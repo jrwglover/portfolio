@@ -37,7 +37,7 @@ const METHOD_COLORS: Record<string, string> = {
   LinearForward: '#8b7ec8', FlatForward: '#5cb87a',
 };
 const METHOD_LABELS: Record<string, string> = {
-  LogCubicDiscount: 'Min-curve spline on log-DF (production)',
+  LogCubicDiscount: 'Cubic spline on log-DF (production)',
   LinearZero: 'Linear on zeros', LinearForward: 'Linear on forwards',
   FlatForward: 'Flat forwards (step)',
 };
@@ -263,7 +263,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Same instruments, four interpolations. All four reprice the calibration set —
             the differences between pillars are the model's freedom. Switch to forwards to
-            see why the desk choice is min-curvature on log-discount: forwards are the
+            see why the desk choice is the cubic spline on log-discount: forwards are the
             spline's derivative (C&sup1;), where linear-zero interpolation produces the
             classic sawtooth and flat-forward the staircase.
           </p>

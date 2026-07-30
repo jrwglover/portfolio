@@ -63,7 +63,7 @@ export const topics: Topic[] = [
             title: 'Meeting-Dated & IMM Curves',
             subtitle: 'Step-forward short ends: ECB policy dates vs IMM dates',
             description:
-              'Compare four constructions of the same ESTR rate: a smooth tenor spline, quarterly IMM steps, IMM + convexity-adjusted futures, and flat forwards between ECB policy effective dates joined to a min-curvature spline. Overlay EURIBOR 6M and the xccy-implied EUR discount curve.',
+              'Compare four constructions of the same ESTR rate: a smooth tenor spline, quarterly IMM steps, IMM + convexity-adjusted futures, and flat forwards between ECB policy effective dates joined to a smooth cubic spline. Overlay EURIBOR 6M and the xccy-implied EUR discount curve.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap'],
             highlights: ['Per-ECB-meeting forwards', 'Hybrid step + spline', 'DF-continuous boundary'],
             status: 'live',
@@ -133,7 +133,7 @@ export const topics: Topic[] = [
             title: 'Live Method Comparison',
             subtitle: 'Same instruments, four interpolations, overlaid',
             description:
-              'The same curve bootstrapped four ways — min-curvature spline on log-discount (production), linear on zeros, linear on forwards, flat forwards — overlaid in forward and zero space. All four reprice the calibration instruments; the differences between pillars are the interpolation model\'s freedom, and the forward domain shows why log-discount min-curvature is the desk choice.',
+              'The same curve bootstrapped four ways — cubic spline on log-discount (production), linear on zeros, linear on forwards, flat forwards — overlaid in forward and zero space. All four reprice the calibration instruments; the differences between pillars are the interpolation model\'s freedom, and the forward domain shows why the log-discount cubic spline is the desk choice.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap'],
             highlights: ['4 methods overlaid', 'Forward-smoothness comparison', 'Bootstrapped live from one instrument set'],
             status: 'live',
@@ -144,9 +144,9 @@ export const topics: Topic[] = [
             id: 'interp-overview',
             slug: 'interp-overview',
             title: 'Method Comparison',
-            subtitle: 'Cubic Spline Min Curvature vs ConvexMonotone vs NaturalSpline',
+            subtitle: 'Production Cubic Spline vs ConvexMonotone vs NaturalSpline',
             description:
-              'Compare three interpolation methods used in multi-curve frameworks: Cubic Spline Min Curvature, Hagan-West ConvexMonotone, and Natural Cubic Spline. Understand how each method handles forward rate smoothness, monotonicity and curvature constraints.',
+              'Compare three interpolation methods used in multi-curve frameworks: the production cubic spline, Hagan-West ConvexMonotone, and Natural Cubic Spline. Understand how each method handles forward rate smoothness, monotonicity and curvature constraints.',
             techBadges: ['C++', 'CUDA', 'QuantLib'],
             highlights: ['3 interpolation methods', 'Forward & zero domains', 'GPU architecture pipeline'],
             status: 'live',
@@ -316,7 +316,7 @@ export const topics: Topic[] = [
             title: 'Performance Benchmarks',
             subtitle: 'GPU vs CPU curve pricing: 50-100x speedup',
             description:
-              'Benchmark 6 interpolation methods across CPU and GPU: QuantLib ConvexMonotone, CUDA ConvexMonotone, CUDA Cubic Spline MinCurve, and linear interpolation variants. See how 150,000 swaps (6.3M cashflows) are priced in under 200ms on GPU versus seconds on CPU.',
+              'Benchmark 6 interpolation methods across CPU and GPU: QuantLib ConvexMonotone, CUDA ConvexMonotone, CUDA Cubic Spline, and linear interpolation variants. See how 150,000 swaps (6.3M cashflows) are priced in under 200ms on GPU versus seconds on CPU.',
             techBadges: ['C++', 'CUDA', 'QuantLib', 'GPU'],
             highlights: ['50-100x GPU speedup', '150k swaps in 200ms', '6 methods compared'],
             status: 'live',
@@ -329,7 +329,7 @@ export const topics: Topic[] = [
             title: 'Interpolation Accuracy',
             subtitle: 'CUDA replication accuracy to 1e-14',
             description:
-              'Verify that GPU-accelerated interpolation exactly reproduces QuantLib CPU results. Compare CUDA ConvexMonotone vs QuantLib CM (near-zero error), CUDA Cubic Spline MinCurve vs QuantLib CS (1e-14 accuracy), and analyse where Natural Spline diverges from Min Curvature.',
+              'Verify that GPU-accelerated interpolation exactly reproduces QuantLib CPU results. Compare CUDA ConvexMonotone vs QuantLib CM (near-zero error), CUDA Cubic Spline vs QuantLib CS (1e-14 accuracy), and analyse where Natural Spline diverges from the production spline.',
             techBadges: ['C++', 'CUDA', 'QuantLib'],
             highlights: ['1e-14 accuracy', 'Method divergence analysis', 'Zero & forward domain comparison'],
             status: 'live',

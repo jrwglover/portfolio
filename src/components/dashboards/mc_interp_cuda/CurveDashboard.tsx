@@ -66,9 +66,9 @@ const METHOD_COLORS: Record<string, string> = {
 };
 const METHOD_LABELS: Record<string, string> = {
   QuantLib_CM: 'CPU ConvexMonotone (QuantLib)',
-  QuantLib_CS_MinCurve: 'CPU CubicSpline MinCurve (QuantLib)',
+  QuantLib_CS_MinCurve: 'CPU Cubic Spline (QuantLib)',
   CUDA_CM: 'GPU ConvexMonotone (CUDA)',
-  CUDA_CS_MinCurve: 'GPU CubicSpline MinCurve (CUDA)',
+  CUDA_CS_MinCurve: 'GPU Cubic Spline (CUDA)',
   CUDA_Linear214: 'GPU Linear Interp (214pt)',
   CUDA_Linear727: 'GPU Linear Interp (727pt)',
 };
@@ -121,7 +121,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
       load('market_data_all_curves.json'),
     ]).then(([p, i, cs, perf, pv01, md]) => {
       setPillarData(p); setInterpData(i); setCsData(cs);
-      // Inject QL CS MinCurve and CUDA CS MinCurve rows into perf data
+      // Inject QL CS and CUDA CS rows into perf data
       // CS kernel uses same Horner polynomial evaluation as CM → same throughput
       // QL CS uses Thomas algorithm (tridiagonal) on CPU → similar to QL CM
       const cudaCM = perf.find((r: PerfRow) => r.Method === 'CUDA_CM');
@@ -311,9 +311,9 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
           </p>
         </div>
         <div className="glass-card rounded-lg p-6" style={{ cursor: 'default', borderLeft: '3px solid var(--accent-cool)' }}>
-          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--accent-cool)' }}>CubicSpline MinCurvature (Custom)</h3>
+          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--accent-cool)' }}>Cubic Spline (Custom)</h3>
           <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            Custom natural cubic spline with minimum curvature tridiagonal scaling. Applied on zeros for RFR curves
+            Custom cubic spline with tridiagonal smoothing. Applied on zeros for RFR curves
             (ESTR, SOFR, SONIA) and on forwards for IBOR curves (EURIBOR6M). CUDA kernel replicates the custom C++
             implementation. Designed for smooth, well-behaved curves.
           </p>
@@ -612,9 +612,9 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
               </table>
             </div>
 
-            {/* 3: QL Natural vs QL MinCurve */}
+            {/* 3: QL Natural vs QL production spline */}
             <div className="glass-card rounded-lg p-6" style={{ cursor: 'default', borderTop: '2px solid var(--accent-purple)' }}>
-              <h4 className="text-xs font-mono uppercase tracking-wider mb-3" style={{ color: 'var(--accent-purple)' }}>QL NaturalSpline vs QL MinCurvature</h4>
+              <h4 className="text-xs font-mono uppercase tracking-wider mb-3" style={{ color: 'var(--accent-purple)' }}>QL NaturalSpline vs Production Spline</h4>
               <p className="text-[10px] mb-2" style={{ color: 'var(--text-dim)' }}>Shows WHY the custom MinCurvature method exists</p>
               <table className="w-full text-xs">
                 <thead>
@@ -688,7 +688,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
                   <Tooltip {...tt} formatter={(v: number) => v?.toExponential(4)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <ReferenceLine y={0} stroke="var(--text-dim)" strokeDasharray="3 3" />
-                  <Line type="monotone" dataKey="Natural_vs_MC" stroke="var(--accent-purple)" strokeWidth={2} dot={false} name="Natural vs MinCurve" />
+                  <Line type="monotone" dataKey="Natural_vs_MC" stroke="var(--accent-purple)" strokeWidth={2} dot={false} name="Natural vs Production Spline" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -780,7 +780,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
             <select value={sensiMethod} onChange={e => setSensiMethod(e.target.value)}
               className="w-full px-2 py-1.5 rounded text-xs font-mono"
               style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}>
-              <option value="CubicSplineMinCurve">Cubic Spline Min Curvature</option>
+              <option value="CubicSplineMinCurve">Cubic Spline (production)</option>
               <option value="ConvexMonotone">Convex Monotone</option>
               <option value="LogLinearDiscount">Log-Linear Discount</option>
               <option value="LogCubicDiscount">Log-Cubic Discount</option>

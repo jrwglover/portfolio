@@ -33,7 +33,7 @@ export const projects: Project[] = [
     title: 'GPU Interpolation Methods',
     subtitle: 'ConvexMonotone vs CubicSpline on GPU',
     description:
-      'Compare interpolation methods used in multi-curve frameworks: Hagan-West ConvexMonotone vs CubicSpline MinCurve. See how CUDA acceleration delivers 50-100x speedups for large-scale curve construction.',
+      'Compare interpolation methods used in multi-curve frameworks: Hagan-West ConvexMonotone vs the production cubic spline. See how CUDA acceleration delivers 50-100x speedups for large-scale curve construction.',
     category: 'Curve Construction & Interpolation',
     techBadges: ['C++', 'CUDA', 'QuantLib', 'GPU'],
     route: '/dashboard/cuda-curves',
