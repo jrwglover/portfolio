@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 interface Case {
   n: string;
   title: string;
-  problem: string;
-  solution: string;
+  target: string;
+  how: string[];
   results: string[];
   stack: string[];
   link: string;
@@ -15,14 +15,17 @@ const CASES: Case[] = [
   {
     n: '01',
     title: 'Multi-Curve Pricing & Risk Engine',
-    problem:
-      'A rates business marks and risks its book off a family of interdependent curves — OIS discounting, IBOR projection, collateral-dependent discounting under CSA, and a short end that trades on central bank meeting dates. Any accelerated pricing path has to tie out to the reference library exactly; risk that does not reconcile does not go to the desk.',
-    solution:
-      'A C++/QuantLib and CUDA framework: dependency-ordered global bootstrap across eight curves and eleven instrument types — tenor OIS, IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, dual-curve EURIBOR, FX swaps and cross-currency basis — with hybrid step-forward and minimum-curvature spline construction, and a spline-exact GPU evaluation layer that reproduces the reference interpolation rather than approximating it.',
+    target:
+      'Price and risk a multi-curve rates book on GPU with marks the desk can trust: every GPU number must match the QuantLib reference exactly, not approximately. Risk that does not reconcile does not go to the desk.',
+    how: [
+      'Bootstrap eight interdependent curves in dependency order — ESTR discounting, EURIBOR projection, SOFR, SONIA, FX-implied EUR/USD — from eleven instrument types including IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, FX swaps and cross-currency basis.',
+      'Build the short end as step-forwards between central bank meeting dates, splined with minimum curvature beyond — the same construction the reference library uses.',
+      'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 174 calibration instruments down both paths and difference them.',
+    ],
     results: [
-      'GPU marks tie out to QuantLib at 3×10⁻¹⁴, at any date on the curve',
-      '174 calibration instruments repriced dual-path — CPU and GPU identical',
-      'Market-quote PV01 ladders: per ECB meeting, per futures contract, per basis pillar',
+      'GPU marks match QuantLib to 3×10⁻¹⁴ at any date on the curve',
+      '174 calibration instruments repriced identically on CPU and GPU',
+      'PV01 ladders per market quote: per ECB meeting, per futures contract, per basis pillar',
       'Seasoned and broken-dated trades priced off historical fixings, exact to machine precision',
     ],
     stack: ['C++17', 'QuantLib', 'CUDA', 'GlobalBootstrap', 'React'],
@@ -32,15 +35,18 @@ const CASES: Case[] = [
   {
     n: '02',
     title: 'Front-to-Back Trade Feed',
-    problem:
-      'The end-of-day feed from trade capture to the rates and inflation risk platform shipped a non-linear book — swaps, caps and floors, swaptions, inflation structures — as a 700MB–1GB flat extract that took ninety minutes to land. Twenty-five thousand trades were serialized as a million redundant rows at 0.19 MB/s, and the overnight batch window absorbed the cost every day.',
-    solution:
-      'A Spark pipeline that re-normalizes the extract in flight: nested schedules and exercise data in place of exploded rows, a completeness gate confirming every trade can key its volatility surface and curves — strikes on unset caplets, settlement method, inflation base fixings, LPI collars — and a parallel batched load into the risk database, with control totals reconciled at every hop.',
+    target:
+      'Cut the end-of-day trade feed from trade capture to the risk platform — 25,000 rates and inflation trades shipped as a 700MB–1GB extract taking 90 minutes — down to minutes, with zero trades lost or altered.',
+    how: [
+      'Diagnose the real cost: the extract serializes each trade once per cashflow period, so 25,000 structured trades become a million redundant rows crawling over a 0.19 MB/s link.',
+      'Re-normalize in flight with Spark: schedules, exercise dates and inflation fixings nested back inside each trade, written as compressed Parquet — 15.3× smaller.',
+      'Gate every trade for pricing readiness (strikes, settlement method, base fixings, LPI collars), load the risk database over eight parallel connections, and reconcile counts, notionals and id-hashes at every hop.',
+    ],
     results: [
-      'End-of-day feed: 89 minutes to 3.6 minutes, measured — a 25× reduction',
-      'Database load 49× faster than single-connection loading, both lanes measured',
+      'End-of-day feed: 89 minutes to 3.6 minutes, measured — 25× faster',
+      'Database load 49× faster than the single-connection baseline, both lanes measured',
       'Extract 15.3× smaller once redundant headers are normalized away',
-      'Zero breaks across 1,035,762 reconciled rows — counts, notionals and id-hashes',
+      'Zero breaks across 1,035,762 reconciled rows',
     ],
     stack: ['PySpark', 'Parquet', 'SQL Server', 'pyarrow', 'Docker'],
     link: '/learn/spark-trade-bridge',
@@ -49,10 +55,13 @@ const CASES: Case[] = [
   {
     n: '03',
     title: 'Government Bond Curve & Credit Spread Engine',
-    problem:
-      'Credit and treasury desks need issuer zero curves implied from bond prices, with the all-in yield decomposed into risk-free, sovereign and credit components — and the decomposition has to hold up when a trader overrides a spread and expects the curve to rebuild instantly.',
-    solution:
-      'A C++/QuantLib bootstrapper over the German Bund complex with full cashflow schedules, an OIS base curve built from ECB money-market rates, and a credit-spread waterfall — risk-free plus sovereign premium plus credit spread — served to an interactive front end with live re-bootstrap on every spread edit.',
+    target:
+      'Imply a zero curve from German government bond prices and decompose each bond’s all-in yield into risk-free, sovereign and credit spread — and rebuild the whole curve instantly when a trader overrides a spread.',
+    how: [
+      'Bootstrap the zero curve from 18 Bunds with full cashflow schedules in C++/QuantLib, on top of an OIS base curve built from ECB money-market rates.',
+      'Layer a credit-spread waterfall — risk-free plus sovereign premium plus credit spread — so every basis point of yield is attributed to a source.',
+      'Serve it to a React front end that re-bootstraps the curve on every spread edit, with a step-through mode that shows the curve forming bond by bond.',
+    ],
     results: [
       '51-point zero curve implied from 18 Bunds, validated to below 0.0001 bps',
       '128 cashflows repriced to machine precision across three independent builds',
@@ -79,17 +88,24 @@ export default function CaseStudies() {
 
       <div className="space-y-8">
         {CASES.map(c => (
-          <div key={c.n} className="rounded-lg p-8 grid md:grid-cols-[1fr_1.2fr] gap-8"
+          <div key={c.n} className="rounded-lg p-8 grid md:grid-cols-[1.2fr_1fr] gap-8"
             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
             <div>
               <div className="flex items-baseline gap-3 mb-4">
                 <span className="font-mono text-xs" style={{ color: 'var(--accent-warm)' }}>{c.n}</span>
                 <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{c.title}</h3>
               </div>
-              <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Problem</p>
-              <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>{c.problem}</p>
-              <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Approach</p>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{c.solution}</p>
+              <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Target</p>
+              <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>{c.target}</p>
+              <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>How</p>
+              <ol className="space-y-2">
+                {c.how.map((step, i) => (
+                  <li key={i} className="text-sm leading-relaxed flex gap-2.5" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="font-mono text-xs shrink-0 pt-0.5" style={{ color: 'var(--text-dim)' }}>{i + 1}.</span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
             </div>
             <div className="flex flex-col">
               <p className="text-xs font-mono uppercase tracking-widest mb-3" style={{ color: 'var(--text-dim)' }}>Measured results</p>
