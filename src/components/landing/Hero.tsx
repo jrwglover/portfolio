@@ -18,14 +18,16 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Three institutional trading-system problems, solved end to end and
-            measured: a multi-curve pricing engine with GPU parity to 14 significant
-            figures, a position-keeping hand-off cut from 1.5 hours to minutes, and
-            a bond curve bootstrapper with sub-basis-point validation.
+            Front-office pricing, risk and trade-flow infrastructure, built end to
+            end and proven with numbers: a multi-curve framework whose GPU marks tie
+            out to the reference library at machine precision; an end-of-day trade
+            feed cut from ninety minutes to under four; a government bond curve
+            engine validated to a hundredth of a basis point.
           </p>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-            Every number on this site is produced by the systems themselves —
-            bootstraps, benchmarks and reconciliations you can inspect, not claims.
+            Everything on this site runs. The curves are bootstrapped, the benchmarks
+            are measured, and the reconciliations are exact — nothing is quoted that
+            the systems did not produce.
           </p>
 
           <div className="flex gap-3 mt-9">
