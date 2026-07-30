@@ -146,7 +146,7 @@ export const topics: Topic[] = [
             title: 'Method Comparison',
             subtitle: 'Cubic Spline Min Curvature vs ConvexMonotone vs NaturalSpline',
             description:
-              'Compare three interpolation methods used in multi-curve frameworks: Cubic Spline Min Curvature (ING), Hagan-West ConvexMonotone, and Natural Cubic Spline. Understand how each method handles forward rate smoothness, monotonicity and curvature constraints.',
+              'Compare three interpolation methods used in multi-curve frameworks: Cubic Spline Min Curvature, Hagan-West ConvexMonotone, and Natural Cubic Spline. Understand how each method handles forward rate smoothness, monotonicity and curvature constraints.',
             techBadges: ['C++', 'CUDA', 'QuantLib'],
             highlights: ['3 interpolation methods', 'Forward & zero domains', 'GPU architecture pipeline'],
             status: 'live',

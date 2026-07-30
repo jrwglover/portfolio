@@ -44,7 +44,7 @@ export default function About() {
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
               Each module covers a core area of market data and derivatives analytics,
               with interactive tools that let you explore real calculations — not just theory.
-              Designed for traders, risk managers, and finance professionals at ING.
+              Built for the people who sit closest to the numbers: traders, risk managers and quants.
             </p>
           </div>
 

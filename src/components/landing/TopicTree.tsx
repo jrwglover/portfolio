@@ -6,7 +6,8 @@ const topicNumbers: Record<string, string> = {
   Credit: '02',
   Volatility: '03',
   Infrastructure: '04',
-  'Market Data': '05',
+  'Data Engineering': '05',
+  'Market Data': '06',
 };
 
 export default function TopicTree() {
@@ -17,10 +18,10 @@ export default function TopicTree() {
           className="font-mono text-xs tracking-widest uppercase mb-3"
           style={{ color: 'var(--accent-warm)' }}
         >
-          Learning Modules
+          Technical Demos
         </p>
         <h2 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Explore by topic
+          Interactive deep dives behind the projects
         </h2>
       </div>
 
@@ -31,9 +32,9 @@ export default function TopicTree() {
             <span
               className="font-mono text-xs font-bold w-7 h-7 rounded flex items-center justify-center"
               style={{
-                background: 'rgba(192, 72, 0, 0.08)',
-                color: 'var(--accent-warm-muted)',
-                border: '1px solid rgba(192, 72, 0, 0.15)',
+                background: 'rgba(91, 143, 201, 0.08)',
+                color: 'var(--accent-warm)',
+                border: '1px solid rgba(91, 143, 201, 0.18)',
               }}
             >
               {topicNumbers[topic.label] ?? '??'}
