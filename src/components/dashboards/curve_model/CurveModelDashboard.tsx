@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
 
@@ -15,12 +16,24 @@ interface MarketCurve {
 }
 interface Inputs { date: string; fixings?: unknown[]; curves: MarketCurve[] }
 
-type Tab = 'inputs' | 'curves' | 'methods';
+type Tab = 'inputs' | 'curves' | 'methods' | 'sensis';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
   { key: 'methods', label: 'Interpolation Methods' },
+  { key: 'sensis', label: 'Risk Ladders' },
 ];
+
+interface SensiRow { curve: string; tenor: string; base?: number; pv01: number }
+interface FxRow { instrument: string; maturity: string; bumpType: string; pillar: string; baseQuote: number; pv01: number }
+interface Sensis { swap: string; notional: number; bump_bps: number; market: SensiRow[]; gpu: SensiRow[]; fx: FxRow[] }
+
+const FX_BUMP_COLORS: Record<string, string> = {
+  SPOT: '#d4a853', FXSWAP_PT: '#5eaab5', XCCY_BASIS: '#8b7ec8',
+};
+const FX_BUMP_LABELS: Record<string, string> = {
+  SPOT: 'FX spot', FXSWAP_PT: 'FX swap point', XCCY_BASIS: 'Xccy basis',
+};
 
 const CURVE_COLORS: Record<string, string> = {
   ESTR: '#d4a853', ESTR_ECB: '#e07850', ESTR_IMM: '#5cb87a', ESTR_IMMFUT: '#b8b04a',
@@ -81,12 +94,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [methodCurve, setMethodCurve] = useState<'ESTR' | 'EURIBOR6M'>('ESTR');
   const [domain, setDomain] = useState<'fwd' | 'zero'>('fwd');
   const [tMax, setTMax] = useState(30);
+  const [sensis, setSensis] = useState<Sensis | null>(null);
+  const [sensiCurve, setSensiCurve] = useState<'EURIBOR6M' | 'ESTR'>('EURIBOR6M');
+  const [fxInstr, setFxInstr] = useState('5Y_FX_FWD');
 
   useEffect(() => {
     const base = '/data/curve_model';
     fetch(`${base}/inputs.json`).then(r => r.json()).then(setInputs).catch(() => {});
     fetch(`${base}/curves.json`).then(r => r.json()).then(setCurves).catch(() => {});
     fetch(`${base}/methods.json`).then(r => r.json()).then(setMethods).catch(() => {});
+    fetch(`${base}/sensis.json`).then(r => r.json()).then(setSensis).catch(() => {});
   }, []);
 
   const selMkt = inputs?.curves.find(c => c.curve === selCurve);
@@ -102,6 +119,23 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     for (const m of ms) series[m] = methods[m][methodCurve];
     return toChart(series, ms, domain === 'fwd' ? 1 : 2, tMax);
   }, [methods, methodCurve, domain, tMax]);
+
+  const sensiChart = useMemo(() => {
+    if (!sensis) return [];
+    const gpuMap = new Map(sensis.gpu.filter(r => r.curve === sensiCurve).map(r => [r.tenor, r.pv01]));
+    return sensis.market
+      .filter(r => r.curve === sensiCurve)
+      .map(r => ({ tenor: r.tenor, cpu: +r.pv01.toFixed(2), gpu: +((gpuMap.get(r.tenor) ?? 0) as number).toFixed(2) }));
+  }, [sensis, sensiCurve]);
+
+  const fxInstruments = useMemo(
+    () => (sensis ? [...new Set(sensis.fx.map(r => r.instrument))] : []), [sensis]);
+  const fxChart = useMemo(() => {
+    if (!sensis) return [];
+    return sensis.fx
+      .filter(r => r.instrument === fxInstr)
+      .map(r => ({ pillar: r.pillar, bumpType: r.bumpType, pv01: +r.pv01.toFixed(2) }));
+  }, [sensis, fxInstr]);
 
   const chip = (active: boolean, color: string) => ({
     border: `1px solid ${active ? color : 'var(--border-subtle)'}`,
@@ -266,6 +300,86 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             see why the desk choice is the cubic spline on log-discount: forwards are the
             spline's derivative (C&sup1;), where linear-zero interpolation produces the
             classic sawtooth and flat-forward the staircase.
+          </p>
+        </div>
+      )}
+
+      {tab === 'sensis' && sensis && (
+        <div>
+          <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
+            Market-quote PV01 for a seasoned, broken-dated EURIBOR swap
+            (&euro;{(sensis.notional / 1e6).toFixed(0)}mm): each input instrument bumped
+            {' '}{sensis.bump_bps}bp, the whole curve family re-bootstrapped, the swap
+            repriced. Risk lands on the quotes the desk actually hedges with &mdash;
+            projection and discounting separately.
+          </p>
+
+          <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
+            {(['EURIBOR6M', 'ESTR'] as const).map(c => (
+              <button key={c} onClick={() => setSensiCurve(c)} className="px-2.5 py-1 rounded"
+                style={chip(sensiCurve === c, CURVE_COLORS[c])}>
+                {c === 'EURIBOR6M' ? 'EURIBOR 6M (projection)' : 'ESTR (discounting)'}
+              </button>
+            ))}
+          </div>
+          <ResponsiveContainer width="100%" height={340}>
+            <BarChart data={sensiChart}>
+              <CartesianGrid stroke={chartGrid} />
+              <XAxis dataKey="tenor" stroke={chartAxis} tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={50} />
+              <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
+                tickFormatter={v => Number(v).toLocaleString()} />
+              <Tooltip {...tt} formatter={(v: any, n: any) =>
+                [`€${Number(v).toLocaleString()}`, n === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder']} />
+              <Legend formatter={(v: string) =>
+                <span style={{ fontSize: 11 }}>{v === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder'}</span>} />
+              <ReferenceLine y={0} stroke={chartAxis} />
+              <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
+              <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="text-xs mt-3 mb-8 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            Two independent ladders: the CPU one bumps the market quote and re-runs the
+            global bootstrap, so the shock propagates through the spline; the GPU one
+            bumps the pillar directly. Where they differ is exactly what re-bootstrapping
+            adds &mdash; risk leaking to neighbouring buckets through the interpolation.
+          </p>
+
+          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            FX &amp; cross-currency ladder
+          </h3>
+          <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap items-center">
+            {fxInstruments.map(i => (
+              <button key={i} onClick={() => setFxInstr(i)} className="px-2.5 py-1 rounded"
+                style={chip(fxInstr === i, '#4a9a68')}>{i.replace(/_/g, ' ')}</button>
+            ))}
+            <span className="ml-2 flex gap-3">
+              {Object.entries(FX_BUMP_LABELS).map(([k, l]) => (
+                <span key={k} style={{ color: FX_BUMP_COLORS[k] }}>&#9632; {l}</span>
+              ))}
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={fxChart}>
+              <CartesianGrid stroke={chartGrid} />
+              <XAxis dataKey="pillar" stroke={chartAxis} tick={{ fontSize: 10 }} interval={0} />
+              <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
+                tickFormatter={v => Number(v).toLocaleString()} />
+              <Tooltip {...tt} formatter={(v: any) => [`€${Number(v).toLocaleString()}`, 'PV01']}
+                labelFormatter={(l: any) => `pillar ${l}`} />
+              <ReferenceLine y={0} stroke={chartAxis} />
+              <Bar dataKey="pv01" isAnimationActive={false}>
+                {fxChart.map((r, i) => (
+                  <Cell key={i} fill={FX_BUMP_COLORS[r.bumpType] ?? '#8b8a97'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The EUR-under-USD-collateral curve risked per quote: FX spot, each FX swap
+            point, each cross-currency basis pillar bumped 1bp/1pip. The risk localizes
+            &mdash; a 5Y forward&apos;s exposure sits at the 5Y basis pillar, a 10Y
+            forward&apos;s at 10Y &mdash; which is the sanity check that the
+            FX/xccy bootstrap keys each instrument to the right part of the curve.
           </p>
         </div>
       )}
