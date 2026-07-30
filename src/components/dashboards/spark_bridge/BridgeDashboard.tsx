@@ -44,7 +44,7 @@ function Stat({ v, l, accent }: { v: string; l: string; accent?: string }) {
 function Stage({ n, title, body }: { n: string; title: string; body: string }) {
   return (
     <div className="rounded p-5" style={{ background: '#12121a', border: '1px solid var(--border-subtle)' }}>
-      <div className="font-mono text-xs mb-2" style={{ color: '#d4a853' }}>{n}</div>
+      <div className="font-mono text-xs mb-2" style={{ color: '#5b8fc9' }}>{n}</div>
       <div className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>{title}</div>
       <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{body}</p>
     </div>
@@ -54,9 +54,9 @@ function Stage({ n, title, body }: { n: string; title: string; body: string }) {
 export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] }) {
   const [tab, setTab] = useState<Tab>((defaultTab as Tab) ?? 'problem');
   const chip = (active: boolean) => ({
-    border: `1px solid ${active ? '#d4a853' : 'var(--border-subtle)'}`,
-    color: active ? '#d4a853' : 'var(--text-dim)',
-    background: active ? '#d4a85318' : 'transparent',
+    border: `1px solid ${active ? '#5b8fc9' : 'var(--border-subtle)'}`,
+    color: active ? '#5b8fc9' : 'var(--text-dim)',
+    background: active ? '#5b8fc918' : 'transparent',
   });
 
   return (

@@ -29,29 +29,34 @@ export default function Header() {
               color: '#0a0a0f',
             }}
           >
-            ML
+            JG
           </div>
           <div className="hidden sm:block">
             <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              Market Data Lab
+              Johnathon Glover
             </div>
             <div className="text-xs" style={{ color: 'var(--text-dim)' }}>
-              ING Data Analytics
+              Financial Markets Engineering
             </div>
           </div>
         </Link>
 
         <nav className="flex items-center gap-2">
           {isHome && (
-            <a
-              href="#modules"
-              className="text-sm transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
-            >
-              Modules
-            </a>
+            <>
+              <a href="#projects" className="text-sm transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+                Projects
+              </a>
+              <a href="#modules" className="text-sm transition-colors ml-4"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+                Demos
+              </a>
+            </>
           )}
           {!isHome && breadcrumb && (
             <div className="flex items-center gap-1.5 text-sm">

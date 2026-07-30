@@ -1,12 +1,12 @@
 import Hero from './Hero';
-import About from './About';
+import CaseStudies from './CaseStudies';
 import TopicTree from './TopicTree';
 
 export default function Landing() {
   return (
     <>
       <Hero />
-      <About />
+      <CaseStudies />
       <TopicTree />
     </>
   );

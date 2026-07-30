@@ -122,7 +122,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className="font-mono text-xs px-4 py-2 rounded transition-colors"
-            style={chip(tab === t.key, '#d4a853')}>{t.label}</button>
+            style={chip(tab === t.key, '#5b8fc9')}>{t.label}</button>
         ))}
       </div>
 
@@ -137,7 +137,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             {inputs.curves.map(c => (
               <button key={c.curve} onClick={() => setSelCurve(c.curve)}
                 className="font-mono text-xs px-3 py-1.5 rounded"
-                style={chip(selCurve === c.curve, CURVE_COLORS[c.index] ?? '#d4a853')}>
+                style={chip(selCurve === c.curve, CURVE_COLORS[c.index] ?? '#5b8fc9')}>
                 {c.curve}
               </button>
             ))}
