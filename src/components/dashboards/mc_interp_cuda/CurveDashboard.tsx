@@ -22,10 +22,6 @@ interface PerfRow {
   Total_Time_ms: number; Time_Per_Swap_us: number;
   Speedup_vs_QuantLib_CM: number; Portfolio_NPV: number; Error_vs_QuantLib_CM: number;
 }
-interface PV01Row {
-  Swap: string; Curve: string; Tenor: string; Node: number; Time: number;
-  BaseFwd: number; ShockedFwd: number; PV01: number;
-}
 interface MarketCurve {
   curve: string; currency: string; index: string; type: string; day_counter: string;
   quotes: { tenor: string; rate: number; instrument: string; }[];
@@ -82,11 +78,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'sensitivities', label: 'Sensitivities' },
 ];
 
-const SWAPS = ['5Y_EURIBOR_Swap', '10Y_EURIBOR_Swap'] as const;
-
 /* ── Helpers ── */
-function fmt(n: number, dp = 4): string { return n.toFixed(dp); }
-function fmtBps(n: number): string { return (n * 10000).toFixed(4) + ' bps'; }
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3030';
 function fmtUsd(n: number): string { return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmtMs(n: number): string { return n.toFixed(1) + ' ms'; }
 function fmtPct(n: number): string { return (n * 100).toFixed(4) + '%'; }
@@ -95,8 +88,6 @@ function fmtPct(n: number): string { return (n * 100).toFixed(4) + '%'; }
 export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] }) {
   const [tab, setTab] = useState<Tab>((defaultTab as Tab) ?? 'overview');
   const [selectedCurve, setSelectedCurve] = useState('EUR_ESTR');
-  const [selectedSwap, setSelectedSwap] = useState<string>('5Y_EURIBOR_Swap');
-
   const [perfStatus, setPerfStatus] = useState<RunStatus>('idle');
   const [accStatus, setAccStatus] = useState<RunStatus>('idle');
   const [sensStatus, setSensStatus] = useState<RunStatus>('idle');
@@ -105,7 +96,6 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
   const [interpData, setInterpData] = useState<InterpolationPoint[]>([]);
   const [csData, setCsData] = useState<CubicSplinePoint[]>([]);
   const [perfData, setPerfData] = useState<PerfRow[]>([]);
-  const [pv01Data, setPv01Data] = useState<PV01Row[]>([]);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
 
   /* Load data */
@@ -117,9 +107,8 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
       load('interpolation_results.json'),
       load('cubicspline_comparison.json'),
       load('portfolio_npv_performance.json'),
-      load('forward_pv01_results.json'),
       load('market_data_all_curves.json'),
-    ]).then(([p, i, cs, perf, pv01, md]) => {
+    ]).then(([p, i, cs, perf, md]) => {
       setPillarData(p); setInterpData(i); setCsData(cs);
       // Inject QL CS and CUDA CS rows into perf data
       // CS kernel uses same Horner polynomial evaluation as CM → same throughput
@@ -138,7 +127,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
           Error_vs_QuantLib_CM: 0.00001 },
         ...perf.filter((r: PerfRow) => r.Method.startsWith('CUDA_Linear')),
       ];
-      setPerfData(augmented); setPv01Data(pv01); setMarketData(md);
+      setPerfData(augmented); setMarketData(md);
     });
   }, []);
 
@@ -151,22 +140,10 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
     setAccStatus('running');
     setTimeout(() => setAccStatus('done'), 1500);
   }, []);
-  const runSensitivity = useCallback(() => {
-    setSensStatus('running');
-    setTimeout(() => setSensStatus('done'), 2000);
-  }, []);
-
   /* Derived data */
   const pillarForCurve = useMemo(() => pillarData.filter(p => p.Curve === selectedCurve), [pillarData, selectedCurve]);
   const interpForCurve = useMemo(() => interpData.filter(p => p.Curve === selectedCurve), [interpData, selectedCurve]);
   const csForCurve = useMemo(() => csData.filter(p => p.Curve === selectedCurve), [csData, selectedCurve]);
-
-  const pv01ForSwap = useMemo(() => {
-    const swapYears = selectedSwap.startsWith('5Y') ? 5 : 10;
-    return pv01Data
-      .filter(r => r.Swap === selectedSwap && r.Time <= swapYears + 1)
-      .sort((a, b) => a.Time - b.Time);
-  }, [pv01Data, selectedSwap]);
 
   /* Accuracy aggregates */
   const cmAccuracy = useMemo(() => {
@@ -200,16 +177,6 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
     return CURVES_ORDER.map(c => ({ curve: c, maxDiff: grouped[c]?.maxDiff || 0, domain: grouped[c]?.domain || '' }));
   }, [csData]);
 
-  /* Risk metrics */
-  const riskMetrics = useMemo(() => {
-    if (!pv01ForSwap.length) return null;
-    const totalPV01 = pv01ForSwap.reduce((s, r) => s + r.PV01, 0);
-    const dv01 = pv01ForSwap.reduce((s, r) => s + Math.abs(r.PV01), 0);
-    const maxBucket = pv01ForSwap.reduce((m, r) => Math.abs(r.PV01) > Math.abs(m.PV01) ? r : m, pv01ForSwap[0]);
-    const wal = pv01ForSwap.reduce((s, r) => s + r.Time * Math.abs(r.PV01), 0) / dv01;
-    return { totalPV01, dv01, maxBucket, wal };
-  }, [pv01ForSwap]);
-
   /* Market data helpers */
   const marketCurveInfo = useMemo(() => {
     if (!marketData) return [];
@@ -220,19 +187,6 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
       tenors: c.quotes.map(q => q.tenor),
     }));
   }, [marketData]);
-
-  /* Download CSV */
-  const downloadPV01CSV = useCallback(() => {
-    if (!pv01ForSwap.length) return;
-    const headers = ['Swap', 'Curve', 'Tenor', 'Node', 'Time', 'BaseFwd', 'ShockedFwd', 'PV01'];
-    const rows = pv01ForSwap.map(r => headers.map(h => (r as any)[h]).join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `pv01_${selectedSwap}.csv`; a.click();
-    URL.revokeObjectURL(url);
-  }, [pv01ForSwap, selectedSwap]);
 
   /* All-curves overlay data */
   const allCurvesZero = useMemo(() => {
@@ -368,7 +322,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
               <CartesianGrid stroke={chartGrid} strokeDasharray="3 3" />
               <XAxis dataKey="Time" tick={{ fill: chartAxis, fontSize: 11 }} label={{ value: 'Time (years)', fill: chartAxis, fontSize: 11, position: 'insideBottom', offset: -2 }} />
               <YAxis tick={{ fill: chartAxis, fontSize: 11 }} tickFormatter={v => fmtPct(v)} />
-              <Tooltip {...tt} formatter={(v: number) => fmtPct(v)} />
+              <Tooltip {...tt} formatter={(v: any) => fmtPct(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="Zero" stroke={CURVE_COLORS[selectedCurve]} strokeWidth={2} dot={false} name="Zero Rate" />
               <Line type="monotone" dataKey="Forward" stroke={CURVE_COLORS[selectedCurve]} strokeWidth={1.5} dot={false} strokeDasharray="5 3" name="Forward Rate" opacity={0.7} />
@@ -384,7 +338,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
               <CartesianGrid stroke={chartGrid} strokeDasharray="3 3" />
               <XAxis dataKey="Time" tick={{ fill: chartAxis, fontSize: 11 }} label={{ value: 'Time (years)', fill: chartAxis, fontSize: 11, position: 'insideBottom', offset: -2 }} />
               <YAxis tick={{ fill: chartAxis, fontSize: 11 }} tickFormatter={v => fmtPct(v)} />
-              <Tooltip {...tt} formatter={(v: number) => fmtPct(v)} />
+              <Tooltip {...tt} formatter={(v: any) => fmtPct(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {CURVES_ORDER.map(c => (
                 <Line key={c} type="monotone" dataKey={`${CURVE_SHORT[c]}_Zero`} stroke={CURVE_COLORS[c]} strokeWidth={1.5} dot={false} name={CURVE_SHORT[c]} connectNulls />
@@ -407,7 +361,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
             <CartesianGrid stroke={chartGrid} strokeDasharray="3 3" />
             <XAxis dataKey="Time" tick={{ fill: chartAxis, fontSize: 11 }} label={{ value: 'Time (years)', fill: chartAxis, fontSize: 11, position: 'insideBottom', offset: -2 }} />
             <YAxis tick={{ fill: chartAxis, fontSize: 11 }} tickFormatter={v => fmtPct(v)} />
-            <Tooltip {...tt} formatter={(v: number) => fmtPct(v)} />
+            <Tooltip {...tt} formatter={(v: any) => fmtPct(v)} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Line type="monotone" dataKey="QL_MC" stroke="var(--accent-cool)" strokeWidth={2} dot={false} name="QL Production Spline" />
             <Line type="monotone" dataKey="CUDA_MC" stroke="var(--accent-warm)" strokeWidth={1.5} dot={false} name="CUDA Production Spline" strokeDasharray="5 3" />
@@ -462,7 +416,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
                 <CartesianGrid stroke={chartGrid} strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fill: chartAxis, fontSize: 11 }} label={{ value: 'Total Time (ms)', fill: chartAxis, fontSize: 11, position: 'insideBottom', offset: -2 }} />
                 <YAxis type="category" dataKey="label" tick={{ fill: chartAxis, fontSize: 10 }} width={210} />
-                <Tooltip {...tt} formatter={(v: number) => fmtMs(v)} />
+                <Tooltip {...tt} formatter={(v: any) => fmtMs(v)} />
                 <Bar dataKey="Total_Time_ms" name="Total Time (ms)" radius={[0, 4, 4, 0]}>
                   {perfData.map((entry, i) => (
                     <Cell key={i} fill={METHOD_COLORS[entry.Method] || 'var(--accent-cool)'} />
@@ -663,7 +617,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
                   <CartesianGrid stroke={chartGrid} strokeDasharray="3 3" />
                   <XAxis dataKey="Days" tick={{ fill: chartAxis, fontSize: 11 }} label={{ value: 'Days', fill: chartAxis, fontSize: 11, position: 'insideBottom', offset: -2 }} />
                   <YAxis tick={{ fill: chartAxis, fontSize: 11 }} tickFormatter={v => v.toExponential(0)} />
-                  <Tooltip {...tt} formatter={(v: number) => v?.toExponential(4)} />
+                  <Tooltip {...tt} formatter={(v: any) => v?.toExponential(4)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <ReferenceLine y={0} stroke="var(--text-dim)" strokeDasharray="3 3" />
                   <Line type="monotone" dataKey="CM_Diff" stroke="var(--accent-warm)" strokeWidth={1.5} dot={false} name="CM Zero Diff" connectNulls />
@@ -685,7 +639,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
                   <CartesianGrid stroke={chartGrid} strokeDasharray="3 3" />
                   <XAxis dataKey="Days" tick={{ fill: chartAxis, fontSize: 11 }} label={{ value: 'Days', fill: chartAxis, fontSize: 11, position: 'insideBottom', offset: -2 }} />
                   <YAxis tick={{ fill: chartAxis, fontSize: 11 }} tickFormatter={v => v.toExponential(0)} />
-                  <Tooltip {...tt} formatter={(v: number) => v?.toExponential(4)} />
+                  <Tooltip {...tt} formatter={(v: any) => v?.toExponential(4)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <ReferenceLine y={0} stroke="var(--text-dim)" strokeDasharray="3 3" />
                   <Line type="monotone" dataKey="Natural_vs_MC" stroke="var(--accent-purple)" strokeWidth={2} dot={false} name="Natural vs Production Spline" />
@@ -712,11 +666,13 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
   const [sensiBump, setSensiBump] = useState(1.0);
   const [sensiMethod, setSensiMethod] = useState('CubicSplineMinCurve');
   const [sensiResult, setSensiResult] = useState<any>(null);
+  const [sensiError, setSensiError] = useState<string | null>(null);
 
   const runInstrumentPV01 = useCallback(() => {
     setSensStatus('running');
     setSensiResult(null);
-    fetch('http://localhost:3030/api/instrument_pv01', {
+    setSensiError(null);
+    fetch(`${API_BASE}/api/instrument_pv01`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -730,7 +686,10 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
     })
       .then(r => r.json())
       .then(data => { setSensiResult(data); setSensStatus('done'); })
-      .catch(() => setSensStatus('idle'));
+      .catch(() => {
+        setSensStatus('idle');
+        setSensiError('Live pricing service unavailable. This panel re-bootstraps curves with QuantLib on a local backend — clone the repo and run it locally for the live demo.');
+      });
   }, [sensiCurve, sensiTenor, sensiNotional, sensiFixedRate, sensiBump, sensiMethod]);
 
   const sensiPV01Data = useMemo(() => {
@@ -832,6 +791,9 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
             </button>
           </div>
         </div>
+        {sensiError && (
+          <p className="text-xs mt-3" style={{ color: 'var(--accent-red, #c75f5f)' }}>{sensiError}</p>
+        )}
       </div>
 
       {sensiResult && (
@@ -867,7 +829,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
                 <CartesianGrid stroke={chartGrid} strokeDasharray="3 3" />
                 <XAxis dataKey="label" tick={{ fill: chartAxis, fontSize: 10 }} angle={-45} textAnchor="end" height={60} />
                 <YAxis tick={{ fill: chartAxis, fontSize: 11 }} label={{ value: `PV01 (${sensiBump}bp)`, fill: chartAxis, fontSize: 11, angle: -90, position: 'insideLeft' }} />
-                <Tooltip {...tt} formatter={(v: number) => fmtUsd(v)} />
+                <Tooltip {...tt} formatter={(v: any) => fmtUsd(v)} />
                 <ReferenceLine y={0} stroke="var(--text-dim)" />
                 <Bar dataKey="pv01" name="Instrument PV01" radius={[3, 3, 0, 0]}>
                   {sensiPV01Data.map((entry: any, i: number) => (

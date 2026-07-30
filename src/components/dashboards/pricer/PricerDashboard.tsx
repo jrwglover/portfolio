@@ -1,6 +1,6 @@
 import EmbeddedApp from '../EmbeddedApp';
 
-export default function PricerDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] } = {}) {
+export default function PricerDashboard({ breadcrumb }: { defaultTab?: string; breadcrumb?: string[] } = {}) {
   return (
     <EmbeddedApp
       label={breadcrumb ? breadcrumb.slice(0, -1).join(' > ') : 'Trading & Risk'}

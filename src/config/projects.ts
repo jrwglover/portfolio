@@ -8,6 +8,7 @@ export interface Project {
   route: string;
   githubUrl?: string;
   highlights: string[];
+  deploymentType?: 'live' | 'analysis';
 }
 
 export const categories = [

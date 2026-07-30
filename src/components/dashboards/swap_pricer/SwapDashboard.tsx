@@ -1,6 +1,6 @@
 import EmbeddedApp from '../EmbeddedApp';
 
-export default function SwapDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] } = {}) {
+export default function SwapDashboard({ breadcrumb }: { defaultTab?: string; breadcrumb?: string[] } = {}) {
   return (
     <EmbeddedApp
       label={breadcrumb ? breadcrumb.slice(0, -1).join(' > ') : 'Real-Time Pricing'}
