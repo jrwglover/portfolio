@@ -64,7 +64,7 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
       <DashboardHeader
         label={(breadcrumb ?? ['Data Engineering']).join(' / ')}
         title="Spark Trade Bridge"
-        subtitle="Position-keeping hand-off for a rates & inflation non-linear book: file pickup, pricing-prep, MSSQL load"
+        subtitle="End-of-day trade feed for a rates & inflation non-linear book: capture extract, pricing preparation, risk database load"
         techBadges={['PySpark', 'Parquet', 'SQL Server', 'Docker']}
       />
       <div className="flex gap-2 mb-8 flex-wrap">
@@ -84,16 +84,17 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
           </div>
           <div className="max-w-3xl text-sm leading-relaxed space-y-4" style={{ color: 'var(--text-secondary)' }}>
             <p>
-              A deal-capture system feeds an internal engine for rates and inflation
-              non-linear trading. Non-linear books are <em>low trade count, high
-              structure</em>: each trade needs full schedules, per-caplet strike steps,
-              Bermudan exercise dates, inflation base index prints and LPI collars to
-              key normal-vol surfaces and the discount/projection curves.
+              The trade capture system feeds the risk and valuation platform for a
+              rates and inflation non-linear business. Non-linear books are <em>low
+              trade count, high structure</em>: each trade carries full schedules,
+              per-caplet strike steps, Bermudan exercise dates, inflation base index
+              fixings and LPI collars — everything the platform needs to key its
+              normal volatility surfaces and discount and projection curves.
             </p>
             <p>
               The legacy export explodes every trade to one row per period and
               exercise, repeating the entire 33-field header on every row — a 25k-trade
-              book becomes a million-row quarter-GB file, and the hand-off crawls at a
+              book becomes a million-row quarter-GB file, and the feed crawls at a
               rate no network explains. The fix is not a faster disk: it is a format,
               a normalization step, and parallel database connections.
             </p>
@@ -113,7 +114,7 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
           </div>
           <pre className="rounded p-4 font-mono text-[11px] overflow-x-auto"
             style={{ background: '#0d0d14', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-{`LEGACY (deal capture ships):                 1,010,762 rows
+{`LEGACY (trade capture ships):                1,010,762 rows
   N0000001 |...33-field header...| PERIOD   | 1 | dates | notional | strike | fixing
   N0000001 |...same header again.| PERIOD   | 2 | ...       <- 30Y quarterly cap = 120 rows
   N0000001 |...same header again.| EXERCISE | 1 | ...       <- Bermudan exercise dates
@@ -135,7 +136,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
         <div className="space-y-10">
           <div>
             <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-              End-to-end hand-off at production transfer rates (1 GB scale)
+              End-of-day feed at production transfer rates (1 GB scale)
             </h3>
             <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
               Transfer leg physically measured through a 0.19 MB/s token-bucket throttle
@@ -213,7 +214,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
               </p>
               <p>
                 Delta mode ships only new/amended/cancelled trades — a 20k-trade delta staged
-                and MERGE'd server-side in 0.8s, leaving steady-state hand-offs at MBs, not GBs.
+                and MERGE'd server-side in 0.8s, leaving the steady-state daily feed at MBs, not GBs.
               </p>
             </div>
           </div>

@@ -349,10 +349,10 @@ export const topics: Topic[] = [
           {
             id: 'spark-trade-bridge',
             slug: 'spark-trade-bridge',
-            title: 'Spark Trade Bridge',
-            subtitle: 'Position-keeping hand-off: 1.5 hours to 3.6 minutes',
+            title: 'Front-to-Back Trade Feed',
+            subtitle: 'End-of-day feed from trade capture to risk: 1.5 hours to 3.6 minutes',
             description:
-              'A rates & inflation non-linear book of 25,000 trades was shipped between position-keeping systems as a million-row exploded text file taking ~1.5 hours to land. The bridge re-nests trades in flight, gates them for pricing readiness (strikes, exercise schedules, inflation base prints, LPI collars) and loads SQL Server over parallel connections.',
+              'The end-of-day feed for a rates & inflation non-linear book shipped 25,000 trades from trade capture to the risk platform as a million-row exploded text extract taking ~1.5 hours to land. The pipeline re-normalizes trades in flight, gates them for pricing readiness (strikes, exercise schedules, inflation base fixings, LPI collars) and loads the risk database over parallel connections.',
             techBadges: ['PySpark', 'Parquet', 'SQL Server', 'Docker'],
             highlights: ['25x end-to-end (measured)', '15.3x payload compression', 'Pricing-readiness quarantine gate'],
             status: 'live',
