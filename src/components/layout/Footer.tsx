@@ -1,0 +1,14 @@
+export default function Footer() {
+  return (
+    <footer className="relative z-10 py-10 px-8" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+      <div className="max-w-[1320px] mx-auto flex items-center justify-between">
+        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
+          &copy; {new Date().getFullYear()} ING Data Analytics &middot; Market Data Lab
+        </span>
+        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
+          Internal use only
+        </span>
+      </div>
+    </footer>
+  );
+}
