@@ -30,11 +30,6 @@ export default function Hero() {
             Financial Markets Engineering
           </p>
 
-          <h1 className="text-[3.2rem] leading-[1.1] font-semibold mb-6 tracking-tight"
-            style={{ color: 'var(--text-primary)' }}>
-            Johnathon Glover
-          </h1>
-
           <p className="text-lg leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
             I build front-office pricing, risk and trade-flow systems, and prove
             them with numbers. Three projects, each targeting one problem:
