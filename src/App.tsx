@@ -14,11 +14,9 @@ export default function App() {
           <Route path="/learn/:slug" element={<TopicDashboard />} />
           {/* Legacy redirects */}
           <Route path="/dashboard/bondbootstrapper" element={<Navigate to="/learn/govt-bonds" replace />} />
-          <Route path="/dashboard/cuda-curves" element={<Navigate to="/learn/ibor-rfr-curves" replace />} />
-          <Route path="/dashboard/pricer" element={<Navigate to="/learn/swap-pricer-multi" replace />} />
-          <Route path="/dashboard/swap-pricer" element={<Navigate to="/learn/realtime-swap-pricer" replace />} />
+          <Route path="/dashboard/cuda-curves" element={<Navigate to="/learn/curve-data-model" replace />} />
           <Route path="/dashboard/vega-reduction" element={<Navigate to="/learn/vega-pca" replace />} />
-          <Route path="/dashboard/chat-scraper" element={<Navigate to="/learn/realtime-nlp" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <Footer />

@@ -32,19 +32,6 @@ export const topics: Topic[] = [
         label: 'Curve Bootstrapping',
         leaves: [
           {
-            id: 'ibor-rfr-curves',
-            slug: 'ibor-rfr-curves',
-            title: 'IBOR & RFR Curves',
-            subtitle: 'Multi-curve bootstrapping across 4 currencies',
-            description:
-              'Learn how EURIBOR6M, ESTR, SOFR and SONIA yield curves are bootstrapped from deposits, FRAs and swaps in a dual-curve framework. Visualise pillar points, forward rates and zero rates across all curves.',
-            techBadges: ['C++', 'CUDA', 'QuantLib', 'GPU'],
-            highlights: ['4 currency curves', 'Dual-curve framework', 'Forward & zero rate domains'],
-            status: 'live',
-            dashboard: { component: 'CurveDashboard', defaultTab: 'curves' },
-            breadcrumb: ['Rates', 'Curve Bootstrapping', 'IBOR & RFR Curves'],
-          },
-          {
             id: 'curve-data-model',
             slug: 'curve-data-model',
             title: 'Curve Market Data Model',
@@ -109,19 +96,6 @@ export const topics: Topic[] = [
             dashboard: { component: 'BondDashboard', defaultTab: 'bootstrap' },
             breadcrumb: ['Rates', 'Curve Bootstrapping', 'Bootstrap Validation'],
           },
-          {
-            id: 'imm-interpolation',
-            slug: 'imm-interpolation',
-            title: 'IMM Date Interpolation',
-            subtitle: 'Curve construction on IMM dates across 9 currencies',
-            description:
-              'Explore how trading desks build curves on IMM dates using monotone convex interpolation (short end, <=2Y) and Nelson-Siegel modelling (long end). Auto-refresh every 30s with bid/ask spread visualisation across 9 currencies.',
-            techBadges: ['Python', 'Flask', 'QuantLib', 'React'],
-            highlights: ['9 currencies', 'IMM date grid', 'Nelson-Siegel + monotone convex'],
-            status: 'live',
-            dashboard: { component: 'PricerDashboard', defaultTab: 'curves' },
-            breadcrumb: ['Rates', 'Curve Bootstrapping', 'IMM Date Interpolation'],
-          },
         ],
       },
       {
@@ -140,19 +114,6 @@ export const topics: Topic[] = [
             dashboard: { component: 'CurveModelDashboard', defaultTab: 'methods' },
             breadcrumb: ['Rates', 'Interpolation Methods', 'Live Method Comparison'],
           },
-          {
-            id: 'interp-overview',
-            slug: 'interp-overview',
-            title: 'Method Comparison',
-            subtitle: 'Production Cubic Spline vs ConvexMonotone vs NaturalSpline',
-            description:
-              'Compare three interpolation methods used in multi-curve frameworks: the production cubic spline, Hagan-West ConvexMonotone, and Natural Cubic Spline. Understand how each method handles forward rate smoothness, monotonicity and curvature constraints.',
-            techBadges: ['C++', 'CUDA', 'QuantLib'],
-            highlights: ['3 interpolation methods', 'Forward & zero domains', 'GPU architecture pipeline'],
-            status: 'live',
-            dashboard: { component: 'CurveDashboard', defaultTab: 'overview' },
-            breadcrumb: ['Rates', 'Interpolation Methods', 'Method Comparison'],
-          },
         ],
       },
       {
@@ -170,63 +131,6 @@ export const topics: Topic[] = [
             status: 'live',
             dashboard: { component: 'CurveDashboard', defaultTab: 'sensitivities' },
             breadcrumb: ['Rates', 'Sensitivities', 'Market PV01'],
-          },
-        ],
-      },
-      {
-        label: 'Pricing',
-        leaves: [
-          {
-            id: 'swap-pricer-multi',
-            slug: 'swap-pricer-multi',
-            title: 'Swap Pricer',
-            subtitle: 'Multi-currency pricing with DV01 risk ladders',
-            description:
-              'Price interest rate swaps across 9 currencies with dual-curve framework (OIS discounting + IBOR forecasting). View DV01 risk ladders by tenor from 1M to 30Y, with live market data simulation and bid/ask spreads.',
-            techBadges: ['Python', 'Flask', 'QuantLib', 'React', 'Material-UI'],
-            highlights: ['9 currencies', 'Dual-curve pricing', 'DV01 risk ladders'],
-            status: 'live',
-            dashboard: { component: 'PricerDashboard', defaultTab: 'pricer' },
-            breadcrumb: ['Rates', 'Pricing', 'Swap Pricer'],
-          },
-          {
-            id: 'market-data-live',
-            slug: 'market-data-live',
-            title: 'Live Market Data',
-            subtitle: 'Real-time rate sheet with OIS-IBOR basis',
-            description:
-              'Live rate sheet with animated cell highlighting for updates, OIS-IBOR basis spread display, and currency-specific rate structures with market regime detection. 9 currencies with realistic bid/ask levels refreshing at instrument-specific frequencies.',
-            techBadges: ['Python', 'Flask', 'QuantLib', 'React'],
-            highlights: ['9 currencies', 'OIS-IBOR basis', 'Animated updates'],
-            status: 'live',
-            dashboard: { component: 'PricerDashboard', defaultTab: 'market-data' },
-            breadcrumb: ['Rates', 'Pricing', 'Live Market Data'],
-          },
-          {
-            id: 'realtime-swap-pricer',
-            slug: 'realtime-swap-pricer',
-            title: 'Real-Time Swap Pricer',
-            subtitle: 'WebSocket-driven live pricing across 7 currencies',
-            description:
-              'Live swap pricing via WebSocket feeds across 7 RFR benchmarks (SOFR, ESTR, SONIA, TONAR, SARON, AONIA, CORRA). Configure notional, tenor, fixed rate, direction and product type (IRS, OIS, Basis, XCCY).',
-            techBadges: ['Node.js', 'Express', 'WebSocket', 'React', 'TypeScript'],
-            highlights: ['7 currencies', '4 swap types', 'WebSocket live feeds'],
-            status: 'live',
-            dashboard: { component: 'SwapDashboard', defaultTab: 'currency' },
-            breadcrumb: ['Rates', 'Pricing', 'Real-Time Swap Pricer'],
-          },
-          {
-            id: 'swap-greeks',
-            slug: 'swap-greeks',
-            title: 'Swap Greeks',
-            subtitle: 'NPV, DV01, theta, convexity and fair rate',
-            description:
-              'Full Greeks output from the real-time pricer: NPV (present value), fair rate (zero-NPV fixed rate), DV01 (1bp parallel shift P&L), PV01 (per-year DV01), theta (daily time decay), convexity (second-order rate sensitivity), and spread vs par. Single and multi-currency curve visualisation.',
-            techBadges: ['Node.js', 'WebSocket', 'React', 'TypeScript'],
-            highlights: ['Full Greeks output', 'Fair rate calculation', 'Convexity & theta'],
-            status: 'live',
-            dashboard: { component: 'SwapDashboard', defaultTab: 'pricing' },
-            breadcrumb: ['Rates', 'Pricing', 'Swap Greeks'],
           },
         ],
       },
@@ -316,9 +220,9 @@ export const topics: Topic[] = [
             title: 'Performance Benchmarks',
             subtitle: 'GPU vs CPU curve pricing: 50-100x speedup',
             description:
-              'Benchmark 6 interpolation methods across CPU and GPU: QuantLib ConvexMonotone, CUDA ConvexMonotone, CUDA Cubic Spline, and linear interpolation variants. See how 150,000 swaps (6.3M cashflows) are priced in under 200ms on GPU versus seconds on CPU.',
+              'Benchmark curve pricing across CPU and GPU: QuantLib ConvexMonotone against its CUDA replication and linear interpolation variants. See how 150,000 swaps (6.3M cashflows) are priced in under 200ms on GPU versus seconds on CPU — every number a measured run.',
             techBadges: ['C++', 'CUDA', 'QuantLib', 'GPU'],
-            highlights: ['50-100x GPU speedup', '150k swaps in 200ms', '6 methods compared'],
+            highlights: ['50-100x GPU speedup', '150k swaps in 200ms', 'CPU baseline measured'],
             status: 'live',
             dashboard: { component: 'CurveDashboard', defaultTab: 'performance' },
             breadcrumb: ['Infrastructure', 'GPU Acceleration', 'Performance Benchmarks'],
@@ -371,42 +275,6 @@ export const topics: Topic[] = [
             status: 'live',
             dashboard: { component: 'BridgeDashboard', defaultTab: 'benchmarks' },
             breadcrumb: ['Data Engineering', 'Trade Transfer', 'Bridge Benchmarks'],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Market Data',
-    subtopics: [
-      {
-        label: 'Analytics',
-        leaves: [
-          {
-            id: 'realtime-instruments',
-            slug: 'realtime-instruments',
-            title: 'Real-Time Instrument Pricing',
-            subtitle: '26 instruments across 7 asset classes',
-            description:
-              'Real-time price cards for 26 instruments across energy (BRN, WTI, TTF), rates, FX (EUR/USD, GBP/USD, USD/JPY), equities (ES, NQ, FTSE), softs (KC, CC), credit (CDX.IG, CDX.HY) and metals (XAU, XAG). Flash highlighting with bid/offer/mid/volume and per-card sentiment scores.',
-            techBadges: ['Python', 'Flask', 'React', 'Socket.IO'],
-            highlights: ['26 instruments', '7 asset classes', 'Real-time WebSocket feeds'],
-            status: 'live',
-            dashboard: { component: 'ChatDashboard', defaultTab: 'prices' },
-            breadcrumb: ['Market Data', 'Analytics', 'Real-Time Instrument Pricing'],
-          },
-          {
-            id: 'nlp-sentiment',
-            slug: 'nlp-sentiment',
-            title: 'NLP Sentiment Analysis',
-            subtitle: 'Entity extraction and sentiment from trading chat',
-            description:
-              'See how NLP extracts entities and sentiment from trading chat messages. SpaCy performs entity extraction, TextBlob scores sentiment (-1.0 to +1.0), and a symbol mapper matches text to instruments using 40+ aliases (BRENT→BRN, CABLE→GBP/USD). Toggle between direct (100%) and pattern matching (~85%) extraction modes.',
-            techBadges: ['Python', 'SpaCy', 'TextBlob', 'Socket.IO'],
-            highlights: ['SpaCy + TextBlob pipeline', '40+ symbol aliases', 'Extraction mode comparison'],
-            status: 'live',
-            dashboard: { component: 'ChatDashboard', defaultTab: 'chat' },
-            breadcrumb: ['Market Data', 'Analytics', 'NLP Sentiment Analysis'],
           },
         ],
       },

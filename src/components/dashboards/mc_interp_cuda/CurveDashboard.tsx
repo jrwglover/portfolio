@@ -110,24 +110,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
       load('market_data_all_curves.json'),
     ]).then(([p, i, cs, perf, md]) => {
       setPillarData(p); setInterpData(i); setCsData(cs);
-      // Inject QL CS and CUDA CS rows into perf data
-      // CS kernel uses same Horner polynomial evaluation as CM → same throughput
-      // QL CS uses Thomas algorithm (tridiagonal) on CPU → similar to QL CM
-      const cudaCM = perf.find((r: PerfRow) => r.Method === 'CUDA_CM');
-      const qlCM = perf.find((r: PerfRow) => r.Method === 'QuantLib_CM');
-      const augmented = [
-        qlCM,
-        { ...qlCM, Method: 'QuantLib_CS_MinCurve', Total_Time_ms: qlCM.Total_Time_ms * 0.95,
-          Time_Per_Swap_us: qlCM.Time_Per_Swap_us * 0.95, Speedup_vs_QuantLib_CM: 1.05,
-          Error_vs_QuantLib_CM: 0 },
-        cudaCM,
-        { ...cudaCM, Method: 'CUDA_CS_MinCurve', Total_Time_ms: cudaCM.Total_Time_ms * 1.02,
-          Time_Per_Swap_us: cudaCM.Time_Per_Swap_us * 1.02,
-          Speedup_vs_QuantLib_CM: cudaCM.Speedup_vs_QuantLib_CM * 0.98,
-          Error_vs_QuantLib_CM: 0.00001 },
-        ...perf.filter((r: PerfRow) => r.Method.startsWith('CUDA_Linear')),
-      ];
-      setPerfData(augmented); setMarketData(md);
+      setPerfData(perf); setMarketData(md);
     });
   }, []);
 
