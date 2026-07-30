@@ -2,20 +2,14 @@ import { useParams, Navigate } from 'react-router-dom';
 import { getLeafBySlug } from '../config/topics';
 import CurveDashboard from './dashboards/mc_interp_cuda/CurveDashboard';
 import BondDashboard from './dashboards/bondbootstrapper/BondDashboard';
-import PricerDashboard from './dashboards/pricer/PricerDashboard';
-import SwapDashboard from './dashboards/swap_pricer/SwapDashboard';
 import VegaDashboard from './dashboards/parameter_reduction/VegaDashboard';
-import ChatDashboard from './dashboards/chat_scraper/ChatDashboard';
 import CurveModelDashboard from './dashboards/curve_model/CurveModelDashboard';
 import BridgeDashboard from './dashboards/spark_bridge/BridgeDashboard';
 
 const COMPONENTS: Record<string, React.ComponentType<any>> = {
   CurveDashboard,
   BondDashboard,
-  PricerDashboard,
-  SwapDashboard,
   VegaDashboard,
-  ChatDashboard,
   CurveModelDashboard,
   BridgeDashboard,
 };
