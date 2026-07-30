@@ -195,7 +195,7 @@ function HeatmapGrid({ label, data, maxVega }: { label: string; data: number[][]
   );
 }
 
-export default function VegaDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] } = {}) {
+export default function VegaDashboard({ breadcrumb }: { defaultTab?: string; breadcrumb?: string[] } = {}) {
   /* ── UI state ── */
   const [tab, setTab] = useState<Tab>('overview');
   const [regime, setRegime] = useState<Regime>('Medium');
@@ -521,7 +521,7 @@ export default function VegaDashboard({ defaultTab, breadcrumb }: { defaultTab?:
                       <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
                       <XAxis dataKey="name" tick={{ fill: '#55546a', fontSize: 11 }} />
                       <YAxis domain={[0.9, 1.0]} tick={{ fill: '#55546a', fontSize: 11 }} tickFormatter={(v: number) => v.toFixed(2)} />
-                      <Tooltip {...tooltipStyle} formatter={(v: number) => [v.toFixed(3), 'VRT']} />
+                      <Tooltip {...tooltipStyle} formatter={(v: any) => [v.toFixed(3), 'VRT']} />
                       <ReferenceLine y={0.95} stroke="var(--accent-red)" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: '0.95 threshold', position: 'right', fill: 'var(--accent-red)', fontSize: 10 }} />
                       <Bar dataKey="VRT" radius={[4, 4, 0, 0]}>
                         {vrtData.map((entry, i) => (
@@ -542,7 +542,7 @@ export default function VegaDashboard({ defaultTab, breadcrumb }: { defaultTab?:
                       <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
                       <XAxis dataKey="name" tick={{ fill: '#55546a', fontSize: 11 }} />
                       <YAxis tick={{ fill: '#55546a', fontSize: 11 }} tickFormatter={(v: number) => `${v}%`} />
-                      <Tooltip {...tooltipStyle} formatter={(v: number) => [`${v.toFixed(2)}%`, 'AVA']} />
+                      <Tooltip {...tooltipStyle} formatter={(v: any) => [`${v.toFixed(2)}%`, 'AVA']} />
                       <Bar dataKey="AVA%" radius={[4, 4, 0, 0]}>
                         {avaData.map((_, i) => (
                           <Cell key={i} fill={METHODS[i].color} />

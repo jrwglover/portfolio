@@ -1,4 +1,4 @@
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getLeafBySlug } from '../../config/topics';
 
 export default function Header() {
