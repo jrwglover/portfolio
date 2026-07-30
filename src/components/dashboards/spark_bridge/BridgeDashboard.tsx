@@ -95,8 +95,8 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
               The legacy export explodes every trade to one row per period and
               exercise, repeating the entire 33-field header on every row — a 25k-trade
               book becomes a million-row quarter-GB file, and the feed crawls at a
-              rate no network explains. The fix is not a faster disk: it is a format,
-              a normalization step, and parallel database connections.
+              rate no network explains. The fix is a format, a normalization step,
+              and parallel database connections.
             </p>
           </div>
         </div>
