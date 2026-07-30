@@ -1,3 +1,21 @@
+const TARGETS = [
+  {
+    n: '01',
+    goal: 'Make GPU pricing trustworthy',
+    how: 'a multi-curve rates engine whose CUDA marks match QuantLib to 3×10⁻¹⁴, verified on 174 instruments',
+  },
+  {
+    n: '02',
+    goal: 'Fix a 90-minute trade feed',
+    how: 'the end-of-day feed from trade capture to risk, rebuilt in Spark and measured at 3.6 minutes — 25× faster',
+  },
+  {
+    n: '03',
+    goal: 'Explain a bond’s yield',
+    how: 'Bund zero curves bootstrapped from prices, with yield split into risk-free, sovereign and credit spread — rebuilt live on every edit',
+  },
+];
+
 export default function Hero() {
   return (
     <section className="relative overflow-hidden">
@@ -7,7 +25,7 @@ export default function Hero() {
       />
 
       <div className="max-w-[1320px] mx-auto px-8 pt-28 pb-16">
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <p className="font-mono text-xs tracking-widest uppercase mb-6" style={{ color: 'var(--accent-warm)' }}>
             Financial Markets Engineering
           </p>
@@ -17,16 +35,27 @@ export default function Hero() {
             Johnathon Glover
           </h1>
 
-          <p className="text-lg leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Front-office pricing, risk and trade-flow infrastructure, built end to
-            end and proven with numbers: a multi-curve framework whose GPU marks tie
-            out to the reference library at machine precision; an end-of-day trade
-            feed cut from ninety minutes to under four; a government bond curve
-            engine validated to a hundredth of a basis point.
+          <p className="text-lg leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
+            I build front-office pricing, risk and trade-flow systems, and prove
+            them with numbers. Three projects, each targeting one problem:
           </p>
+
+          <ul className="space-y-4 mb-8">
+            {TARGETS.map(t => (
+              <li key={t.n} className="flex gap-4 items-baseline">
+                <span className="font-mono text-xs shrink-0" style={{ color: 'var(--accent-warm)' }}>{t.n}</span>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{t.goal}</span>
+                  <span style={{ color: 'var(--text-dim)' }}> &mdash; </span>
+                  {t.how}
+                </p>
+              </li>
+            ))}
+          </ul>
+
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-dim)' }}>
             Everything on this site runs. The curves are bootstrapped, the benchmarks
-            are measured, and the reconciliations are exact — nothing is quoted that
+            are measured, and the reconciliations are exact &mdash; nothing is quoted that
             the systems did not produce.
           </p>
 
