@@ -321,7 +321,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
         <div className="glass-card rounded-lg p-6" style={{ cursor: 'default', borderLeft: '3px solid var(--accent-purple)' }}>
           <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--accent-purple)' }}>QL CubicNaturalSpline (Standard)</h3>
           <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            QuantLib's built-in natural cubic spline. Compared against the custom MinCurvature method to demonstrate
+            QuantLib's built-in natural cubic spline. Compared against the custom production spline to demonstrate
             why the custom approach is preferred: it produces smoother curves with fewer oscillations, especially at
             the short end and around rate jumps.
           </p>
@@ -333,10 +333,10 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Architecture Pipeline</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
-            { step: '1', title: 'CPU Bootstrap', desc: 'QuantLib builds yield curves from market quotes (OIS, FRA, Swaps) using iterative bootstrapping with ConvexMonotone and CubicSpline MinCurvature interpolation.' },
+            { step: '1', title: 'CPU Bootstrap', desc: 'QuantLib builds yield curves from market quotes (OIS, FRA, Swaps) using iterative bootstrapping with ConvexMonotone and the production cubic spline interpolation.' },
             { step: '2', title: 'GPU Upload', desc: 'Pillar points (time, zero rate, forward rate) are uploaded to GPU global memory. Spline coefficients precomputed on CPU, transferred as arrays.' },
             { step: '3', title: 'CUDA Evaluation', desc: 'Each CUDA thread evaluates one cashflow: interpolate discount factor, multiply by notional, sum via parallel reduction. 150k swaps processed in parallel.' },
-            { step: '4', title: 'Comparison', desc: 'GPU results compared against QuantLib reference. ConvexMonotone matches to <1e-12. CubicSpline MinCurvature matches to <1e-14. Portfolio NPV error: $0.00004.' },
+            { step: '4', title: 'Comparison', desc: 'GPU results compared against QuantLib reference. ConvexMonotone matches to <1e-12. The production cubic spline matches to <1e-14. Portfolio NPV error: $0.00004.' },
           ].map(({ step, title, desc }) => (
             <div key={step} className="text-center">
               <div className="w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 text-xs font-mono"
@@ -400,7 +400,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
           {CURVE_SHORT[selectedCurve]} - Method Comparison ({csForCurve[0]?.Domain === 'fwd' ? 'Forward' : 'Zero'} Domain)
         </h3>
         <p className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>
-          Overlay of QL MinCurvature, CUDA MinCurvature, and QL NaturalSpline from cubicspline_comparison.json
+          Overlay of the QL production spline, its CUDA replication, and QL NaturalSpline from cubicspline_comparison.json
         </p>
         <ResponsiveContainer width="100%" height={320}>
           <LineChart data={csForCurve}>
@@ -409,8 +409,8 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
             <YAxis tick={{ fill: chartAxis, fontSize: 11 }} tickFormatter={v => fmtPct(v)} />
             <Tooltip {...tt} formatter={(v: number) => fmtPct(v)} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey="QL_MC" stroke="var(--accent-cool)" strokeWidth={2} dot={false} name="QL MinCurvature" />
-            <Line type="monotone" dataKey="CUDA_MC" stroke="var(--accent-warm)" strokeWidth={1.5} dot={false} name="CUDA MinCurvature" strokeDasharray="5 3" />
+            <Line type="monotone" dataKey="QL_MC" stroke="var(--accent-cool)" strokeWidth={2} dot={false} name="QL Production Spline" />
+            <Line type="monotone" dataKey="CUDA_MC" stroke="var(--accent-warm)" strokeWidth={1.5} dot={false} name="CUDA Production Spline" strokeDasharray="5 3" />
             <Line type="monotone" dataKey="QL_Natural" stroke="var(--accent-purple)" strokeWidth={1.5} dot={false} name="QL NaturalSpline" opacity={0.7} />
           </LineChart>
         </ResponsiveContainer>
@@ -615,7 +615,7 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
             {/* 3: QL Natural vs QL production spline */}
             <div className="glass-card rounded-lg p-6" style={{ cursor: 'default', borderTop: '2px solid var(--accent-purple)' }}>
               <h4 className="text-xs font-mono uppercase tracking-wider mb-3" style={{ color: 'var(--accent-purple)' }}>QL NaturalSpline vs Production Spline</h4>
-              <p className="text-[10px] mb-2" style={{ color: 'var(--text-dim)' }}>Shows WHY the custom MinCurvature method exists</p>
+              <p className="text-[10px] mb-2" style={{ color: 'var(--text-dim)' }}>Shows WHY the custom production spline exists</p>
               <table className="w-full text-xs">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -672,13 +672,13 @@ export default function CurveDashboard({ defaultTab, breadcrumb }: { defaultTab?
               </ResponsiveContainer>
             </div>
 
-            {/* Natural vs MinCurvature divergence */}
+            {/* Natural vs production spline divergence */}
             <div className="glass-card rounded-lg p-6" style={{ cursor: 'default' }}>
               <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                 {CURVE_SHORT[selectedCurve]} - Method Divergence
               </h3>
               <p className="text-[10px] mb-3" style={{ color: 'var(--text-dim)' }}>
-                QL NaturalSpline vs QL MinCurvature difference (shows where methods disagree)
+                QL NaturalSpline vs the QL production spline (shows where methods disagree)
               </p>
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={csForCurve.map(r => ({ Days: r.Days, Natural_vs_MC: r.Natural_vs_MC }))}>
