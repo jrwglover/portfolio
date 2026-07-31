@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
   LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ReferenceLine, ResponsiveContainer,
+  ReferenceLine, LabelList, ResponsiveContainer,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
 
@@ -46,6 +46,10 @@ interface PerfPattern { id: string; name: string; workload: string; note: string
 interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[] }
 
 const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
+const fmtMs = (v: number) =>
+  v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}s`
+    : v >= 1 ? `${v.toFixed(v >= 100 ? 0 : 1)}ms`
+      : `${v.toFixed(2)}ms`;
 const fmtCcy = (v: number | null, ccy: string) =>
   v == null ? '—' : `${CCY_SYM[ccy] ?? ''}${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
@@ -548,22 +552,30 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           {perf.patterns.map(p => {
             const base = p.lanes.find(l => l.lane === p.baseline)?.ms ?? 1;
             const data = p.lanes.map(l => ({ ...l, x: Math.max(l.ms, 0.001) }));
+            // On a log axis recharts draws bars from domain[0], so the smallest
+            // value would render zero-width. Anchor below the minimum and leave
+            // headroom above the maximum.
+            const vals = data.map(d => d.x);
+            const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals))) - 1);
+            const hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
             return (
               <div key={p.id} className="mb-10">
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{p.name}</h3>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>{p.workload}</p>
-                <ResponsiveContainer width="100%" height={40 + data.length * 38}>
-                  <BarChart data={data} layout="vertical" margin={{ left: 8, right: 60 }}>
+                <ResponsiveContainer width="100%" height={44 + data.length * 40}>
+                  <BarChart data={data} layout="vertical" margin={{ left: 8, right: 96, top: 4, bottom: 4 }}>
                     <CartesianGrid stroke={chartGrid} horizontal={false} />
-                    <XAxis type="number" scale="log" domain={['auto', 'auto']} stroke={chartAxis}
-                      tick={{ fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}s` : `${v}ms`} />
+                    <XAxis type="number" scale="log" domain={[lo, hi]} allowDataOverflow
+                      stroke={chartAxis} tick={{ fontSize: 10 }} tickFormatter={fmtMs} />
                     <YAxis type="category" dataKey="lane" width={250} stroke={chartAxis} tick={{ fontSize: 11 }} />
-                    <Tooltip {...tt} formatter={(v: any) => [
-                      Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(2)} s` : `${Number(v).toFixed(3)} ms`, 'wall clock']} />
-                    <Bar dataKey="x" isAnimationActive={false} radius={[0, 3, 3, 0]}>
+                    <Tooltip {...tt} cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                      formatter={(v: any) => [fmtMs(Number(v)), 'wall clock']} />
+                    <Bar dataKey="x" isAnimationActive={false} radius={[0, 3, 3, 0]} barSize={22}>
                       {data.map((d, i) => (
                         <Cell key={i} fill={d.kind === 'gpu' ? '#d4a853' : '#5b8fc9'} />
                       ))}
+                      <LabelList dataKey="x" position="right" formatter={(v: any) => fmtMs(Number(v))}
+                        style={{ fill: 'var(--text-secondary)', fontSize: 11, fontFamily: 'monospace' }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
