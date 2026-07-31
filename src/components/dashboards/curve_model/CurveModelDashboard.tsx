@@ -24,9 +24,14 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'sensis', label: 'Risk Ladders' },
 ];
 
-interface SensiRow { curve: string; tenor: string; base?: number; pv01: number }
+interface LadderRow { tenor: string; instrument: string; rate: number; cpu: number; gpu: number | null }
 interface FxRow { instrument: string; maturity: string; bumpType: string; pillar: string; baseQuote: number; pv01: number }
-interface Sensis { swap: string; notional: number; bump_bps: number; market: SensiRow[]; gpu: SensiRow[]; fx: FxRow[] }
+interface Trade {
+  id: string; label: string; product: string; notional: string; detail: string;
+  curves: { key: string; role: string }[]; engine: string;
+  ladders: Record<string, LadderRow[]>; hasGpu: boolean; fx?: FxRow[];
+}
+interface TradesFile { date: string; bump_bps: number; trades: Trade[] }
 
 const FX_BUMP_COLORS: Record<string, string> = {
   SPOT: '#d4a853', FXSWAP_PT: '#5eaab5', XCCY_BASIS: '#8b7ec8',
@@ -94,8 +99,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [methodCurve, setMethodCurve] = useState<'ESTR' | 'EURIBOR6M'>('ESTR');
   const [domain, setDomain] = useState<'fwd' | 'zero'>('fwd');
   const [tMax, setTMax] = useState(30);
-  const [sensis, setSensis] = useState<Sensis | null>(null);
-  const [sensiCurve, setSensiCurve] = useState<'EURIBOR6M' | 'ESTR'>('EURIBOR6M');
+  const [trades, setTrades] = useState<TradesFile | null>(null);
+  const [selTradeId, setSelTradeId] = useState('aged-euribor');
+  const [tradeCurve, setTradeCurve] = useState<string | null>(null);
   const [fxInstr, setFxInstr] = useState('5Y_FX_FWD');
 
   useEffect(() => {
@@ -103,7 +109,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     fetch(`${base}/inputs.json`).then(r => r.json()).then(setInputs).catch(() => {});
     fetch(`${base}/curves.json`).then(r => r.json()).then(setCurves).catch(() => {});
     fetch(`${base}/methods.json`).then(r => r.json()).then(setMethods).catch(() => {});
-    fetch(`${base}/sensis.json`).then(r => r.json()).then(setSensis).catch(() => {});
+    fetch(`${base}/trades.json`).then(r => r.json()).then(setTrades).catch(() => {});
   }, []);
 
   const selMkt = inputs?.curves.find(c => c.curve === selCurve);
@@ -120,22 +126,26 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     return toChart(series, ms, domain === 'fwd' ? 1 : 2, tMax);
   }, [methods, methodCurve, domain, tMax]);
 
-  const sensiChart = useMemo(() => {
-    if (!sensis) return [];
-    const gpuMap = new Map(sensis.gpu.filter(r => r.curve === sensiCurve).map(r => [r.tenor, r.pv01]));
-    return sensis.market
-      .filter(r => r.curve === sensiCurve)
-      .map(r => ({ tenor: r.tenor, cpu: +r.pv01.toFixed(2), gpu: +((gpuMap.get(r.tenor) ?? 0) as number).toFixed(2) }));
-  }, [sensis, sensiCurve]);
+  const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
+  const tradeCurveKeys = selTrade ? Object.keys(selTrade.ladders) : [];
+  const activeCurve = tradeCurve && tradeCurveKeys.includes(tradeCurve) ? tradeCurve : tradeCurveKeys[0];
+
+  const ladderChart = useMemo(() => {
+    if (!selTrade || !activeCurve) return [];
+    return (selTrade.ladders[activeCurve] ?? []).map(r => ({
+      tenor: r.tenor, instrument: r.instrument,
+      cpu: +r.cpu.toFixed(2), gpu: r.gpu == null ? undefined : +r.gpu.toFixed(2),
+    }));
+  }, [selTrade, activeCurve]);
 
   const fxInstruments = useMemo(
-    () => (sensis ? [...new Set(sensis.fx.map(r => r.instrument))] : []), [sensis]);
+    () => (selTrade?.fx ? [...new Set(selTrade.fx.map(r => r.instrument))] : []), [selTrade]);
   const fxChart = useMemo(() => {
-    if (!sensis) return [];
-    return sensis.fx
+    if (!selTrade?.fx) return [];
+    return selTrade.fx
       .filter(r => r.instrument === fxInstr)
       .map(r => ({ pillar: r.pillar, bumpType: r.bumpType, pv01: +r.pv01.toFixed(2) }));
-  }, [sensis, fxInstr]);
+  }, [selTrade, fxInstr]);
 
   const chip = (active: boolean, color: string) => ({
     border: `1px solid ${active ? color : 'var(--border-subtle)'}`,
@@ -304,83 +314,119 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
         </div>
       )}
 
-      {tab === 'sensis' && sensis && (
+      {tab === 'sensis' && trades && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Market-quote PV01 for a seasoned, broken-dated EURIBOR swap
-            (&euro;{(sensis.notional / 1e6).toFixed(0)}mm): each input instrument bumped
-            {' '}{sensis.bump_bps}bp, the whole curve family re-bootstrapped, the swap
-            repriced. Risk lands on the quotes the desk actually hedges with &mdash;
-            projection and discounting separately.
+            Market-quote PV01 per trade: every input instrument bumped {trades.bump_bps}bp,
+            the curve family re-bootstrapped, the trade repriced. One example trade per
+            curve in the framework &mdash; pick a trade to see where its risk lands.
           </p>
 
-          <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
-            {(['EURIBOR6M', 'ESTR'] as const).map(c => (
-              <button key={c} onClick={() => setSensiCurve(c)} className="px-2.5 py-1 rounded"
-                style={chip(sensiCurve === c, CURVE_COLORS[c])}>
-                {c === 'EURIBOR6M' ? 'EURIBOR 6M (projection)' : 'ESTR (discounting)'}
+          <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
+            {trades.trades.map(t => (
+              <button key={t.id} onClick={() => { setSelTradeId(t.id); setTradeCurve(null); }}
+                className="px-2.5 py-1 rounded"
+                style={chip(selTradeId === t.id, CURVE_COLORS[t.curves[0].key] ?? '#5b8fc9')}>
+                {t.label}
               </button>
             ))}
           </div>
-          <ResponsiveContainer width="100%" height={340}>
-            <BarChart data={sensiChart}>
-              <CartesianGrid stroke={chartGrid} />
-              <XAxis dataKey="tenor" stroke={chartAxis} tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={50} />
-              <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
-                tickFormatter={v => Number(v).toLocaleString()} />
-              <Tooltip {...tt} formatter={(v: any, n: any) =>
-                [`€${Number(v).toLocaleString()}`, n === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder']} />
-              <Legend formatter={(v: string) =>
-                <span style={{ fontSize: 11 }}>{v === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder'}</span>} />
-              <ReferenceLine y={0} stroke={chartAxis} />
-              <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
-              <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
-          <p className="text-xs mt-3 mb-8 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Two independent ladders: the CPU one bumps the market quote and re-runs the
-            global bootstrap, so the shock propagates through the spline; the GPU one
-            bumps the pillar directly. Where they differ is exactly what re-bootstrapping
-            adds &mdash; risk leaking to neighbouring buckets through the interpolation.
-          </p>
 
-          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-            FX &amp; cross-currency ladder
-          </h3>
-          <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap items-center">
-            {fxInstruments.map(i => (
-              <button key={i} onClick={() => setFxInstr(i)} className="px-2.5 py-1 rounded"
-                style={chip(fxInstr === i, '#4a9a68')}>{i.replace(/_/g, ' ')}</button>
-            ))}
-            <span className="ml-2 flex gap-3">
-              {Object.entries(FX_BUMP_LABELS).map(([k, l]) => (
-                <span key={k} style={{ color: FX_BUMP_COLORS[k] }}>&#9632; {l}</span>
-              ))}
-            </span>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={fxChart}>
-              <CartesianGrid stroke={chartGrid} />
-              <XAxis dataKey="pillar" stroke={chartAxis} tick={{ fontSize: 10 }} interval={0} />
-              <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
-                tickFormatter={v => Number(v).toLocaleString()} />
-              <Tooltip {...tt} formatter={(v: any) => [`€${Number(v).toLocaleString()}`, 'PV01']}
-                labelFormatter={(l: any) => `pillar ${l}`} />
-              <ReferenceLine y={0} stroke={chartAxis} />
-              <Bar dataKey="pv01" isAnimationActive={false}>
-                {fxChart.map((r, i) => (
-                  <Cell key={i} fill={FX_BUMP_COLORS[r.bumpType] ?? '#8b8a97'} />
+          {selTrade && (
+            <div className="rounded px-4 py-3 mb-5" style={{ border: '1px solid var(--border-subtle)' }}>
+              <div className="font-mono text-xs mb-1 flex gap-4 flex-wrap" style={{ color: 'var(--text-primary)' }}>
+                <span>{selTrade.product}</span>
+                <span style={{ color: 'var(--text-dim)' }}>{selTrade.notional}</span>
+              </div>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{selTrade.detail}</p>
+              <div className="font-mono text-[10px] flex gap-3 flex-wrap" style={{ color: 'var(--text-dim)' }}>
+                {selTrade.curves.map(c => (
+                  <span key={c.key}>
+                    <span style={{ color: CURVE_COLORS[c.key] ?? 'var(--text-secondary)' }}>{CURVE_LABELS[c.key] ?? c.key}</span>
+                    {' '}&middot; {c.role}
+                  </span>
                 ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The EUR-under-USD-collateral curve risked per quote: FX spot, each FX swap
-            point, each cross-currency basis pillar bumped 1bp/1pip. The risk localizes
-            &mdash; a 5Y forward&apos;s exposure sits at the 5Y basis pillar, a 10Y
-            forward&apos;s at 10Y &mdash; which is the sanity check that the
-            FX/xccy bootstrap keys each instrument to the right part of the curve.
-          </p>
+                <span>&middot; {selTrade.engine}</span>
+              </div>
+            </div>
+          )}
+
+          {selTrade && !selTrade.fx && (
+            <div>
+              <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
+                {tradeCurveKeys.map(k => (
+                  <button key={k} onClick={() => setTradeCurve(k)} className="px-2.5 py-1 rounded"
+                    style={chip(activeCurve === k, CURVE_COLORS[k] ?? '#5b8fc9')}>
+                    {CURVE_LABELS[k] ?? k}
+                  </button>
+                ))}
+              </div>
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={ladderChart}>
+                  <CartesianGrid stroke={chartGrid} />
+                  <XAxis dataKey="tenor" stroke={chartAxis} tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={50} />
+                  <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
+                    tickFormatter={v => Number(v).toLocaleString()} />
+                  <Tooltip {...tt} formatter={(v: any, n: any) =>
+                    [Number(v).toLocaleString(), n === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder']}
+                    labelFormatter={(l: any) => {
+                      const row = ladderChart.find(r => r.tenor === l);
+                      return `${l}${row ? ` · ${row.instrument}` : ''}`;
+                    }} />
+                  {selTrade.hasGpu && <Legend formatter={(v: string) =>
+                    <span style={{ fontSize: 11 }}>{v === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder'}</span>} />}
+                  <ReferenceLine y={0} stroke={chartAxis} />
+                  <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
+                  {selTrade.hasGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                {selTrade.hasGpu
+                  ? 'Two independent ladders: the CPU one bumps the market quote and re-runs the global bootstrap, so the shock propagates through the spline; the GPU one bumps the pillar directly. Where they differ is what re-bootstrapping adds — risk leaking to neighbouring buckets through the interpolation.'
+                  : 'Each bar is one market quote bumped and the curve rebuilt — the buckets are the instruments the desk hedges with.'}
+                {activeCurve === 'ESTR_ECB' && ' MTG pillars are ECB policy effective dates: the ladder is per central bank meeting.'}
+                {(activeCurve === 'ESTR_IMM' || activeCurve === 'ESTR_IMMFUT') && ' IMM pillars are quarterly futures dates.'}
+                {activeCurve === 'ESTR_IMMFUT' && ' FUT buckets are convexity-adjusted futures contracts.'}
+              </p>
+            </div>
+          )}
+
+          {selTrade?.fx && (
+            <div>
+              <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap items-center">
+                {fxInstruments.map(i => (
+                  <button key={i} onClick={() => setFxInstr(i)} className="px-2.5 py-1 rounded"
+                    style={chip(fxInstr === i, '#4a9a68')}>{i.replace(/_/g, ' ')}</button>
+                ))}
+                <span className="ml-2 flex gap-3">
+                  {Object.entries(FX_BUMP_LABELS).map(([k, l]) => (
+                    <span key={k} style={{ color: FX_BUMP_COLORS[k] }}>&#9632; {l}</span>
+                  ))}
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={fxChart}>
+                  <CartesianGrid stroke={chartGrid} />
+                  <XAxis dataKey="pillar" stroke={chartAxis} tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
+                    tickFormatter={v => Number(v).toLocaleString()} />
+                  <Tooltip {...tt} formatter={(v: any) => [`€${Number(v).toLocaleString()}`, 'PV01']}
+                    labelFormatter={(l: any) => `pillar ${l}`} />
+                  <ReferenceLine y={0} stroke={chartAxis} />
+                  <Bar dataKey="pv01" isAnimationActive={false}>
+                    {fxChart.map((r, i) => (
+                      <Cell key={i} fill={FX_BUMP_COLORS[r.bumpType] ?? '#8b8a97'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                The risk localizes &mdash; a 5Y forward&apos;s exposure sits at the 5Y basis
+                pillar, a 10Y forward&apos;s at 10Y &mdash; the sanity check that the
+                FX/xccy bootstrap keys each instrument to the right part of the curve.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
