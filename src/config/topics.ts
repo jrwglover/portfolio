@@ -122,12 +122,12 @@ export const topics: Topic[] = [
           {
             id: 'market-pv01',
             slug: 'market-pv01',
-            title: 'Market PV01',
-            subtitle: 'Trade-level bump-and-rebuild ladders across all 8 curves',
+            title: 'Trade Risk & Cashflows',
+            subtitle: 'Bump-and-rebuild ladders and full cashflow schedules, 8 trades',
             description:
-              'Market-quote PV01 trade by trade: eight example trades covering every curve in the framework — a seasoned broken-dated EURIBOR swap, swaps discounted on the ECB meeting-dated and IMM ESTR curves, ESTR/SOFR/SONIA OIS, and EUR/USD forwards on the xccy curve. Each ladder is a 1bp bump and full re-bootstrap, with per-ECB-meeting and per-futures-contract buckets and CPU vs GPU comparison.',
+              'Market-quote PV01 trade by trade: eight example trades covering every curve in the framework — a seasoned broken-dated EURIBOR swap, swaps discounted on the ECB meeting-dated and IMM ESTR curves, ESTR/SOFR/SONIA OIS, and EUR/USD forwards on the xccy curve. Each ladder is a 1bp bump and full re-bootstrap, with per-ECB-meeting and per-futures-contract buckets, followed by the trade\'s complete cashflow schedule: accrual periods, projected rates, discount factors and present values.',
             techBadges: ['C++', 'CUDA', 'QuantLib', 'GlobalBootstrap'],
-            highlights: ['8 trades, 8 curves', 'Per-meeting & per-future buckets', 'CPU vs GPU ladders'],
+            highlights: ['8 trades, 8 curves', 'Per-meeting & per-future buckets', 'Cashflow-level PV breakdown'],
             status: 'live',
             dashboard: { component: 'CurveModelDashboard', defaultTab: 'sensis' },
             breadcrumb: ['Rates', 'Sensitivities', 'Market PV01'],

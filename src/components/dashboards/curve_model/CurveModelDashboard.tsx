@@ -16,22 +16,38 @@ interface MarketCurve {
 }
 interface Inputs { date: string; fixings?: unknown[]; curves: MarketCurve[] }
 
-type Tab = 'inputs' | 'curves' | 'methods' | 'sensis';
+type Tab = 'inputs' | 'curves' | 'methods' | 'sensis' | 'perf';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
   { key: 'methods', label: 'Interpolation Methods' },
-  { key: 'sensis', label: 'Risk Ladders' },
+  { key: 'sensis', label: 'Trade Risk & Cashflows' },
+  { key: 'perf', label: 'CPU vs GPU' },
 ];
 
 interface LadderRow { tenor: string; instrument: string; rate: number; cpu: number; gpu: number | null }
 interface FxRow { instrument: string; maturity: string; bumpType: string; pillar: string; baseQuote: number; pv01: number }
+interface Cashflow {
+  leg: 'fixed' | 'float'; start: string; end: string; pay: string;
+  tau: number; rate: number; amount: number; df: number; pv: number;
+}
 interface Trade {
-  id: string; label: string; product: string; notional: string; detail: string;
+  id: string; label: string; product: string; notional: string; detail: string; ccy: string;
   curves: { key: string; role: string }[]; engine: string;
   ladders: Record<string, LadderRow[]>; hasGpu: boolean; fx?: FxRow[];
+  fairRate: number | null; npv: number | null;
+  fixedLegNpv?: number | null; floatLegNpv?: number | null;
+  cashflows: Cashflow[];
 }
 interface TradesFile { date: string; bump_bps: number; trades: Trade[] }
+
+interface PerfLane { lane: string; ms: number; kind: 'cpu' | 'gpu' }
+interface PerfPattern { id: string; name: string; workload: string; note: string; lanes: PerfLane[]; baseline: string }
+interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[] }
+
+const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
+const fmtCcy = (v: number | null, ccy: string) =>
+  v == null ? '—' : `${CCY_SYM[ccy] ?? ''}${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 const FX_BUMP_COLORS: Record<string, string> = {
   SPOT: '#d4a853', FXSWAP_PT: '#5eaab5', XCCY_BASIS: '#8b7ec8',
@@ -103,6 +119,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [selTradeId, setSelTradeId] = useState('aged-euribor');
   const [tradeCurve, setTradeCurve] = useState<string | null>(null);
   const [fxInstr, setFxInstr] = useState('5Y_FX_FWD');
+  const [perf, setPerf] = useState<PerfFile | null>(null);
+  const [cfLeg, setCfLeg] = useState<'all' | 'fixed' | 'float'>('all');
 
   useEffect(() => {
     const base = '/data/curve_model';
@@ -110,6 +128,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     fetch(`${base}/curves.json`).then(r => r.json()).then(setCurves).catch(() => {});
     fetch(`${base}/methods.json`).then(r => r.json()).then(setMethods).catch(() => {});
     fetch(`${base}/trades.json`).then(r => r.json()).then(setTrades).catch(() => {});
+    fetch(`${base}/performance.json`).then(r => r.json()).then(setPerf).catch(() => {});
   }, []);
 
   const selMkt = inputs?.curves.find(c => c.curve === selCurve);
@@ -427,6 +446,153 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               </p>
             </div>
           )}
+
+          {selTrade && selTrade.cashflows.length > 0 && (
+            <div className="mt-10">
+              <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                Cashflow schedule
+              </h3>
+              <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                Every remaining cashflow priced off the same curves as the ladder above:
+                accrual period, projected rate, amount, discount factor and present value.
+                Struck at fair so the two legs offset &mdash; the residual NPV is the
+                rounding of the quoted rate, not a mispricing.
+              </p>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 font-mono text-xs">
+                {[
+                  ['Fair rate', `${selTrade.fairRate?.toFixed(4)}%`, 'var(--text-primary)'],
+                  ['NPV', fmtCcy(selTrade.npv, selTrade.ccy), Math.abs(selTrade.npv ?? 0) < 1000 ? 'var(--accent-green)' : 'var(--text-primary)'],
+                  ['Fixed leg PV', fmtCcy(selTrade.fixedLegNpv ?? null, selTrade.ccy), 'var(--text-secondary)'],
+                  ['Float leg PV', fmtCcy(selTrade.floatLegNpv ?? null, selTrade.ccy), 'var(--text-secondary)'],
+                ].map(([k, v, col]) => (
+                  <div key={k} className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>{k}</div>
+                    <div style={{ color: col }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2 mb-3 font-mono text-[11px]">
+                {(['all', 'fixed', 'float'] as const).map(l => (
+                  <button key={l} onClick={() => setCfLeg(l)} className="px-2.5 py-1 rounded"
+                    style={chip(cfLeg === l, l === 'fixed' ? '#d4a853' : l === 'float' ? '#5eaab5' : '#5b8fc9')}>
+                    {l === 'all' ? 'both legs' : `${l} leg`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="overflow-x-auto rounded" style={{ border: '1px solid var(--border-subtle)' }}>
+                <table className="w-full font-mono text-[11px]">
+                  <thead>
+                    <tr style={{ color: 'var(--text-dim)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <th className="text-left px-3 py-2">Leg</th>
+                      <th className="text-left px-3 py-2">Accrual start</th>
+                      <th className="text-left px-3 py-2">Accrual end</th>
+                      <th className="text-left px-3 py-2">Pay</th>
+                      <th className="text-right px-3 py-2">τ</th>
+                      <th className="text-right px-3 py-2">Rate %</th>
+                      <th className="text-right px-3 py-2">Amount</th>
+                      <th className="text-right px-3 py-2">DF</th>
+                      <th className="text-right px-3 py-2">PV</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selTrade.cashflows
+                      .filter(c => cfLeg === 'all' || c.leg === cfLeg)
+                      .sort((a, b) => a.pay.localeCompare(b.pay))
+                      .map((c, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #14141f', color: 'var(--text-secondary)' }}>
+                          <td className="px-3 py-1">
+                            <span className="px-1.5 py-0.5 rounded text-[10px]"
+                              style={{
+                                background: c.leg === 'fixed' ? 'rgba(212,168,83,0.15)' : 'rgba(94,170,181,0.15)',
+                                color: c.leg === 'fixed' ? '#d4a853' : '#5eaab5',
+                              }}>{c.leg}</span>
+                          </td>
+                          <td className="px-3 py-1">{c.start}</td>
+                          <td className="px-3 py-1">{c.end}</td>
+                          <td className="px-3 py-1">{c.pay}</td>
+                          <td className="px-3 py-1 text-right">{c.tau.toFixed(4)}</td>
+                          <td className="px-3 py-1 text-right">{c.rate.toFixed(4)}</td>
+                          <td className="px-3 py-1 text-right">{fmtCcy(c.amount, selTrade.ccy)}</td>
+                          <td className="px-3 py-1 text-right">{c.df.toFixed(6)}</td>
+                          <td className="px-3 py-1 text-right" style={{ color: 'var(--text-primary)' }}>
+                            {fmtCcy(c.pv, selTrade.ccy)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              {selTrade.id === 'aged-euribor' && (
+                <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The first floating coupon accrues from before today: its rate is the
+                  historical EURIBOR 6M fixing, not a projected forward &mdash; the
+                  in-flight coupon that makes a seasoned trade different from a spot-start one.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'perf' && perf && (
+        <div>
+          <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
+            Where GPU acceleration actually pays, measured per workload pattern on this
+            machine. Bars are wall-clock milliseconds on a log scale; the multiple is
+            against the CPU baseline for that pattern.
+          </p>
+
+          {perf.patterns.map(p => {
+            const base = p.lanes.find(l => l.lane === p.baseline)?.ms ?? 1;
+            const data = p.lanes.map(l => ({ ...l, x: Math.max(l.ms, 0.001) }));
+            return (
+              <div key={p.id} className="mb-10">
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{p.name}</h3>
+                <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>{p.workload}</p>
+                <ResponsiveContainer width="100%" height={40 + data.length * 38}>
+                  <BarChart data={data} layout="vertical" margin={{ left: 8, right: 60 }}>
+                    <CartesianGrid stroke={chartGrid} horizontal={false} />
+                    <XAxis type="number" scale="log" domain={['auto', 'auto']} stroke={chartAxis}
+                      tick={{ fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}s` : `${v}ms`} />
+                    <YAxis type="category" dataKey="lane" width={250} stroke={chartAxis} tick={{ fontSize: 11 }} />
+                    <Tooltip {...tt} formatter={(v: any) => [
+                      Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(2)} s` : `${Number(v).toFixed(3)} ms`, 'wall clock']} />
+                    <Bar dataKey="x" isAnimationActive={false} radius={[0, 3, 3, 0]}>
+                      {data.map((d, i) => (
+                        <Cell key={i} fill={d.kind === 'gpu' ? '#d4a853' : '#5b8fc9'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap gap-x-6 gap-y-1 mb-2 font-mono text-[11px]">
+                  {p.lanes.filter(l => l.lane !== p.baseline).map(l => (
+                    <span key={l.lane} style={{ color: 'var(--text-dim)' }}>
+                      {l.lane}: <span style={{ color: base / l.ms >= 1 ? 'var(--accent-green)' : '#c86e6e' }}>
+                        {(base / l.ms).toFixed(base / l.ms >= 100 ? 0 : 1)}&times;
+                      </span>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs max-w-3xl" style={{ color: 'var(--text-dim)' }}>{p.note}</p>
+              </div>
+            );
+          })}
+
+          <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+            Accuracy of the accelerated path
+          </h3>
+          <div className="grid md:grid-cols-3 gap-3">
+            {perf.accuracy.map(a => (
+              <div key={a.metric} className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>{a.metric}</div>
+                <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{a.value}</div>
+                <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>{a.note}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
