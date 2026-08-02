@@ -117,6 +117,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
   const [methodCurve, setMethodCurve] = useState<'ESTR' | 'EURIBOR6M'>('ESTR');
+  const [shownMethods, setShownMethods] = useState<string[]>(
+    ['LogCubicDiscount', 'LinearZero', 'FlatForward']);
   const [domain, setDomain] = useState<'fwd' | 'zero'>('fwd');
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
@@ -181,7 +183,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
-        subtitle="From raw quotes to bootstrapped curves: 8 curves, 11 instrument types, 4 interpolation methods"
+        subtitle="From raw quotes to bootstrapped curves: 8 curves, 10 instrument types, 4 interpolation methods"
         techBadges={['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap']}
       />
 
@@ -312,6 +314,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 style={chip(tMax === x, '#8b7ec8')}>{x}Y</button>
             ))}
           </div>
+          <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
+            {Object.keys(METHOD_LABELS).map(m => (
+              <button key={m}
+                onClick={() => setShownMethods(s => s.includes(m) ? s.filter(x => x !== m) : [...s, m])}
+                className="px-2.5 py-1 rounded" style={chip(shownMethods.includes(m), METHOD_COLORS[m])}>
+                {METHOD_LABELS[m]}
+              </button>
+            ))}
+          </div>
           <ResponsiveContainer width="100%" height={420}>
             <LineChart data={methodChart}>
               <CartesianGrid stroke={chartGrid} />
@@ -322,18 +333,28 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               <Tooltip {...tt} formatter={(v: any, n: any) => [`${v.toFixed(3)}%`, METHOD_LABELS[n] ?? n]}
                 labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
               <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{METHOD_LABELS[v] ?? v}</span>} />
-              {Object.keys(METHOD_LABELS).map(m => (
+              {shownMethods.map(m => (
                 <Line key={m} dataKey={m} stroke={METHOD_COLORS[m]} dot={false} strokeWidth={1.8} isAnimationActive={false} />
               ))}
             </LineChart>
           </ResponsiveContainer>
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Same instruments, four interpolations. All four reprice the calibration set —
-            the differences between pillars are the model's freedom. Switch to forwards to
-            see why the desk choice is the cubic spline on log-discount: forwards are the
-            spline's derivative (C&sup1;), where linear-zero interpolation produces the
-            classic sawtooth and flat-forward the staircase.
+            what differs is what happens <em>between</em> pillars, which is the model&apos;s
+            freedom. In the forward domain the log-discount spline stays smooth, linear-on-zeros
+            produces the classic sawtooth and flat-forward the staircase.
           </p>
+          {!shownMethods.includes('LinearForward') && (
+            <p className="text-xs mt-2 max-w-3xl" style={{ color: '#c86e6e' }}>
+              Linear-on-forwards is off by default because it does not survive this curve.
+              Bootstrapping instantaneous forwards linearly is unstable when adjacent pillars
+              are days apart &mdash; the 1W and 2W points sit a week apart, so a fraction of a
+              basis point of discount-factor difference implies a huge forward, and linear
+              interpolation carries that error down the whole curve. Toggle it on to see it
+              swing between &minus;12% and +13%. That instability is the reason desks bootstrap
+              on discount factors or use a monotone-convex scheme rather than raw forwards.
+            </p>
+          )}
         </div>
       )}
 

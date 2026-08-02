@@ -18,13 +18,13 @@ const CASES: Case[] = [
     target:
       'Price and risk a multi-curve rates book on GPU with marks the desk can trust: every GPU number must match the QuantLib reference exactly, not approximately. Risk that does not reconcile does not go to the desk.',
     how: [
-      'Bootstrap eight interdependent curves in dependency order — ESTR discounting, EURIBOR projection, SOFR, SONIA, FX-implied EUR/USD — from eleven instrument types including IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, FX swaps and cross-currency basis.',
+      'Bootstrap eight interdependent curves in dependency order — ESTR discounting, EURIBOR projection, SOFR, SONIA, FX-implied EUR/USD — from ten instrument types including IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, FX swaps and cross-currency basis.',
       'Build the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond — the same construction the reference library uses.',
-      'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 174 calibration instruments down both paths and difference them.',
+      'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 209 calibration instruments down both paths and difference them.',
     ],
     results: [
       'GPU marks match QuantLib to 3×10⁻¹⁴ at any date on the curve',
-      '174 calibration instruments repriced identically on CPU and GPU',
+      '209 calibration instruments repriced identically on CPU and GPU',
       'PV01 ladders per market quote: per ECB meeting, per futures contract, per basis pillar',
       'Seasoned and broken-dated trades priced off historical fixings, exact to machine precision',
     ],
