@@ -5,7 +5,7 @@
    "index": "EURIBOR6M",
    "from": "2024-09-02",
    "to": "2025-09-15",
-   "rate": 0.0352
+   "rate": 0.0225
   }
  ],
  "curves": [
@@ -19,123 +19,173 @@
    "quotes": [
     {
      "tenor": "1W",
-     "rate": 0.034419,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018896
+    },
+    {
+     "tenor": "2W",
+     "instrument": "OIS",
+     "rate": 0.018871
     },
     {
      "tenor": "1M",
-     "rate": 0.034243,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018815
     },
     {
      "tenor": "2M",
-     "rate": 0.034014,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018714
     },
     {
      "tenor": "3M",
-     "rate": 0.033793,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018622
     },
     {
      "tenor": "4M",
-     "rate": 0.033558,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018529
     },
     {
      "tenor": "5M",
-     "rate": 0.033355,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018452
     },
     {
      "tenor": "6M",
-     "rate": 0.033164,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018384
+    },
+    {
+     "tenor": "7M",
+     "instrument": "OIS",
+     "rate": 0.018314
+    },
+    {
+     "tenor": "8M",
+     "instrument": "OIS",
+     "rate": 0.01825
     },
     {
      "tenor": "9M",
-     "rate": 0.032563,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018193
     },
     {
-     "tenor": "1Y",
-     "rate": 0.032001,
-     "instrument": "OIS"
+     "tenor": "10M",
+     "instrument": "OIS",
+     "rate": 0.018142
+    },
+    {
+     "tenor": "11M",
+     "instrument": "OIS",
+     "rate": 0.018094
+    },
+    {
+     "tenor": "12M",
+     "instrument": "OIS",
+     "rate": 0.018052
+    },
+    {
+     "tenor": "15M",
+     "instrument": "OIS",
+     "rate": 0.017891
     },
     {
      "tenor": "18M",
-     "rate": 0.030699,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.017793
+    },
+    {
+     "tenor": "21M",
+     "instrument": "OIS",
+     "rate": 0.017741
     },
     {
      "tenor": "2Y",
-     "rate": 0.029703,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.017727
     },
     {
      "tenor": "3Y",
-     "rate": 0.027938,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.017855
     },
     {
      "tenor": "4Y",
-     "rate": 0.026574,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018248
     },
     {
      "tenor": "5Y",
-     "rate": 0.025492,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.018789
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.019397
     },
     {
      "tenor": "7Y",
-     "rate": 0.023906,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.020025
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.020641
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.021222
     },
     {
      "tenor": "10Y",
-     "rate": 0.022389,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.021762
+    },
+    {
+     "tenor": "11Y",
+     "instrument": "OIS",
+     "rate": 0.022263
     },
     {
      "tenor": "12Y",
-     "rate": 0.021698,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.022718
     },
     {
      "tenor": "15Y",
-     "rate": 0.020934,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.023842
     },
     {
      "tenor": "20Y",
-     "rate": 0.020074,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.025102
     },
     {
      "tenor": "25Y",
-     "rate": 0.019497,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.025888
     },
     {
      "tenor": "30Y",
-     "rate": 0.019082,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.026407
     },
     {
      "tenor": "40Y",
-     "rate": 0.018526,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.027034
     },
     {
      "tenor": "50Y",
-     "rate": 0.018177,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "60Y",
-     "rate": 0.017941,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.027388
     }
    ]
   },
@@ -151,102 +201,102 @@
    "quotes": [
     {
      "tenor": "1W",
-     "rate": 0.034419,
+     "rate": 0.018896,
      "instrument": "OIS"
     },
     {
      "tenor": "1M",
-     "rate": 0.034243,
+     "rate": 0.018815,
      "instrument": "OIS"
     },
     {
      "tenor": "2M",
-     "rate": 0.034014,
+     "rate": 0.018714,
      "instrument": "OIS"
     },
     {
      "tenor": "IMM1",
-     "rate": 0.033793,
+     "rate": 0.018622,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM2",
-     "rate": 0.032246,
+     "rate": 0.018056,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM3",
-     "rate": 0.030857,
+     "rate": 0.017653,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM4",
-     "rate": 0.02961,
+     "rate": 0.017392,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM5",
-     "price": 97.147,
+     "price": 98.2707,
      "instrument": "FUTURE"
     },
     {
      "tenor": "IMM6",
-     "price": 97.2457,
+     "price": 98.2722,
      "instrument": "FUTURE"
     },
     {
      "tenor": "IMM7",
-     "price": 97.3339,
+     "price": 98.2646,
      "instrument": "FUTURE"
     },
     {
      "tenor": "IMM8",
-     "price": 97.4127,
+     "price": 98.2491,
      "instrument": "FUTURE"
     },
     {
      "tenor": "3Y",
-     "rate": 0.027938,
+     "rate": 0.017855,
      "instrument": "OIS"
     },
     {
      "tenor": "5Y",
-     "rate": 0.025492,
+     "rate": 0.018789,
      "instrument": "OIS"
     },
     {
      "tenor": "7Y",
-     "rate": 0.023906,
+     "rate": 0.020025,
      "instrument": "OIS"
     },
     {
      "tenor": "10Y",
-     "rate": 0.022389,
+     "rate": 0.021762,
      "instrument": "OIS"
     },
     {
      "tenor": "15Y",
-     "rate": 0.020934,
+     "rate": 0.023842,
      "instrument": "OIS"
     },
     {
      "tenor": "20Y",
-     "rate": 0.020074,
+     "rate": 0.025102,
      "instrument": "OIS"
     },
     {
      "tenor": "30Y",
-     "rate": 0.019082,
+     "rate": 0.026407,
      "instrument": "OIS"
     },
     {
      "tenor": "50Y",
-     "rate": 0.018177,
+     "rate": 0.027388,
      "instrument": "OIS"
     },
     {
      "tenor": "60Y",
-     "rate": 0.017941,
+     "rate": 0.027606,
      "instrument": "OIS"
     }
    ]
@@ -262,102 +312,102 @@
    "quotes": [
     {
      "tenor": "1W",
-     "rate": 0.034419,
+     "rate": 0.018896,
      "instrument": "OIS"
     },
     {
      "tenor": "1M",
-     "rate": 0.034243,
+     "rate": 0.018815,
      "instrument": "OIS"
     },
     {
      "tenor": "2M",
-     "rate": 0.034014,
+     "rate": 0.018714,
      "instrument": "OIS"
     },
     {
      "tenor": "IMM1",
-     "rate": 0.033793,
+     "rate": 0.018622,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM2",
-     "rate": 0.032246,
+     "rate": 0.018056,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM3",
-     "rate": 0.030857,
+     "rate": 0.017653,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM4",
-     "rate": 0.02961,
+     "rate": 0.017392,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM5",
-     "rate": 0.028489,
+     "rate": 0.017252,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM6",
-     "rate": 0.027481,
+     "rate": 0.017216,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM7",
-     "rate": 0.026574,
+     "rate": 0.017268,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "IMM8",
-     "rate": 0.025758,
+     "rate": 0.017393,
      "instrument": "IMM_OIS"
     },
     {
      "tenor": "3Y",
-     "rate": 0.027938,
+     "rate": 0.017855,
      "instrument": "OIS"
     },
     {
      "tenor": "5Y",
-     "rate": 0.025492,
+     "rate": 0.018789,
      "instrument": "OIS"
     },
     {
      "tenor": "7Y",
-     "rate": 0.023906,
+     "rate": 0.020025,
      "instrument": "OIS"
     },
     {
      "tenor": "10Y",
-     "rate": 0.022389,
+     "rate": 0.021762,
      "instrument": "OIS"
     },
     {
      "tenor": "15Y",
-     "rate": 0.020934,
+     "rate": 0.023842,
      "instrument": "OIS"
     },
     {
      "tenor": "20Y",
-     "rate": 0.020074,
+     "rate": 0.025102,
      "instrument": "OIS"
     },
     {
      "tenor": "30Y",
-     "rate": 0.019082,
+     "rate": 0.026407,
      "instrument": "OIS"
     },
     {
      "tenor": "50Y",
-     "rate": 0.018177,
+     "rate": 0.027388,
      "instrument": "OIS"
     },
     {
      "tenor": "60Y",
-     "rate": 0.017941,
+     "rate": 0.027606,
      "instrument": "OIS"
     }
    ]
@@ -387,127 +437,127 @@
    "quotes": [
     {
      "tenor": "1W",
-     "rate": 0.034039,
+     "rate": 0.018743,
      "instrument": "OIS"
     },
     {
      "tenor": "1M",
-     "rate": 0.034076,
+     "rate": 0.018754,
      "instrument": "OIS"
     },
     {
      "tenor": "MTG0",
-     "rate": 0.034077,
+     "rate": 0.018754,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG1",
-     "rate": 0.033386,
+     "rate": 0.018524,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG2",
-     "rate": 0.032643,
+     "rate": 0.018277,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG3",
-     "rate": 0.031894,
+     "rate": 0.018028,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG4",
-     "rate": 0.031157,
+     "rate": 0.017781,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG5",
-     "rate": 0.030642,
+     "rate": 0.017539,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG6",
-     "rate": 0.02992,
+     "rate": 0.017519,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG7",
-     "rate": 0.029418,
+     "rate": 0.017295,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG8",
-     "rate": 0.028683,
+     "rate": 0.017278,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG9",
-     "rate": 0.028179,
+     "rate": 0.017281,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG10",
-     "rate": 0.027684,
+     "rate": 0.017281,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "MTG11",
-     "rate": 0.02719,
+     "rate": 0.017276,
      "instrument": "MTG_OIS"
     },
     {
      "tenor": "18M",
-     "rate": 0.030729,
+     "rate": 0.017845,
      "instrument": "OIS"
     },
     {
      "tenor": "2Y",
-     "rate": 0.029727,
+     "rate": 0.017766,
      "instrument": "OIS"
     },
     {
      "tenor": "3Y",
-     "rate": 0.027953,
+     "rate": 0.017881,
      "instrument": "OIS"
     },
     {
      "tenor": "5Y",
-     "rate": 0.025502,
+     "rate": 0.018805,
      "instrument": "OIS"
     },
     {
      "tenor": "7Y",
-     "rate": 0.023914,
+     "rate": 0.020036,
      "instrument": "OIS"
     },
     {
      "tenor": "10Y",
-     "rate": 0.022394,
+     "rate": 0.021771,
      "instrument": "OIS"
     },
     {
      "tenor": "15Y",
-     "rate": 0.020938,
+     "rate": 0.023848,
      "instrument": "OIS"
     },
     {
      "tenor": "20Y",
-     "rate": 0.020077,
+     "rate": 0.025107,
      "instrument": "OIS"
     },
     {
      "tenor": "30Y",
-     "rate": 0.019084,
+     "rate": 0.02641,
      "instrument": "OIS"
     },
     {
      "tenor": "50Y",
-     "rate": 0.018178,
+     "rate": 0.02739,
      "instrument": "OIS"
     },
     {
      "tenor": "60Y",
-     "rate": 0.017942,
+     "rate": 0.027608,
      "instrument": "OIS"
     }
    ]
@@ -522,123 +572,173 @@
    "quotes": [
     {
      "tenor": "1W",
-     "rate": 0.043581,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.04034
+    },
+    {
+     "tenor": "2W",
+     "instrument": "OIS",
+     "rate": 0.040284
     },
     {
      "tenor": "1M",
-     "rate": 0.043474,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.040156
     },
     {
      "tenor": "2M",
-     "rate": 0.043336,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039919
     },
     {
      "tenor": "3M",
-     "rate": 0.043204,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039692
     },
     {
      "tenor": "4M",
-     "rate": 0.043061,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039446
     },
     {
      "tenor": "5M",
-     "rate": 0.042947,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.03925
     },
     {
      "tenor": "6M",
-     "rate": 0.042836,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039061
+    },
+    {
+     "tenor": "7M",
+     "instrument": "OIS",
+     "rate": 0.038857
+    },
+    {
+     "tenor": "8M",
+     "instrument": "OIS",
+     "rate": 0.038661
     },
     {
      "tenor": "9M",
-     "rate": 0.042496,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.038478
     },
     {
-     "tenor": "1Y",
-     "rate": 0.042191,
-     "instrument": "OIS"
+     "tenor": "10M",
+     "instrument": "OIS",
+     "rate": 0.038301
+    },
+    {
+     "tenor": "11M",
+     "instrument": "OIS",
+     "rate": 0.038125
+    },
+    {
+     "tenor": "12M",
+     "instrument": "OIS",
+     "rate": 0.037956
+    },
+    {
+     "tenor": "15M",
+     "instrument": "OIS",
+     "rate": 0.03722
     },
     {
      "tenor": "18M",
-     "rate": 0.041123,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.036654
+    },
+    {
+     "tenor": "21M",
+     "instrument": "OIS",
+     "rate": 0.036186
     },
     {
      "tenor": "2Y",
-     "rate": 0.040472,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.035799
     },
     {
      "tenor": "3Y",
-     "rate": 0.039204,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.034411
     },
     {
      "tenor": "4Y",
-     "rate": 0.038259,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.033574
     },
     {
      "tenor": "5Y",
-     "rate": 0.037535,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.033112
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.032911
     },
     {
      "tenor": "7Y",
-     "rate": 0.036523,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.032885
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.032976
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.033138
     },
     {
      "tenor": "10Y",
-     "rate": 0.035619,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.033343
+    },
+    {
+     "tenor": "11Y",
+     "instrument": "OIS",
+     "rate": 0.033572
     },
     {
      "tenor": "12Y",
-     "rate": 0.035232,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.033808
     },
     {
      "tenor": "15Y",
-     "rate": 0.034822,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.03449
     },
     {
      "tenor": "20Y",
-     "rate": 0.034387,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.035387
     },
     {
      "tenor": "25Y",
-     "rate": 0.03411,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.035993
     },
     {
      "tenor": "30Y",
-     "rate": 0.033919,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.036401
     },
     {
      "tenor": "40Y",
-     "rate": 0.033676,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.036889
     },
     {
      "tenor": "50Y",
-     "rate": 0.033532,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "60Y",
-     "rate": 0.033441,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.037153
     }
    ]
   },
@@ -652,123 +752,173 @@
    "quotes": [
     {
      "tenor": "1W",
-     "rate": 0.039778,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039465
+    },
+    {
+     "tenor": "2W",
+     "instrument": "OIS",
+     "rate": 0.039429
     },
     {
      "tenor": "1M",
-     "rate": 0.039703,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039348
     },
     {
      "tenor": "2M",
-     "rate": 0.039603,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039191
     },
     {
      "tenor": "3M",
-     "rate": 0.03952,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.039061
     },
     {
      "tenor": "4M",
-     "rate": 0.03943,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.038923
     },
     {
      "tenor": "5M",
-     "rate": 0.039341,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.038787
     },
     {
      "tenor": "6M",
-     "rate": 0.039265,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.038672
+    },
+    {
+     "tenor": "7M",
+     "instrument": "OIS",
+     "rate": 0.038554
+    },
+    {
+     "tenor": "8M",
+     "instrument": "OIS",
+     "rate": 0.038441
     },
     {
      "tenor": "9M",
-     "rate": 0.039034,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.03833
     },
     {
-     "tenor": "1Y",
-     "rate": 0.038823,
-     "instrument": "OIS"
+     "tenor": "10M",
+     "instrument": "OIS",
+     "rate": 0.038226
+    },
+    {
+     "tenor": "11M",
+     "instrument": "OIS",
+     "rate": 0.038118
+    },
+    {
+     "tenor": "12M",
+     "instrument": "OIS",
+     "rate": 0.038028
+    },
+    {
+     "tenor": "15M",
+     "instrument": "OIS",
+     "rate": 0.037492
     },
     {
      "tenor": "18M",
-     "rate": 0.037996,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.037105
+    },
+    {
+     "tenor": "21M",
+     "instrument": "OIS",
+     "rate": 0.036806
     },
     {
      "tenor": "2Y",
-     "rate": 0.037502,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.036575
     },
     {
      "tenor": "3Y",
-     "rate": 0.036496,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.035676
     },
     {
      "tenor": "4Y",
-     "rate": 0.035716,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.035166
     },
     {
      "tenor": "5Y",
-     "rate": 0.035106,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.034924
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.034862
     },
     {
      "tenor": "7Y",
-     "rate": 0.034219,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.034919
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.035052
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.03523
     },
     {
      "tenor": "10Y",
-     "rate": 0.03338,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.035434
+    },
+    {
+     "tenor": "11Y",
+     "instrument": "OIS",
+     "rate": 0.035646
     },
     {
      "tenor": "12Y",
-     "rate": 0.033004,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.03586
     },
     {
      "tenor": "15Y",
-     "rate": 0.032589,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.036459
     },
     {
      "tenor": "20Y",
-     "rate": 0.032128,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.03722
     },
     {
      "tenor": "25Y",
-     "rate": 0.031821,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.037728
     },
     {
      "tenor": "30Y",
-     "rate": 0.031601,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.03807
     },
     {
      "tenor": "40Y",
-     "rate": 0.031311,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.038478
     },
     {
      "tenor": "50Y",
-     "rate": 0.031132,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "60Y",
-     "rate": 0.031016,
-     "instrument": "OIS"
+     "instrument": "OIS",
+     "rate": 0.038698
     }
    ]
   },
@@ -783,112 +933,107 @@
     {
      "tenor": "6M",
      "instrument": "DEPOSIT",
-     "rate": 0.034932
+     "rate": 0.020145
     },
     {
      "tenor": "12M",
      "instrument": "FRA",
-     "rate": 0.032048
+     "rate": 0.019265
     },
     {
      "tenor": "18M",
      "instrument": "FRA",
-     "rate": 0.029704
+     "rate": 0.018918
     },
     {
-     "tenor": "IMM7",
-     "instrument": "IMM_FRA",
-     "rate": 0.027809
+     "tenor": "24M",
+     "instrument": "FRA",
+     "rate": 0.018967
     },
     {
      "tenor": "IMM9",
      "instrument": "IMM_FRA",
-     "rate": 0.026271
+     "rate": 0.019289
     },
     {
      "tenor": "3Y",
-     "rate": 0.029988,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.019778
     },
     {
      "tenor": "4Y",
-     "rate": 0.028542,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.020127
     },
     {
      "tenor": "5Y",
-     "rate": 0.027388,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.02063
     },
     {
      "tenor": "6Y",
-     "rate": 0.026454,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.021207
     },
     {
      "tenor": "7Y",
-     "rate": 0.025693,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.021815
     },
     {
      "tenor": "8Y",
-     "rate": 0.025046,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.022406
     },
     {
      "tenor": "9Y",
-     "rate": 0.024502,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.022963
     },
     {
      "tenor": "10Y",
-     "rate": 0.024035,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.023484
+    },
+    {
+     "tenor": "11Y",
+     "instrument": "IRS",
+     "rate": 0.02397
     },
     {
      "tenor": "12Y",
-     "rate": 0.023276,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.024408
     },
     {
      "tenor": "15Y",
-     "rate": 0.022426,
-     "instrument": "IRS"
-    },
-    {
-     "tenor": "17Y",
-     "rate": 0.021986,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.02549
     },
     {
      "tenor": "20Y",
-     "rate": 0.021457,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.026695
     },
     {
      "tenor": "25Y",
-     "rate": 0.020804,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.02744
     },
     {
      "tenor": "30Y",
-     "rate": 0.020333,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.027931
     },
     {
      "tenor": "40Y",
-     "rate": 0.019703,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.028522
     },
     {
      "tenor": "50Y",
-     "rate": 0.019307,
-     "instrument": "IRS"
-    },
-    {
-     "tenor": "60Y",
-     "rate": 0.019041,
-     "instrument": "IRS"
+     "instrument": "IRS",
+     "rate": 0.028852
     }
    ]
   },
@@ -903,83 +1048,108 @@
    "quotes": [
     {
      "tenor": "1M",
-     "rate": 0.001007,
+     "rate": 0.002225,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "2M",
-     "rate": 0.001996,
+     "rate": 0.004348,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "3M",
-     "rate": 0.002965,
+     "rate": 0.006371,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "6M",
-     "rate": 0.005942,
+     "rate": 0.01227,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "9M",
-     "rate": 0.009088,
+     "rate": 0.018041,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "1Y",
-     "rate": 0.012336,
+     "rate": 0.023564,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "18M",
-     "rate": 0.019,
+     "rate": 0.033762,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "2Y",
-     "rate": 0.026122,
+     "rate": 0.043311,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "3Y",
-     "rate": -0.00105,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.001255
     },
     {
      "tenor": "4Y",
-     "rate": -0.001142,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.00127
     },
     {
      "tenor": "5Y",
-     "rate": -0.001226,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.001285
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "XCCY",
+     "rate": -0.001299
     },
     {
      "tenor": "7Y",
-     "rate": -0.001376,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.001312
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "XCCY",
+     "rate": -0.001325
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "XCCY",
+     "rate": -0.001336
     },
     {
      "tenor": "10Y",
-     "rate": -0.001558,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.001347
+    },
+    {
+     "tenor": "12Y",
+     "instrument": "XCCY",
+     "rate": -0.001367
     },
     {
      "tenor": "15Y",
-     "rate": -0.001777,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.001393
     },
     {
      "tenor": "20Y",
-     "rate": -0.001921,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.001427
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "XCCY",
+     "rate": -0.001453
     },
     {
      "tenor": "30Y",
-     "rate": -0.002079,
-     "instrument": "XCCY"
+     "instrument": "XCCY",
+     "rate": -0.001473
     }
    ]
   }

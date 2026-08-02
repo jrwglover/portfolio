@@ -35,7 +35,7 @@ export const topics: Topic[] = [
             id: 'curve-data-model',
             slug: 'curve-data-model',
             title: 'Curve Market Data Model',
-            subtitle: '8 curves, 11 instrument types: quotes in, curves out',
+            subtitle: '8 curves, 10 instrument types: quotes in, curves out',
             description:
               'Explore the full market data model behind the multi-curve framework: tenor OIS, IMM-dated OIS strips, price-quoted futures with convexity adjustment, ECB meeting-dated OIS, dual-curve EURIBOR (deposits, FRAs, IMM FRAs, IRS) and the FX/xccy-implied EUR-under-USD-collateral curve. Every quote is a bootstrap constraint and a PV01 bucket.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap', 'CUDA'],
