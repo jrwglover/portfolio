@@ -107,7 +107,7 @@ export const topics: Topic[] = [
             title: 'Live Method Comparison',
             subtitle: 'Same instruments, four interpolations, overlaid',
             description:
-              'The same curve bootstrapped four ways — cubic spline on log-discount (production), linear on zeros, linear on forwards, flat forwards — overlaid in forward and zero space. All four reprice the calibration instruments; the differences between pillars are the interpolation model\'s freedom, and the forward domain shows why the log-discount cubic spline is the desk choice.',
+              'The same curve bootstrapped four ways (cubic spline on log-discount for production, linear on zeros, linear on forwards, flat forwards) overlaid in forward and zero space. All four reprice the calibration instruments; the differences between pillars are the interpolation model\'s freedom, and the forward domain shows why the log-discount cubic spline is the desk choice.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap'],
             highlights: ['4 methods overlaid', 'Forward-smoothness comparison', 'Bootstrapped live from one instrument set'],
             status: 'live',
@@ -125,7 +125,7 @@ export const topics: Topic[] = [
             title: 'Trade Risk & Cashflows',
             subtitle: 'Bump-and-rebuild ladders and full cashflow schedules, 8 trades',
             description:
-              'Market-quote PV01 trade by trade: eight example trades covering every curve in the framework — a seasoned broken-dated EURIBOR swap, swaps discounted on the ECB meeting-dated and IMM ESTR curves, ESTR/SOFR/SONIA OIS, and EUR/USD forwards on the xccy curve. Each ladder is a 1bp bump and full re-bootstrap, with per-ECB-meeting and per-futures-contract buckets, followed by the trade\'s complete cashflow schedule: accrual periods, projected rates, discount factors and present values.',
+              'Market-quote PV01 trade by trade: eight example trades covering every curve in the framework: a seasoned broken-dated EURIBOR swap, swaps discounted on the ECB meeting-dated and IMM ESTR curves, ESTR/SOFR/SONIA OIS, and EUR/USD forwards on the xccy curve. Each ladder is a 1bp bump and full re-bootstrap, with per-ECB-meeting and per-futures-contract buckets, followed by the trade\'s complete cashflow schedule: accrual periods, projected rates, discount factors and present values.',
             techBadges: ['C++', 'CUDA', 'QuantLib', 'GlobalBootstrap'],
             highlights: ['8 trades, 8 curves', 'Per-meeting & per-future buckets', 'Cashflow-level PV breakdown'],
             status: 'live',
@@ -154,91 +154,6 @@ export const topics: Topic[] = [
             status: 'live',
             dashboard: { component: 'BondDashboard', defaultTab: 'spreads' },
             breadcrumb: ['Credit', 'Curve Bootstrapping', 'Credit Curve & Decomposition'],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Volatility',
-    subtopics: [
-      {
-        label: 'Parameter Reduction',
-        leaves: [
-          {
-            id: 'vega-pca',
-            slug: 'vega-pca',
-            title: 'Vega PCA Compression',
-            subtitle: 'PCA-based options vega risk reduction under CRR2/FRTB',
-            description:
-              'Understand how PCA compresses 5 vega risk factors (ATM level, skew, convexity, term slope, wing decay) to 4 observables for regulatory capital. Compare Statistical PCA, Heston basis and SVI basis methods.',
-            techBadges: ['Python', 'NumPy', 'SciPy', 'scikit-learn', 'Plotly'],
-            highlights: ['3 PCA methods', 'Regulatory context', '5 → 4 parameter compression'],
-            status: 'analysis',
-            dashboard: { component: 'VegaDashboard', defaultTab: 'overview' },
-            breadcrumb: ['Volatility', 'Parameter Reduction', 'Vega PCA Compression'],
-          },
-          {
-            id: 'vega-analysis',
-            slug: 'vega-analysis',
-            title: 'VRT & AVA Validation',
-            subtitle: 'Variance Ratio Test and Additional Valuation Adjustment',
-            description:
-              'Run PCA decomposition across low, medium and high volatility regimes. Compare VRT pass/fail status (>95% variance retained), AVA residual risk percentage, and compression ratios across all three basis methods.',
-            techBadges: ['Python', 'NumPy', 'scikit-learn', 'Recharts'],
-            highlights: ['VRT >95% threshold', 'AVA residual metrics', '3 volatility regimes'],
-            status: 'analysis',
-            dashboard: { component: 'VegaDashboard', defaultTab: 'analysis' },
-            breadcrumb: ['Volatility', 'Parameter Reduction', 'VRT & AVA Validation'],
-          },
-          {
-            id: 'vol-surface',
-            slug: 'vol-surface',
-            title: 'Volatility Surface',
-            subtitle: 'Original vs PCA-reduced surface heatmaps',
-            description:
-              'Generate and compare original (5-parameter) vs PCA-reduced (4-parameter) volatility surface heatmaps across 8 strikes (80%-140%) and 6 expiries (1M-5Y). Analyse compression residuals colour-coded by magnitude.',
-            techBadges: ['Python', 'Plotly', 'Recharts'],
-            highlights: ['8 strikes x 6 expiries', 'Surface heatmaps', 'Residual analysis'],
-            status: 'analysis',
-            dashboard: { component: 'VegaDashboard', defaultTab: 'surface' },
-            breadcrumb: ['Volatility', 'Parameter Reduction', 'Volatility Surface'],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Infrastructure',
-    subtopics: [
-      {
-        label: 'GPU Acceleration',
-        leaves: [
-          {
-            id: 'gpu-performance',
-            slug: 'gpu-performance',
-            title: 'Performance Benchmarks',
-            subtitle: 'GPU vs CPU curve pricing: 50-100x speedup',
-            description:
-              'Benchmark curve pricing across CPU and GPU: QuantLib ConvexMonotone against its CUDA replication and linear interpolation variants. See how 150,000 swaps (6.3M cashflows) are priced in under 200ms on GPU versus seconds on CPU — every number a measured run.',
-            techBadges: ['C++', 'CUDA', 'QuantLib', 'GPU'],
-            highlights: ['50-100x GPU speedup', '150k swaps in 200ms', 'CPU baseline measured'],
-            status: 'live',
-            dashboard: { component: 'CurveDashboard', defaultTab: 'performance' },
-            breadcrumb: ['Infrastructure', 'GPU Acceleration', 'Performance Benchmarks'],
-          },
-          {
-            id: 'gpu-accuracy',
-            slug: 'gpu-accuracy',
-            title: 'Interpolation Accuracy',
-            subtitle: 'CUDA replication accuracy to 1e-14',
-            description:
-              'Verify that GPU-accelerated interpolation exactly reproduces QuantLib CPU results. Compare CUDA ConvexMonotone vs QuantLib CM (near-zero error), CUDA Cubic Spline vs QuantLib CS (1e-14 accuracy), and analyse where Natural Spline diverges from the production spline.',
-            techBadges: ['C++', 'CUDA', 'QuantLib'],
-            highlights: ['1e-14 accuracy', 'Method divergence analysis', 'Zero & forward domain comparison'],
-            status: 'live',
-            dashboard: { component: 'CurveDashboard', defaultTab: 'accuracy' },
-            breadcrumb: ['Infrastructure', 'GPU Acceleration', 'Interpolation Accuracy'],
           },
         ],
       },

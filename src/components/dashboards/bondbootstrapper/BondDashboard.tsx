@@ -417,8 +417,8 @@ export default function BondDashboard({ defaultTab, breadcrumb }: { defaultTab?:
             </LineChart>
           </ResponsiveContainer>
           <p className="text-xs mt-3 mb-6 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Three independently built curves — the reference, a bootstrap from the raw CSV,
-            and a bootstrap from engine-rebuilt schedules — overlaid. They are
+            Three independently built curves overlaid: the reference, a bootstrap from the raw CSV,
+            and a bootstrap from engine-rebuilt schedules. They are
             indistinguishable by construction: the table shows the basis-point differences.
           </p>
 

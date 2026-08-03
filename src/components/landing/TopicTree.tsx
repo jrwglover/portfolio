@@ -4,12 +4,8 @@ import TopicCard from './TopicCard';
 const topicNumbers: Record<string, string> = {
   Rates: '01',
   Credit: '02',
-  Volatility: '03',
-  Infrastructure: '04',
-  'Data Engineering': '05',
-  'Market Data': '06',
+  'Data Engineering': '03',
 };
-
 export default function TopicTree() {
   return (
     <section id="modules" className="max-w-[1320px] mx-auto px-8 py-20">

@@ -7,12 +7,12 @@ const TARGETS = [
   {
     n: '02',
     goal: 'Fix a 90-minute trade feed',
-    how: 'the end-of-day feed from trade capture to risk, rebuilt in Spark and measured at 3.6 minutes — 25× faster',
+    how: 'the end-of-day feed from trade capture to risk, rebuilt in Spark and measured at 3.6 minutes, 25× faster',
   },
   {
     n: '03',
     goal: 'Explain a bond’s yield',
-    how: 'Bund zero curves bootstrapped from prices, with yield split into risk-free, sovereign and credit spread — rebuilt live on every edit',
+    how: 'Bund zero curves bootstrapped from prices, with yield split into risk-free, sovereign and credit spread, rebuilt live on every edit',
   },
 ];
 
@@ -31,8 +31,8 @@ export default function Hero() {
           </p>
 
           <p className="text-lg leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            I solve front-office problems — pricing, risk, trade flow — and prove
-            the solutions with numbers. Three projects, each targeting one problem:
+            I solve front-office problems in pricing, risk and trade flow, and
+            prove the solutions with numbers. Three projects, each targeting one problem:
           </p>
 
           <ul className="space-y-4 mb-8">
@@ -41,7 +41,7 @@ export default function Hero() {
                 <span className="font-mono text-xs shrink-0" style={{ color: 'var(--accent-warm)' }}>{t.n}</span>
                 <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{t.goal}</span>
-                  <span style={{ color: 'var(--text-dim)' }}> &mdash; </span>
+                  <span style={{ color: 'var(--text-dim)' }}>: </span>
                   {t.how}
                 </p>
               </li>
@@ -50,7 +50,7 @@ export default function Hero() {
 
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-dim)' }}>
             Everything on this site runs. The curves are bootstrapped, the benchmarks
-            are measured, and the reconciliations are exact &mdash; nothing is quoted that
+            are measured, and the reconciliations are exact. Nothing is quoted that
             the systems did not produce.
           </p>
 

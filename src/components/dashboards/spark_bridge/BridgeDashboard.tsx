@@ -79,8 +79,8 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
             <Stat v="700MB–1GB" l="daily trade export (swaps, caps, floors, swaptions, inflation)" />
             <Stat v="~1.5 hours" l="observed write to cloud virtual disk" accent="#c86e6e" />
-            <Stat v="0.19 MB/s" l="effective throughput — a format problem, not bandwidth" accent="#c86e6e" />
-            <Stat v="25,000" l="trades in the book — shipped as 1,010,762 rows" />
+            <Stat v="0.19 MB/s" l="effective throughput: a format problem, not bandwidth" accent="#c86e6e" />
+            <Stat v="25,000" l="trades in the book, shipped as 1,010,762 rows" />
           </div>
           <div className="max-w-3xl text-sm leading-relaxed space-y-4" style={{ color: 'var(--text-secondary)' }}>
             <p>
@@ -88,12 +88,12 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
               rates and inflation non-linear business. Non-linear books are <em>low
               trade count, high structure</em>: each trade carries full schedules,
               per-caplet strike steps, Bermudan exercise dates, inflation base index
-              fixings and LPI collars — everything the platform needs to key its
+              fixings and LPI collars: everything the platform needs to key its
               normal volatility surfaces and discount and projection curves.
             </p>
             <p>
               The legacy export explodes every trade to one row per period and
-              exercise, repeating the entire 33-field header on every row — a 25k-trade
+              exercise, repeating the entire 33-field header on every row, so a 25k-trade
               book becomes a million-row quarter-GB file, and the feed crawls at a
               rate no network explains. The fix is a format, a normalization step,
               and parallel database connections.
@@ -106,9 +106,9 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
         <div>
           <div className="grid md:grid-cols-3 gap-4 mb-8">
             <Stage n="01 · PICK UP" title="Typed parallel ingest"
-              body="Spark reads the exploded pipe-delimited export with an explicit schema — no inference pass over a GB of text. Malformed rows are quarantined, never silently dropped." />
+              body="Spark reads the exploded pipe-delimited export with an explicit schema, so there is no inference pass over a GB of text. Malformed rows are quarantined, never silently dropped." />
             <Stage n="02 · PREPARE" title="Re-nest + pricing-readiness gate"
-              body="One record per trade with array<struct> period and exercise schedules — the header stored once. A readiness gate quarantines any trade that cannot key a vol lookup: missing strikes on unset caplets, missing settlement method, missing inflation base print, missing LPI collars." />
+              body="One record per trade with array<struct> period and exercise schedules, with the header stored once. A readiness gate quarantines any trade that cannot key a vol lookup: missing strikes on unset caplets, missing settlement method, missing inflation base print, missing LPI collars." />
             <Stage n="03 · WRITE" title="Parallel batched MSSQL load"
               body="Parent/child tables (trades, periods, exercises) over 8 parallel JDBC connections with 10k-row batches. Delta days stage into a MERGE by trade id and version. Counts, notionals and id-hashes reconcile after every load." />
           </div>
@@ -140,7 +140,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
             </h3>
             <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
               Transfer leg physically measured through a 0.19 MB/s token-bucket throttle
-              (legacy 927s at file size — within 0.03% of arithmetic — vs 11s for the
+              (legacy 927s at file size, within 0.03% of arithmetic, vs 11s for the
               partitioned Parquet over 8 streams)
             </p>
             <ResponsiveContainer width="100%" height={140}>
@@ -165,7 +165,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
             </h3>
             <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
               Same file, same three tables, both lanes reconciled exactly. Single-connection
-              inserts are bounded by round-trips and log flushes — the measured shape of why
+              inserts are bounded by round-trips and log flushes: the measured shape of why
               single-threaded loaders take hours.
             </p>
             <ResponsiveContainer width="100%" height={140}>
@@ -202,18 +202,18 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-              <p className="font-mono text-xs" style={{ color: '#5cb87a' }}>15.3x — repeated headers dedup away</p>
+              <p className="font-mono text-xs" style={{ color: '#5cb87a' }}>15.3x: repeated headers dedup away</p>
             </div>
             <div className="text-xs leading-relaxed space-y-3 pt-1" style={{ color: 'var(--text-secondary)' }}>
               <p>
                 <span style={{ color: 'var(--text-primary)' }}>The honest benchmark:</span> on
                 the <em>prepare</em> leg a careful single-threaded parser beats Spark at this
-                size (8.3s vs 11.9s — JVM startup and shuffle overhead are real). Every claim
+                size (8.3s vs 11.9s; JVM startup and shuffle overhead are real). Every claim
                 is attributed to its cause: compression wins the transfer, connection
                 parallelism wins the database, and single-thread code wins small-file compute.
               </p>
               <p>
-                Delta mode ships only new/amended/cancelled trades — a 20k-trade delta staged
+                Delta mode ships only new/amended/cancelled trades, so a 20k-trade delta staged
                 and MERGE'd server-side in 0.8s, leaving the steady-state daily feed at MBs, not GBs.
               </p>
             </div>
