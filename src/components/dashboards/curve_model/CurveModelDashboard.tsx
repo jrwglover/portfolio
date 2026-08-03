@@ -327,6 +327,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             curve against USD collateral. Zoom to 2.5Y with the ESTR variants selected to see
             the short-end constructions diverge.
           </p>
+          <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            EURIBOR is solved on discrete 6M forwards, one per instrument date. A FRA pins the
+            average of the instantaneous forward over its accrual window, never the forward at a
+            point, so the curve is built as the smoothest instantaneous forward satisfying every
+            one of those window averages: minimum curvature under interval-average constraints
+            rather than point constraints. That is the min-curvature objective under the
+            Hagan-West constraint, which is what makes the 6M forwards exact and the curve smooth
+            at the same time.
+          </p>
         </div>
       )}
 
