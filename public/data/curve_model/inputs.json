@@ -936,14 +936,69 @@
      "rate": 0.020145
     },
     {
+     "tenor": "7M",
+     "instrument": "FRA",
+     "rate": 0.019954
+    },
+    {
+     "tenor": "8M",
+     "instrument": "FRA",
+     "rate": 0.019778
+    },
+    {
+     "tenor": "9M",
+     "instrument": "FRA",
+     "rate": 0.019626
+    },
+    {
+     "tenor": "10M",
+     "instrument": "FRA",
+     "rate": 0.019482
+    },
+    {
+     "tenor": "11M",
+     "instrument": "FRA",
+     "rate": 0.019365
+    },
+    {
      "tenor": "12M",
      "instrument": "FRA",
      "rate": 0.019265
     },
     {
+     "tenor": "13M",
+     "instrument": "FRA",
+     "rate": 0.019173
+    },
+    {
+     "tenor": "14M",
+     "instrument": "FRA",
+     "rate": 0.019096
+    },
+    {
+     "tenor": "15M",
+     "instrument": "FRA",
+     "rate": 0.019034
+    },
+    {
+     "tenor": "16M",
+     "instrument": "FRA",
+     "rate": 0.018985
+    },
+    {
+     "tenor": "17M",
+     "instrument": "FRA",
+     "rate": 0.018946
+    },
+    {
      "tenor": "18M",
      "instrument": "FRA",
      "rate": 0.018918
+    },
+    {
+     "tenor": "21M",
+     "instrument": "FRA",
+     "rate": 0.018901
     },
     {
      "tenor": "24M",
