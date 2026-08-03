@@ -14,8 +14,6 @@ export default function App() {
           <Route path="/learn/:slug" element={<TopicDashboard />} />
           {/* Legacy redirects */}
           <Route path="/dashboard/bondbootstrapper" element={<Navigate to="/learn/govt-bonds" replace />} />
-          <Route path="/dashboard/cuda-curves" element={<Navigate to="/learn/curve-data-model" replace />} />
-          <Route path="/dashboard/vega-reduction" element={<Navigate to="/learn/vega-pca" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

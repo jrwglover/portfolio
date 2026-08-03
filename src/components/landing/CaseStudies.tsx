@@ -18,8 +18,8 @@ const CASES: Case[] = [
     target:
       'Price and risk a multi-curve rates book on GPU with marks the desk can trust: every GPU number must match the QuantLib reference exactly, not approximately. Risk that does not reconcile does not go to the desk.',
     how: [
-      'Bootstrap eight interdependent curves in dependency order — ESTR discounting, EURIBOR projection, SOFR, SONIA, FX-implied EUR/USD — from ten instrument types including IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, FX swaps and cross-currency basis.',
-      'Build the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond — the same construction the reference library uses.',
+      'Bootstrap eight interdependent curves in dependency order (ESTR discounting, EURIBOR projection, SOFR, SONIA and the FX-implied EUR/USD curve) from ten instrument types including IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, FX swaps and cross-currency basis.',
+      'Build the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond, the same construction the reference library uses.',
       'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 209 calibration instruments down both paths and difference them.',
     ],
     results: [
@@ -36,14 +36,14 @@ const CASES: Case[] = [
     n: '02',
     title: 'Front-to-Back Trade Feed',
     target:
-      'Cut the end-of-day trade feed from trade capture to the risk platform — 25,000 rates and inflation trades shipped as a 700MB–1GB extract taking 90 minutes — down to minutes, with zero trades lost or altered.',
+      'Cut the end-of-day trade feed from trade capture to the risk platform, where 25,000 rates and inflation trades shipped as a 700MB to 1GB extract taking 90 minutes, down to minutes, with zero trades lost or altered.',
     how: [
       'Diagnose the real cost: the extract serializes each trade once per cashflow period, so 25,000 structured trades become a million redundant rows crawling over a 0.19 MB/s link.',
-      'Re-normalize in flight with Spark: schedules, exercise dates and inflation fixings nested back inside each trade, written as compressed Parquet — 15.3× smaller.',
+      'Re-normalize in flight with Spark: schedules, exercise dates and inflation fixings nested back inside each trade, written as compressed Parquet, 15.3× smaller.',
       'Gate every trade for pricing readiness (strikes, settlement method, base fixings, LPI collars), load the risk database over eight parallel connections, and reconcile counts, notionals and id-hashes at every hop.',
     ],
     results: [
-      'End-of-day feed: 89 minutes to 3.6 minutes, measured — 25× faster',
+      'End-of-day feed: 89 minutes to 3.6 minutes, measured: 25× faster',
       'Database load 49× faster than the single-connection baseline, both lanes measured',
       'Extract 15.3× smaller once redundant headers are normalized away',
       'Zero breaks across 1,035,762 reconciled rows',
@@ -56,10 +56,10 @@ const CASES: Case[] = [
     n: '03',
     title: 'Government Bond Curve & Credit Spread Engine',
     target:
-      'Imply a zero curve from German government bond prices and decompose each bond’s all-in yield into risk-free, sovereign and credit spread — and rebuild the whole curve instantly when a trader overrides a spread.',
+      'Imply a zero curve from German government bond prices and decompose each bond’s all-in yield into risk-free, sovereign and credit spread, and rebuild the whole curve instantly when a trader overrides a spread.',
     how: [
       'Bootstrap the zero curve from 18 Bunds with full cashflow schedules in C++/QuantLib, on top of an OIS base curve built from ECB money-market rates.',
-      'Layer a credit-spread waterfall — risk-free plus sovereign premium plus credit spread — so every basis point of yield is attributed to a source.',
+      'Layer a credit-spread waterfall of risk-free plus sovereign premium plus credit spread, so every basis point of yield is attributed to a source.',
       'Serve it to a React front end that re-bootstraps the curve on every spread edit, with a step-through mode that shows the curve forming bond by bond.',
     ],
     results: [

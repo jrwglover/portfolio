@@ -51,7 +51,7 @@ const fmtMs = (v: number) =>
     : v >= 1 ? `${v.toFixed(v >= 100 ? 0 : 1)}ms`
       : `${v.toFixed(2)}ms`;
 const fmtCcy = (v: number | null, ccy: string) =>
-  v == null ? '—' : `${CCY_SYM[ccy] ?? ''}${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  v == null ? 'n/a' : `${CCY_SYM[ccy] ?? ''}${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 const FX_BUMP_COLORS: Record<string, string> = {
   SPOT: '#d4a853', FXSWAP_PT: '#5eaab5', XCCY_BASIS: '#8b7ec8',
@@ -339,7 +339,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             </LineChart>
           </ResponsiveContainer>
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Same instruments, four interpolations. All four reprice the calibration set —
+            Same instruments, four interpolations. All four reprice the calibration set;
             what differs is what happens <em>between</em> pillars, which is the model&apos;s
             freedom. In the forward domain the log-discount spline stays smooth, linear-on-zeros
             produces the classic sawtooth and flat-forward the staircase.
@@ -348,7 +348,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             <p className="text-xs mt-2 max-w-3xl" style={{ color: '#c86e6e' }}>
               Linear-on-forwards is off by default because it does not survive this curve.
               Bootstrapping instantaneous forwards linearly is unstable when adjacent pillars
-              are days apart &mdash; the 1W and 2W points sit a week apart, so a fraction of a
+              are days apart. The 1W and 2W points sit a week apart, so a fraction of a
               basis point of discount-factor difference implies a huge forward, and linear
               interpolation carries that error down the whole curve. Toggle it on to see it
               swing between &minus;12% and +13%. That instability is the reason desks bootstrap
@@ -363,7 +363,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
             Market-quote PV01 per trade: every input instrument bumped {trades.bump_bps}bp,
             the curve family re-bootstrapped, the trade repriced. One example trade per
-            curve in the framework &mdash; pick a trade to see where its risk lands.
+            curve in the framework. Pick a trade to see where its risk lands.
           </p>
 
           <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
@@ -426,8 +426,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               </ResponsiveContainer>
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                 {selTrade.hasGpu
-                  ? 'Two independent ladders: the CPU one bumps the market quote and re-runs the global bootstrap, so the shock propagates through the spline; the GPU one bumps the pillar directly. Where they differ is what re-bootstrapping adds — risk leaking to neighbouring buckets through the interpolation.'
-                  : 'Each bar is one market quote bumped and the curve rebuilt — the buckets are the instruments the desk hedges with.'}
+                  ? 'Two independent ladders: the CPU one bumps the market quote and re-runs the global bootstrap, so the shock propagates through the spline; the GPU one bumps the pillar directly. Where they differ is what re-bootstrapping adds: risk leaking to neighbouring buckets through the interpolation.'
+                  : 'Each bar is one market quote bumped and the curve rebuilt; the buckets are the instruments the desk hedges with.'}
                 {activeCurve === 'ESTR_ECB' && ' MTG pillars are ECB policy effective dates: the ladder is per central bank meeting.'}
                 {(activeCurve === 'ESTR_IMM' || activeCurve === 'ESTR_IMMFUT') && ' IMM pillars are quarterly futures dates.'}
                 {activeCurve === 'ESTR_IMMFUT' && ' FUT buckets are convexity-adjusted futures contracts.'}
@@ -465,8 +465,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </BarChart>
               </ResponsiveContainer>
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                The risk localizes &mdash; a 5Y forward&apos;s exposure sits at the 5Y basis
-                pillar, a 10Y forward&apos;s at 10Y &mdash; the sanity check that the
+                The risk localizes: a 5Y forward&apos;s exposure sits at the 5Y basis
+                pillar and a 10Y forward&apos;s at 10Y, the sanity check that the
                 FX/xccy bootstrap keys each instrument to the right part of the curve.
               </p>
             </div>
@@ -480,7 +480,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                 Every remaining cashflow priced off the same curves as the ladder above:
                 accrual period, projected rate, amount, discount factor and present value.
-                Struck at fair so the two legs offset &mdash; the residual NPV is the
+                Struck at fair so the two legs offset, leaving a residual NPV that is the
                 rounding of the quoted rate, not a mispricing.
               </p>
 
@@ -553,7 +553,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               {selTrade.id === 'aged-euribor' && (
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   The first floating coupon accrues from before today: its rate is the
-                  historical EURIBOR 6M fixing, not a projected forward &mdash; the
+                  historical EURIBOR 6M fixing, not a projected forward. That is the
                   in-flight coupon that makes a seasoned trade different from a spot-start one.
                 </p>
               )}
