@@ -16,11 +16,11 @@ interface MarketCurve {
 }
 interface Inputs { date: string; fixings?: unknown[]; curves: MarketCurve[] }
 
-type Tab = 'inputs' | 'curves' | 'methods' | 'sensis' | 'perf';
+type Tab = 'inputs' | 'curves' | 'domains' | 'sensis' | 'perf';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
-  { key: 'methods', label: 'Interpolation Methods' },
+  { key: 'domains', label: 'Forward / Zero / Par' },
   { key: 'sensis', label: 'Trade Risk & Cashflows' },
   { key: 'perf', label: 'CPU vs GPU' },
 ];
@@ -70,15 +70,6 @@ const CURVE_LABELS: Record<string, string> = {
   EURIBOR6M: 'EURIBOR 6M (dual-curve)', EURUSD: 'EUR under USD collateral (xccy)',
   SOFR: 'SOFR', SONIA: 'SONIA',
 };
-const METHOD_COLORS: Record<string, string> = {
-  LogCubicDiscount: '#d4a853', LinearZero: '#5eaab5',
-  LinearForward: '#8b7ec8', FlatForward: '#5cb87a',
-};
-const METHOD_LABELS: Record<string, string> = {
-  LogCubicDiscount: 'Cubic spline on log-DF (production)',
-  LinearZero: 'Linear on zeros', LinearForward: 'Linear on forwards',
-  FlatForward: 'Flat forwards (step)',
-};
 const INSTR_BADGE: Record<string, string> = {
   OIS: '#5eaab5', IMM_OIS: '#5cb87a', MTG_OIS: '#e07850', FUTURE: '#b8b04a',
   DEPOSIT: '#8b8a97', FRA: '#8b8a97', IMM_FRA: '#5cb87a', IRS: '#8b7ec8',
@@ -91,6 +82,51 @@ const tt = {
   contentStyle: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 6, fontSize: 12 },
   labelStyle: { color: '#8b8a97' },
 };
+
+/* ── Par rates implied by a bootstrapped curve ──────────────────────────────
+   The exported zero rates are continuously compounded, so DF(t) = exp(-z t).
+   For a single-curve (OIS) trade the same curve projects and discounts:
+       S(T) = (1 - DF(T)) / Σ DF(t_i)                      annual fixed leg
+   EURIBOR 6M is dual-curve, so its float leg is projected off EURIBOR and
+   every cashflow discounted on ESTR:
+       S(T) = Σ DF_d(t_j)·(DF_p(t_{j-1})/DF_p(t_j) - 1) / Σ DF_d(t_i)         */
+function zeroAt(pts: Pt[], t: number): number {
+  if (!pts.length) return 0;
+  if (t <= pts[0][0]) return pts[0][2];
+  let lo = 0, hi = pts.length - 1;
+  if (t >= pts[hi][0]) return pts[hi][2];
+  while (lo < hi - 1) { const m = (lo + hi) >> 1; if (pts[m][0] <= t) lo = m; else hi = m; }
+  const [t0, , z0] = pts[lo], [t1, , z1] = pts[hi];
+  return t1 === t0 ? z0 : z0 + (z1 - z0) * (t - t0) / (t1 - t0);
+}
+const dfAt = (pts: Pt[], t: number) => Math.exp(-(zeroAt(pts, t) / 100) * t);
+
+function parCurve(proj: Pt[], disc: Pt[] | null, tMax: number, tau: number) {
+  // tau is the fixed-leg accrual factor for a one-year period: 365/360 on an
+  // Act/360 leg (ESTR, SOFR, EURIBOR), 1.0 on Act/365 (SONIA) and 30E/360.
+  // Getting this wrong biases par by tau-1, which is 3-5bp at these levels.
+  const out: { t: number; par: number }[] = [];
+  const d = disc ?? proj;
+  const tEnd = Math.min(tMax, proj[proj.length - 1]?.[0] ?? 0, d[d.length - 1]?.[0] ?? 0);
+  for (let T = 1; T <= tEnd; T++) {
+    let annuity = 0;
+    for (let i = 1; i <= T; i++) annuity += tau * dfAt(d, i);
+    if (annuity <= 0) continue;
+    let par: number;
+    if (disc) {
+      let floatPv = 0;
+      for (let j = 1; j <= 2 * T; j++) {
+        const ta = (j - 1) / 2, tb = j / 2;
+        floatPv += dfAt(d, tb) * (dfAt(proj, ta) / dfAt(proj, tb) - 1);
+      }
+      par = floatPv / annuity;
+    } else {
+      par = (1 - dfAt(d, T)) / annuity;
+    }
+    out.push({ t: T, par: par * 100 });
+  }
+  return out;
+}
 
 function toChart(series: Record<string, Pt[]>, keys: string[], field: 1 | 2, tMax: number) {
   const base = series[keys[0]] ?? [];
@@ -113,12 +149,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [tab, setTab] = useState<Tab>((defaultTab as Tab) ?? 'inputs');
   const [inputs, setInputs] = useState<Inputs | null>(null);
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
-  const [methods, setMethods] = useState<Record<string, Record<string, Pt[]>>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
-  const [methodCurve, setMethodCurve] = useState<'ESTR' | 'EURIBOR6M'>('ESTR');
-  const [shownMethods, setShownMethods] = useState<string[]>(
-    ['LogCubicDiscount', 'LinearZero', 'FlatForward']);
+  const [domainCurve, setDomainCurve] = useState('ESTR');
   const [domain, setDomain] = useState<'fwd' | 'zero'>('fwd');
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
@@ -132,7 +165,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     const base = '/data/curve_model';
     fetch(`${base}/inputs.json`).then(r => r.json()).then(setInputs).catch(() => {});
     fetch(`${base}/curves.json`).then(r => r.json()).then(setCurves).catch(() => {});
-    fetch(`${base}/methods.json`).then(r => r.json()).then(setMethods).catch(() => {});
     fetch(`${base}/trades.json`).then(r => r.json()).then(setTrades).catch(() => {});
     fetch(`${base}/performance.json`).then(r => r.json()).then(setPerf).catch(() => {});
   }, []);
@@ -144,17 +176,19 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     () => toChart(curves, shown, domain === 'fwd' ? 1 : 2, tMax),
     [curves, shown, domain, tMax]);
 
-  const methodChart = useMemo(() => {
-    // Only the selected methods go into the rows. A hidden series left in the
-    // data still feeds the auto-scaled y-axis, and linear-on-forwards spans
-    // -17% to +22% on this curve, which flattens everything else to a line.
-    const ms = Object.keys(METHOD_LABELS)
-      .filter(m => shownMethods.includes(m) && methods[m]?.[methodCurve]);
-    if (!ms.length) return [];
-    const series: Record<string, Pt[]> = {};
-    for (const m of ms) series[m] = methods[m][methodCurve];
-    return toChart(series, ms, domain === 'fwd' ? 1 : 2, tMax);
-  }, [methods, methodCurve, domain, tMax, shownMethods]);
+  const domainSeries = useMemo(() => {
+    const pts = curves[domainCurve];
+    if (!pts?.length) return { fwd: [], par: [] as { t: number; par: number }[] };
+    const isDual = domainCurve === 'EURIBOR6M';
+    // EURIBOR pays an annual 30E/360 fixed leg (tau = 1); the OIS curves pay on
+    // their own index day count, read from the market data model.
+    const dc = inputs?.curves.find(c => c.index === domainCurve)?.day_counter ?? '';
+    const tau = isDual || dc.startsWith('Actual/365') ? 1 : 365 / 360;
+    return {
+      fwd: pts.filter(p => p[0] > 0 && p[0] <= tMax).map(p => ({ t: p[0], fwd: p[1], zero: p[2] })),
+      par: parCurve(pts, isDual ? curves.ESTR ?? null : null, tMax, tau),
+    };
+  }, [curves, inputs, domainCurve, tMax]);
 
   const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
   const tradeCurveKeys = selTrade ? Object.keys(selTrade.ladders) : [];
@@ -188,7 +222,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
-        subtitle="From raw quotes to bootstrapped curves: 8 curves, 10 instrument types, 4 interpolation methods"
+        subtitle="From raw quotes to bootstrapped curves: 8 curves, 10 instrument types, forward / zero / par views"
         techBadges={['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap']}
       />
 
@@ -303,69 +337,64 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
         </div>
       )}
 
-      {tab === 'methods' && (
+      {tab === 'domains' && (
         <div>
+          <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
+            One curve, three views. A desk reads the same bootstrapped curve in whichever
+            domain answers the question: par to quote and hedge, zero to discount, forward
+            to see what the curve actually implies about future overnight rates. All three
+            are the same object; the forward is just the most sensitive to how the curve
+            was built.
+          </p>
+
           <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
-            {(['ESTR', 'EURIBOR6M'] as const).map(c => (
-              <button key={c} onClick={() => setMethodCurve(c)} className="px-2.5 py-1 rounded"
-                style={chip(methodCurve === c, CURVE_COLORS[c])}>{CURVE_LABELS[c]}</button>
+            {curveKeys.map(k => (
+              <button key={k} onClick={() => setDomainCurve(k)} className="px-2.5 py-1 rounded"
+                style={chip(domainCurve === k, CURVE_COLORS[k])}>{CURVE_LABELS[k]}</button>
             ))}
-            {(['fwd', 'zero'] as const).map(d => (
-              <button key={d} onClick={() => setDomain(d)} className="px-2.5 py-1 rounded"
-                style={chip(domain === d, '#5eaab5')}>{d === 'fwd' ? 'forwards' : 'zeros'}</button>
-            ))}
-            {[10, 30].map(x => (
+          </div>
+          <div className="flex gap-2 mb-5 font-mono text-[11px]">
+            {[2.5, 10, 30].map(x => (
               <button key={x} onClick={() => setTMax(x)} className="px-2.5 py-1 rounded"
                 style={chip(tMax === x, '#8b7ec8')}>{x}Y</button>
             ))}
           </div>
-          <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
-            {Object.keys(METHOD_LABELS).map(m => (
-              <button key={m}
-                onClick={() => setShownMethods(s => s.includes(m) ? s.filter(x => x !== m) : [...s, m])}
-                className="px-2.5 py-1 rounded" style={chip(shownMethods.includes(m), METHOD_COLORS[m])}>
-                {METHOD_LABELS[m]}
-              </button>
-            ))}
-          </div>
-          <ResponsiveContainer width="100%" height={420}>
-            <LineChart data={methodChart}>
-              <CartesianGrid stroke={chartGrid} />
-              <XAxis dataKey="t" stroke={chartAxis} tick={{ fontSize: 11 }} type="number"
-                domain={[0, tMax]} tickFormatter={v => `${v}Y`} />
-              <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} domain={['auto', 'auto']}
-                tickFormatter={v => `${Number(v).toFixed(1)}%`} width={52} />
-              <Tooltip {...tt} formatter={(v: any, n: any) => [`${v.toFixed(3)}%`, METHOD_LABELS[n] ?? n]}
-                labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
-              <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{METHOD_LABELS[v] ?? v}</span>} />
-              {shownMethods.map(m => (
-                <Line key={m} dataKey={m} stroke={METHOD_COLORS[m]} dot={false} strokeWidth={1.8} isAnimationActive={false} />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Same instruments, four interpolations. All four reprice the calibration set;
-            what differs is what happens <em>between</em> pillars, which is the model&apos;s
-            freedom. In the forward domain the log-discount spline stays smooth, linear-on-zeros
-            produces the classic sawtooth and flat-forward the staircase.
+
+          {([
+            ['par', 'Par swap rate', 'What the market quotes: the fixed rate that prices this trade at zero today, per maturity.'],
+            ['zero', 'Zero rate', 'Continuously compounded rate to each maturity. This is the discount factor curve, and it is smooth by construction.'],
+            ['fwd', 'Instantaneous forward', 'The overnight rate the curve implies at each future date. It is the derivative of the discount curve, so every kink the build introduces shows up here first.'],
+          ] as const).map(([key, title, blurb]) => (
+            <div key={key} className="mb-8">
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
+              <p className="text-xs mb-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>{blurb}</p>
+              <ResponsiveContainer width="100%" height={230}>
+                <LineChart data={(key === 'par' ? domainSeries.par : domainSeries.fwd) as any[]}>
+                  <CartesianGrid stroke={chartGrid} />
+                  <XAxis dataKey="t" stroke={chartAxis} tick={{ fontSize: 11 }} type="number"
+                    domain={[0, tMax]} tickFormatter={v => `${v}Y`} />
+                  <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} domain={['auto', 'auto']}
+                    tickFormatter={v => `${Number(v).toFixed(2)}%`} width={58} />
+                  <Tooltip {...tt}
+                    formatter={(v: any) => [`${Number(v).toFixed(4)}%`, title]}
+                    labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
+                  <Line dataKey={key === 'par' ? 'par' : key} stroke={CURVE_COLORS[domainCurve] ?? '#5b8fc9'}
+                    dot={key === 'par' && tMax <= 10} strokeWidth={1.9} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ))}
+
+          <p className="text-xs max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            Par is rebuilt in the browser from the zero curve on this page, annual fixed leg;
+            {' '}{domainCurve === 'EURIBOR6M'
+              ? 'EURIBOR 6M is dual-curve, so its floating leg is projected off EURIBOR and every cashflow discounted on ESTR.'
+              : 'this curve both projects and discounts, so par is the OIS rate it implies.'}
+            {' '}Note how flat the par curve looks against the forward: par is an average over
+            the whole life of the trade, so it smooths away short-end structure that the
+            forward shows plainly. On the meeting-dated and IMM curves, zoom to 2.5Y and the
+            forward steps between policy dates while par barely moves.
           </p>
-          {shownMethods.includes('LinearForward') ? (
-            <p className="text-xs mt-2 max-w-3xl" style={{ color: '#c86e6e' }}>
-              <strong>That wild line is the point, not a plotting bug.</strong> Linear-on-forwards
-              fails on this instrument set: it spans &minus;16.9% to +21.6% on ESTR. Bootstrapping
-              instantaneous forwards linearly is unstable when adjacent pillars are days apart,
-              and the 1W and 2W quotes sit one week apart, so a fraction of a basis point of
-              discount-factor difference implies an enormous forward that the linear scheme then
-              carries down the curve. It is the reason desks bootstrap on discount factors, or use
-              a monotone-convex scheme, rather than on raw forwards. Untick it to compare the three
-              methods that do work.
-            </p>
-          ) : (
-            <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              Linear-on-forwards is hidden by default: it does not survive this instrument set,
-              spanning &minus;16.9% to +21.6% on ESTR. Tick it to see the failure and why.
-            </p>
-          )}
         </div>
       )}
 
