@@ -16,11 +16,10 @@ interface MarketCurve {
 }
 interface Inputs { date: string; fixings?: unknown[]; curves: MarketCurve[] }
 
-type Tab = 'inputs' | 'curves' | 'domains' | 'sensis' | 'perf';
+type Tab = 'inputs' | 'curves' | 'sensis' | 'perf';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
-  { key: 'domains', label: 'Forward / Zero / Par' },
   { key: 'sensis', label: 'Trade Risk & Cashflows' },
   { key: 'perf', label: 'CPU vs GPU' },
 ];
@@ -101,49 +100,7 @@ function zeroAt(pts: Pt[], t: number): number {
 }
 const dfAt = (pts: Pt[], t: number) => Math.exp(-(zeroAt(pts, t) / 100) * t);
 
-function parCurve(proj: Pt[], disc: Pt[] | null, tMax: number, tau: number) {
-  // tau is the fixed-leg accrual factor for a one-year period: 365/360 on an
-  // Act/360 leg (ESTR, SOFR, EURIBOR), 1.0 on Act/365 (SONIA) and 30E/360.
-  // Getting this wrong biases par by tau-1, which is 3-5bp at these levels.
-  const out: { t: number; par: number }[] = [];
-  const d = disc ?? proj;
-  const tEnd = Math.min(tMax, proj[proj.length - 1]?.[0] ?? 0, d[d.length - 1]?.[0] ?? 0);
-  for (let T = 1; T <= tEnd; T++) {
-    let annuity = 0;
-    for (let i = 1; i <= T; i++) annuity += tau * dfAt(d, i);
-    if (annuity <= 0) continue;
-    let par: number;
-    if (disc) {
-      let floatPv = 0;
-      for (let j = 1; j <= 2 * T; j++) {
-        const ta = (j - 1) / 2, tb = j / 2;
-        floatPv += dfAt(d, tb) * (dfAt(proj, ta) / dfAt(proj, tb) - 1);
-      }
-      par = floatPv / annuity;
-    } else {
-      par = (1 - dfAt(d, T)) / annuity;
-    }
-    out.push({ t: T, par: par * 100 });
-  }
-  return out;
-}
 
-function toChart(series: Record<string, Pt[]>, keys: string[], field: 1 | 2, tMax: number) {
-  const base = series[keys[0]] ?? [];
-  return base
-    .filter(p => p[0] <= tMax)
-    .map(p => {
-      const row: Record<string, number> = { t: p[0] };
-      for (const k of keys) {
-        const arr = series[k];
-        if (!arr) continue;
-        // arrays share the same t-grid per extraction; guard by nearest index
-        const idx = arr.findIndex(q => q[0] >= p[0]);
-        if (idx >= 0) row[k] = arr[idx][field];
-      }
-      return row;
-    });
-}
 
 export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] }) {
   const [tab, setTab] = useState<Tab>((defaultTab as Tab) ?? 'inputs');
@@ -151,8 +108,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
-  const [domainCurve, setDomainCurve] = useState('ESTR');
-  const [domain, setDomain] = useState<'fwd' | 'zero'>('fwd');
+  const [domain, setDomain] = useState<'fwd' | 'zero' | 'df'>('fwd');
+  const [fwdTenor, setFwdTenor] = useState(0.25);
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
   const [selTradeId, setSelTradeId] = useState('aged-euribor');
@@ -172,23 +129,29 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const selMkt = inputs?.curves.find(c => c.curve === selCurve);
   const curveKeys = Object.keys(CURVE_LABELS).filter(k => curves[k]);
 
-  const outChart = useMemo(
-    () => toChart(curves, shown, domain === 'fwd' ? 1 : 2, tMax),
-    [curves, shown, domain, tMax]);
-
-  const domainSeries = useMemo(() => {
-    const pts = curves[domainCurve];
-    if (!pts?.length) return { fwd: [], par: [] as { t: number; par: number }[] };
-    const isDual = domainCurve === 'EURIBOR6M';
-    // EURIBOR pays an annual 30E/360 fixed leg (tau = 1); the OIS curves pay on
-    // their own index day count, read from the market data model.
-    const dc = inputs?.curves.find(c => c.index === domainCurve)?.day_counter ?? '';
-    const tau = isDual || dc.startsWith('Actual/365') ? 1 : 365 / 360;
-    return {
-      fwd: pts.filter(p => p[0] > 0 && p[0] <= tMax).map(p => ({ t: p[0], fwd: p[1], zero: p[2] })),
-      par: parCurve(pts, isDual ? curves.ESTR ?? null : null, tMax, tau),
-    };
-  }, [curves, inputs, domainCurve, tMax]);
+  // One chart, three domains. Discrete forwards are period rates off the same
+  // discount curve, so they show what a FRA or future pays rather than the
+  // derivative of the spline.
+  const curveChart = useMemo(() => {
+    const keys = shown.filter(k => curves[k]?.length);
+    if (!keys.length) return [];
+    const grid: number[] = [];
+    const step = tMax <= 2.5 ? 1 / 52 : tMax <= 10 ? 1 / 12 : 1 / 4;
+    for (let t = step; t <= tMax + 1e-9; t += step) grid.push(+t.toFixed(6));
+    return grid.map(t => {
+      const row: Record<string, number> = { t };
+      for (const k of keys) {
+        const pts = curves[k];
+        if (domain === 'zero') row[k] = zeroAt(pts, t);
+        else if (domain === 'df') row[k] = dfAt(pts, t);
+        else {
+          const d1 = dfAt(pts, t), d2 = dfAt(pts, t + fwdTenor);
+          if (d1 > 0 && d2 > 0) row[k] = (Math.log(d1 / d2) / fwdTenor) * 100;
+        }
+      }
+      return row;
+    });
+  }, [curves, shown, domain, tMax, fwdTenor]);
 
   const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
   const tradeCurveKeys = selTrade ? Object.keys(selTrade.ladders) : [];
@@ -295,6 +258,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
       {tab === 'curves' && (
         <div>
+          <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
+            Every curve, in whichever domain answers the question. Discrete forwards are the
+            {' '}{fwdTenor === 0.25 ? '3M' : '6M'} rate a FRA or future actually pays, so they average out the
+            interpolation and are directly comparable to the quotes on the Market Data Model
+            tab. Zero rates discount cashflows; discount factors are the raw solved quantity.
+          </p>
+
           <div className="flex gap-2 mb-3 flex-wrap items-center">
             {curveKeys.map(k => (
               <button key={k}
@@ -303,24 +273,40 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 style={chip(shown.includes(k), CURVE_COLORS[k])}>{CURVE_LABELS[k]}</button>
             ))}
           </div>
-          <div className="flex gap-2 mb-5 font-mono text-[11px]">
-            {(['fwd', 'zero'] as const).map(d => (
-              <button key={d} onClick={() => setDomain(d)} className="px-2.5 py-1 rounded"
-                style={chip(domain === d, '#5eaab5')}>{d === 'fwd' ? 'instantaneous forwards' : 'zero rates'}</button>
-            ))}
+
+          <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap items-center">
+            {([['fwd', 'discrete forwards'], ['zero', 'zero rates'], ['df', 'discount factors']] as const)
+              .map(([d, label]) => (
+                <button key={d} onClick={() => setDomain(d)} className="px-2.5 py-1 rounded"
+                  style={chip(domain === d, '#5eaab5')}>{label}</button>
+              ))}
+            <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
             {[2.5, 10, 30].map(x => (
               <button key={x} onClick={() => setTMax(x)} className="px-2.5 py-1 rounded"
                 style={chip(tMax === x, '#8b7ec8')}>{x}Y</button>
             ))}
+            {domain === 'fwd' && (
+              <>
+                <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
+                {[[0.25, '3M'], [0.5, '6M']].map(([v, l]) => (
+                  <button key={l as string} onClick={() => setFwdTenor(v as number)} className="px-2.5 py-1 rounded"
+                    style={chip(fwdTenor === v, '#d4a853')}>{l as string}</button>
+                ))}
+              </>
+            )}
           </div>
-          <ResponsiveContainer width="100%" height={420}>
-            <LineChart data={outChart}>
+
+          <ResponsiveContainer width="100%" height={440}>
+            <LineChart data={curveChart}>
               <CartesianGrid stroke={chartGrid} />
               <XAxis dataKey="t" stroke={chartAxis} tick={{ fontSize: 11 }} type="number"
                 domain={[0, tMax]} tickFormatter={v => `${v}Y`} />
-              <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} domain={['auto', 'auto']}
-                tickFormatter={v => `${Number(v).toFixed(1)}%`} width={52} />
-              <Tooltip {...tt} formatter={(v: any, n: any) => [`${v.toFixed(3)}%`, CURVE_LABELS[n] ?? n]}
+              <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} domain={['auto', 'auto']} width={62}
+                tickFormatter={v => domain === 'df' ? Number(v).toFixed(3) : `${Number(v).toFixed(2)}%`} />
+              <Tooltip {...tt}
+                formatter={(v: any, n: any) => [
+                  domain === 'df' ? Number(v).toFixed(6) : `${Number(v).toFixed(4)}%`,
+                  CURVE_LABELS[n] ?? n]}
                 labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
               <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{CURVE_LABELS[v] ?? v}</span>} />
               {shown.map(k => (
@@ -328,72 +314,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               ))}
             </LineChart>
           </ResponsiveContainer>
+
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Zoom to 2.5Y with the ESTR variants selected to see the short-end constructions:
-            the ECB curve steps at policy effective dates, the IMM curves quarterly, the
-            tenor curve glides. All four reprice their instruments exactly; the GPU evaluates
-            the identical spline to 3&times;10<sup>-14</sup>.
-          </p>
-        </div>
-      )}
-
-      {tab === 'domains' && (
-        <div>
-          <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            One curve, three views. A desk reads the same bootstrapped curve in whichever
-            domain answers the question: par to quote and hedge, zero to discount, forward
-            to see what the curve actually implies about future overnight rates. All three
-            are the same object; the forward is just the most sensitive to how the curve
-            was built.
-          </p>
-
-          <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
-            {curveKeys.map(k => (
-              <button key={k} onClick={() => setDomainCurve(k)} className="px-2.5 py-1 rounded"
-                style={chip(domainCurve === k, CURVE_COLORS[k])}>{CURVE_LABELS[k]}</button>
-            ))}
-          </div>
-          <div className="flex gap-2 mb-5 font-mono text-[11px]">
-            {[2.5, 10, 30].map(x => (
-              <button key={x} onClick={() => setTMax(x)} className="px-2.5 py-1 rounded"
-                style={chip(tMax === x, '#8b7ec8')}>{x}Y</button>
-            ))}
-          </div>
-
-          {([
-            ['par', 'Par swap rate', 'What the market quotes: the fixed rate that prices this trade at zero today, per maturity.'],
-            ['zero', 'Zero rate', 'Continuously compounded rate to each maturity. This is the discount factor curve, and it is smooth by construction.'],
-            ['fwd', 'Instantaneous forward', 'The overnight rate the curve implies at each future date. It is the derivative of the discount curve, so every kink the build introduces shows up here first.'],
-          ] as const).map(([key, title, blurb]) => (
-            <div key={key} className="mb-8">
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
-              <p className="text-xs mb-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>{blurb}</p>
-              <ResponsiveContainer width="100%" height={230}>
-                <LineChart data={(key === 'par' ? domainSeries.par : domainSeries.fwd) as any[]}>
-                  <CartesianGrid stroke={chartGrid} />
-                  <XAxis dataKey="t" stroke={chartAxis} tick={{ fontSize: 11 }} type="number"
-                    domain={[0, tMax]} tickFormatter={v => `${v}Y`} />
-                  <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} domain={['auto', 'auto']}
-                    tickFormatter={v => `${Number(v).toFixed(2)}%`} width={58} />
-                  <Tooltip {...tt}
-                    formatter={(v: any) => [`${Number(v).toFixed(4)}%`, title]}
-                    labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
-                  <Line dataKey={key === 'par' ? 'par' : key} stroke={CURVE_COLORS[domainCurve] ?? '#5b8fc9'}
-                    dot={key === 'par' && tMax <= 10} strokeWidth={1.9} isAnimationActive={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ))}
-
-          <p className="text-xs max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Par is rebuilt in the browser from the zero curve on this page, annual fixed leg;
-            {' '}{domainCurve === 'EURIBOR6M'
-              ? 'EURIBOR 6M is dual-curve, so its floating leg is projected off EURIBOR and every cashflow discounted on ESTR.'
-              : 'this curve both projects and discounts, so par is the OIS rate it implies.'}
-            {' '}Note how flat the par curve looks against the forward: par is an average over
-            the whole life of the trade, so it smooths away short-end structure that the
-            forward shows plainly. On the meeting-dated and IMM curves, zoom to 2.5Y and the
-            forward steps between policy dates while par barely moves.
+            Each curve is solved in the domain its instruments pin: the OIS strips on zero
+            rates, the meeting-dated and IMM curves as flat forwards between policy or IMM
+            dates joined to a min-curvature spline, and the EUR/USD curve as an implied zero
+            curve against USD collateral. Zoom to 2.5Y with the ESTR variants selected to see
+            the short-end constructions diverge.
           </p>
         </div>
       )}
