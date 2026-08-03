@@ -187,7 +187,8 @@
      "instrument": "OIS",
      "rate": 0.023524
     }
-   ]
+   ],
+   "interpolation": "CubicSplineMinCurve"
   },
   {
    "curve": "EUR_ESTR_IMMFUT",
@@ -334,7 +335,8 @@
      "instrument": "OIS",
      "rate": 0.023524
     }
-   ]
+   ],
+   "interpolation": "CubicSplineMinCurve"
   },
   {
    "curve": "EUR_ESTR_IMM",
@@ -480,7 +482,8 @@
      "instrument": "OIS",
      "rate": 0.023524
     }
-   ]
+   ],
+   "interpolation": "CubicSplineMinCurve"
   },
   {
    "curve": "EUR_ESTR_ECB",
@@ -660,7 +663,8 @@
      "instrument": "OIS",
      "rate": 0.023523
     }
-   ]
+   ],
+   "interpolation": "CubicSplineMinCurve"
   },
   {
    "curve": "USD_SOFR",
@@ -840,7 +844,8 @@
      "instrument": "OIS",
      "rate": 0.035855
     }
-   ]
+   ],
+   "interpolation": "CubicSplineMinCurve"
   },
   {
    "curve": "GBP_SONIA",
@@ -1020,7 +1025,8 @@
      "instrument": "OIS",
      "rate": 0.035725
     }
-   ]
+   ],
+   "interpolation": "CubicSplineMinCurve"
   },
   {
    "curve": "EUR_EURIBOR6M",
@@ -1190,7 +1196,8 @@
      "instrument": "IRS",
      "rate": 0.024917
     }
-   ]
+   ],
+   "interpolation": "DiscreteForwardSplineCM"
   },
   {
    "curve": "EUR_USD_XCCY",
@@ -1306,7 +1313,9 @@
      "instrument": "XCCY",
      "rate": -0.001473
     }
-   ]
+   ],
+   "interpolation": "CubicSplineMinCurve"
   }
- ]
+ ],
+ "_provenance": "Synthetic market quotes, frozen. Each quote was implied once from a single arbitrage-free discount curve using the exact conventions of the rate helper that consumes it, so the set is mutually consistent. From here the pipeline bootstraps these quotes and nothing else - there is no parametric term-structure model in the runtime path."
 }
