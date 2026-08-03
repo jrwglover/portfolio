@@ -135,9 +135,14 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const curveChart = useMemo(() => {
     const keys = shown.filter(k => curves[k]?.length);
     if (!keys.length) return [];
+    // A period forward at t needs data out to t + tenor. Past the last
+    // exported point the zero clamps flat, which fabricates a rising forward
+    // at the right edge, so stop the series before that happens.
+    const lastT = Math.min(...keys.map(k => curves[k][curves[k].length - 1][0]));
+    const end = Math.min(tMax, domain === 'fwd' ? lastT - fwdTenor : lastT);
     const grid: number[] = [];
     const step = tMax <= 2.5 ? 1 / 52 : tMax <= 10 ? 1 / 12 : 1 / 4;
-    for (let t = step; t <= tMax + 1e-9; t += step) grid.push(+t.toFixed(6));
+    for (let t = step; t <= end + 1e-9; t += step) grid.push(+t.toFixed(6));
     return grid.map(t => {
       const row: Record<string, number> = { t };
       for (const k of keys) {
