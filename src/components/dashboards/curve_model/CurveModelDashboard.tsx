@@ -100,6 +100,21 @@ function zeroAt(pts: Pt[], t: number): number {
 }
 const dfAt = (pts: Pt[], t: number) => Math.exp(-(zeroAt(pts, t) / 100) * t);
 
+/* Instantaneous forward, read straight off the exported column and held
+   piecewise constant between points. A period forward averages over its tenor,
+   which smooths clean across the meeting-dated and IMM plateaus - a 3M average
+   over ~6-week ECB steps erases them entirely - so the step construction is
+   only visible here. Left-continuous lookup on purpose: interpolating would
+   slant the risers and make the steps look like a curve. */
+function instAt(pts: Pt[], t: number): number {
+  if (!pts.length) return 0;
+  if (t <= pts[0][0]) return pts[0][1];
+  let lo = 0, hi = pts.length - 1;
+  if (t >= pts[hi][0]) return pts[hi][1];
+  while (lo < hi - 1) { const m = (lo + hi) >> 1; if (pts[m][0] <= t) lo = m; else hi = m; }
+  return pts[lo][1];
+}
+
 
 
 export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] }) {
@@ -108,7 +123,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
-  const [domain, setDomain] = useState<'fwd' | 'zero' | 'df'>('fwd');
+  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df'>('fwd');
   const [fwdTenor, setFwdTenor] = useState(0.25);
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
@@ -129,9 +144,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const selMkt = inputs?.curves.find(c => c.curve === selCurve);
   const curveKeys = Object.keys(CURVE_LABELS).filter(k => curves[k]);
 
-  // One chart, three domains. Discrete forwards are period rates off the same
-  // discount curve, so they show what a FRA or future pays rather than the
-  // derivative of the spline.
+  // One chart, four domains. Discrete forwards are period rates off the same
+  // discount curve, so they show what a FRA or future pays; the instantaneous
+  // forward is the curve's own local rate, which is where the meeting-dated and
+  // IMM step construction is actually visible.
   const curveChart = useMemo(() => {
     const keys = shown.filter(k => curves[k]?.length);
     if (!keys.length) return [];
@@ -140,8 +156,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     // at the right edge, so stop the series before that happens.
     const lastT = Math.min(...keys.map(k => curves[k][curves[k].length - 1][0]));
     const end = Math.min(tMax, domain === 'fwd' ? lastT - fwdTenor : lastT);
+    // the step region lives inside ~2Y, so sample finely enough to resolve it
+    const fine = domain === 'inst' && tMax <= 10;
     const grid: number[] = [];
-    const step = tMax <= 2.5 ? 1 / 52 : tMax <= 10 ? 1 / 12 : 1 / 4;
+    const step = fine ? 1 / 104 : tMax <= 2.5 ? 1 / 52 : tMax <= 10 ? 1 / 12 : 1 / 4;
     for (let t = step; t <= end + 1e-9; t += step) grid.push(+t.toFixed(6));
     return grid.map(t => {
       const row: Record<string, number> = { t };
@@ -149,6 +167,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
         const pts = curves[k];
         if (domain === 'zero') row[k] = zeroAt(pts, t);
         else if (domain === 'df') row[k] = dfAt(pts, t);
+        else if (domain === 'inst') row[k] = instAt(pts, t);
         else {
           const d1 = dfAt(pts, t), d2 = dfAt(pts, t + fwdTenor);
           if (d1 > 0 && d2 > 0) row[k] = (Math.log(d1 / d2) / fwdTenor) * 100;
@@ -280,7 +299,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           </div>
 
           <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap items-center">
-            {([['fwd', 'discrete forwards'], ['zero', 'zero rates'], ['df', 'discount factors']] as const)
+            {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'], ['zero', 'zero rates'], ['df', 'discount factors']] as const)
               .map(([d, label]) => (
                 <button key={d} onClick={() => setDomain(d)} className="px-2.5 py-1 rounded"
                   style={chip(domain === d, '#5eaab5')}>{label}</button>
@@ -324,8 +343,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             Each curve is solved in the domain its instruments pin: the OIS strips on zero
             rates, the meeting-dated and IMM curves as flat forwards between policy or IMM
             dates joined to a min-curvature spline, and the EUR/USD curve as an implied zero
-            curve against USD collateral. Zoom to 2.5Y with the ESTR variants selected to see
-            the short-end constructions diverge.
+            curve against USD collateral. Pick the instantaneous forward at 2.5Y with the ESTR
+            variants selected to see the step construction directly: flat between ECB
+            meetings out to 1.5Y, flat between IMM dates out to 2Y, then the spline. A
+            discrete forward averages over its own tenor, so a 3M rate smooths straight
+            across six-week meeting steps and hides them.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             EURIBOR is solved on discrete 6M forwards, one per instrument date. A FRA pins the
