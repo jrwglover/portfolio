@@ -145,11 +145,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     [curves, shown, domain, tMax]);
 
   const methodChart = useMemo(() => {
-    const ms = Object.keys(METHOD_LABELS).filter(m => methods[m]?.[methodCurve]);
+    // Only the selected methods go into the rows. A hidden series left in the
+    // data still feeds the auto-scaled y-axis, and linear-on-forwards spans
+    // -17% to +22% on this curve, which flattens everything else to a line.
+    const ms = Object.keys(METHOD_LABELS)
+      .filter(m => shownMethods.includes(m) && methods[m]?.[methodCurve]);
+    if (!ms.length) return [];
     const series: Record<string, Pt[]> = {};
     for (const m of ms) series[m] = methods[m][methodCurve];
     return toChart(series, ms, domain === 'fwd' ? 1 : 2, tMax);
-  }, [methods, methodCurve, domain, tMax]);
+  }, [methods, methodCurve, domain, tMax, shownMethods]);
 
   const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
   const tradeCurveKeys = selTrade ? Object.keys(selTrade.ladders) : [];
@@ -344,15 +349,21 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             freedom. In the forward domain the log-discount spline stays smooth, linear-on-zeros
             produces the classic sawtooth and flat-forward the staircase.
           </p>
-          {!shownMethods.includes('LinearForward') && (
+          {shownMethods.includes('LinearForward') ? (
             <p className="text-xs mt-2 max-w-3xl" style={{ color: '#c86e6e' }}>
-              Linear-on-forwards is off by default because it does not survive this curve.
-              Bootstrapping instantaneous forwards linearly is unstable when adjacent pillars
-              are days apart. The 1W and 2W points sit a week apart, so a fraction of a
-              basis point of discount-factor difference implies a huge forward, and linear
-              interpolation carries that error down the whole curve. Toggle it on to see it
-              swing between &minus;12% and +13%. That instability is the reason desks bootstrap
-              on discount factors or use a monotone-convex scheme rather than raw forwards.
+              <strong>That wild line is the point, not a plotting bug.</strong> Linear-on-forwards
+              fails on this instrument set: it spans &minus;16.9% to +21.6% on ESTR. Bootstrapping
+              instantaneous forwards linearly is unstable when adjacent pillars are days apart,
+              and the 1W and 2W quotes sit one week apart, so a fraction of a basis point of
+              discount-factor difference implies an enormous forward that the linear scheme then
+              carries down the curve. It is the reason desks bootstrap on discount factors, or use
+              a monotone-convex scheme, rather than on raw forwards. Untick it to compare the three
+              methods that do work.
+            </p>
+          ) : (
+            <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              Linear-on-forwards is hidden by default: it does not survive this instrument set,
+              spanning &minus;16.9% to +21.6% on ESTR. Tick it to see the failure and why.
             </p>
           )}
         </div>
