@@ -185,7 +185,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
-        subtitle="From raw quotes to bootstrapped curves: 8 curves, 10 instrument types, forward / zero / par views"
+        subtitle="From raw quotes to bootstrapped curves: 8 curves, 10 instrument types, each solved in the domain its instruments pin"
         techBadges={['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap']}
       />
 
