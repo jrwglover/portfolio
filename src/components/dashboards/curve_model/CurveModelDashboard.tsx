@@ -100,19 +100,26 @@ function zeroAt(pts: Pt[], t: number): number {
 }
 const dfAt = (pts: Pt[], t: number) => Math.exp(-(zeroAt(pts, t) / 100) * t);
 
-/* Instantaneous forward, read straight off the exported column and held
-   piecewise constant between points. A period forward averages over its tenor,
-   which smooths clean across the meeting-dated and IMM plateaus - a 3M average
-   over ~6-week ECB steps erases them entirely - so the step construction is
-   only visible here. Left-continuous lookup on purpose: interpolating would
-   slant the risers and make the steps look like a curve. */
+/* Instantaneous forward, read straight off the exported column. A period
+   forward averages over its tenor, which smooths clean across the meeting-dated
+   and IMM plateaus - a 3M average over ~6-week ECB steps erases them entirely -
+   so the step construction is only visible here.
+
+   Interpolated, NOT held piecewise constant. Holding it constant keeps genuine
+   risers sharp but snaps every sample to the left data point, and past 3Y the
+   export thins from daily to 15-day spacing - sparser than the chart grid - so
+   a smooth spline quantises into ledges that look exactly like step
+   interpolation where there is none. The step region is daily, so a riser spans
+   well under a pixel even interpolated; the artifact is the only thing that
+   changes. */
 function instAt(pts: Pt[], t: number): number {
   if (!pts.length) return 0;
   if (t <= pts[0][0]) return pts[0][1];
   let lo = 0, hi = pts.length - 1;
   if (t >= pts[hi][0]) return pts[hi][1];
   while (lo < hi - 1) { const m = (lo + hi) >> 1; if (pts[m][0] <= t) lo = m; else hi = m; }
-  return pts[lo][1];
+  const [t0, f0] = pts[lo], [t1, f1] = pts[hi];
+  return t1 === t0 ? f0 : f0 + (f1 - f0) * (t - t0) / (t1 - t0);
 }
 
 
