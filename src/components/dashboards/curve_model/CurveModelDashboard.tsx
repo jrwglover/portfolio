@@ -156,11 +156,20 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     // at the right edge, so stop the series before that happens.
     const lastT = Math.min(...keys.map(k => curves[k][curves[k].length - 1][0]));
     const end = Math.min(tMax, domain === 'fwd' ? lastT - fwdTenor : lastT);
-    // the step region lives inside ~2Y, so sample finely enough to resolve it
-    const fine = domain === 'inst' && tMax <= 10;
+    const step = tMax <= 2.5 ? 1 / 52 : tMax <= 10 ? 1 / 12 : 1 / 4;
     const grid: number[] = [];
-    const step = fine ? 1 / 104 : tMax <= 2.5 ? 1 / 52 : tMax <= 10 ? 1 / 12 : 1 / 4;
-    for (let t = step; t <= end + 1e-9; t += step) grid.push(+t.toFixed(6));
+    // The step region ends by ~2Y and its plateaus are as short as six weeks,
+    // so on the 30Y grid (quarterly) a 14-step ECB curve gets 8 samples and
+    // aliases into a jagged line rather than a staircase. Sample that window
+    // weekly at EVERY zoom and use the normal spacing beyond it, so the
+    // construction reads correctly whichever range is selected.
+    if (domain === 'inst') {
+      const fineEnd = Math.min(end, 2.5), fineStep = 1 / 104;
+      for (let t = fineStep; t <= fineEnd + 1e-9; t += fineStep) grid.push(+t.toFixed(6));
+      for (let t = fineEnd + step; t <= end + 1e-9; t += step) grid.push(+t.toFixed(6));
+    } else {
+      for (let t = step; t <= end + 1e-9; t += step) grid.push(+t.toFixed(6));
+    }
     return grid.map(t => {
       const row: Record<string, number> = { t };
       for (const k of keys) {
