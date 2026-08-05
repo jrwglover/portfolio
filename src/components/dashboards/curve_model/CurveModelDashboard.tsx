@@ -130,7 +130,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
-  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df'>('fwd');
+  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df' | 'fx'>('fwd');
   const [fwdTenor, setFwdTenor] = useState(0.25);
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
@@ -155,8 +155,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   // discount curve, so they show what a FRA or future pays; the instantaneous
   // forward is the curve's own local rate, which is where the meeting-dated and
   // IMM step construction is actually visible.
+  const fxSpot = inputs?.curves.find(c => c.index === 'EURUSD')?.fx_spot;
+
   const curveChart = useMemo(() => {
-    const keys = shown.filter(k => curves[k]?.length);
+    const keys = domain === 'fx' ? ['EURUSD'] : shown.filter(k => curves[k]?.length);
     if (!keys.length) return [];
     // A period forward at t needs data out to t + tenor. Past the last
     // exported point the zero clamps flat, which fabricates a rising forward
@@ -177,6 +179,19 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     } else {
       for (let t = step; t <= end + 1e-9; t += step) grid.push(+t.toFixed(6));
     }
+    // EUR/USD outright forward. Covered interest parity on the two curves the
+    // engine already solved: F(T) = S * DF_EUR(T) / DF_USD(T), where DF_EUR is
+    // the EUR curve under USD collateral and DF_USD is SOFR. This is the object
+    // the FX swap points and xccy basis actually quote - the implied zero curve
+    // shown in the other domains is derived FROM it - so it is worth showing
+    // directly. Rebuilt this way it reprices the quoted points to under a pip.
+    if (domain === 'fx') {
+      const eur = curves['EURUSD'], usd = curves['SOFR'];
+      if (!eur?.length || !usd?.length || !fxSpot) return [];
+      return grid.map(t => ({
+        t, EURUSD: fxSpot * (dfAt(eur, t) / dfAt(usd, t)),
+      }));
+    }
     return grid.map(t => {
       const row: Record<string, number> = { t };
       for (const k of keys) {
@@ -191,7 +206,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       }
       return row;
     });
-  }, [curves, shown, domain, tMax, fwdTenor]);
+  }, [curves, shown, domain, tMax, fwdTenor, fxSpot]);
 
   const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
   const tradeCurveKeys = selTrade ? Object.keys(selTrade.ladders) : [];
@@ -305,7 +320,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             tab. Zero rates discount cashflows; discount factors are the raw solved quantity.
           </p>
 
-          <div className="flex gap-2 mb-3 flex-wrap items-center">
+          <div className="flex gap-2 mb-3 flex-wrap items-center"
+               style={{ opacity: domain === 'fx' ? 0.35 : 1 }}>
             {curveKeys.map(k => (
               <button key={k}
                 onClick={() => setShown(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])}
@@ -315,7 +331,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           </div>
 
           <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap items-center">
-            {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'], ['zero', 'zero rates'], ['df', 'discount factors']] as const)
+            {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'], ['zero', 'zero rates'], ['df', 'discount factors'], ['fx', 'EUR/USD forwards']] as const)
               .map(([d, label]) => (
                 <button key={d} onClick={() => setDomain(d)} className="px-2.5 py-1 rounded"
                   style={chip(domain === d, '#5eaab5')}>{label}</button>
@@ -342,14 +358,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               <XAxis dataKey="t" stroke={chartAxis} tick={{ fontSize: 11 }} type="number"
                 domain={[0, tMax]} tickFormatter={v => `${v}Y`} />
               <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} domain={['auto', 'auto']} width={62}
-                tickFormatter={v => domain === 'df' ? Number(v).toFixed(3) : `${Number(v).toFixed(2)}%`} />
+                tickFormatter={v => domain === 'df' ? Number(v).toFixed(3) : domain === 'fx' ? Number(v).toFixed(4) : `${Number(v).toFixed(2)}%`} />
               <Tooltip {...tt}
                 formatter={(v: any, n: any) => [
-                  domain === 'df' ? Number(v).toFixed(6) : `${Number(v).toFixed(4)}%`,
-                  CURVE_LABELS[n] ?? n]}
+                  domain === 'df' ? Number(v).toFixed(6)
+                    : domain === 'fx' ? Number(v).toFixed(5)
+                      : `${Number(v).toFixed(4)}%`,
+                  domain === 'fx' ? 'EUR/USD outright' : CURVE_LABELS[n] ?? n]}
                 labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
               <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{CURVE_LABELS[v] ?? v}</span>} />
-              {shown.map(k => (
+              {(domain === 'fx' ? ['EURUSD'] : shown).map(k => (
                 <Line key={k} dataKey={k} stroke={CURVE_COLORS[k]} dot={false} strokeWidth={1.8} isAnimationActive={false} />
               ))}
             </LineChart>
@@ -364,6 +382,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             meetings out to 1.5Y, flat between IMM dates out to 2Y, then the spline. A
             discrete forward averages over its own tenor, so a 3M rate smooths straight
             across six-week meeting steps and hides them.
+          </p>
+          <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            EUR/USD forwards are the outright the FX swap points and cross-currency basis
+            actually quote, rebuilt from the two bootstrapped curves by covered interest
+            parity: F(T) = spot x DF_EUR(T) / DF_USD(T), with EUR discounted under USD
+            collateral and USD on SOFR. The other domains show the zero curve DERIVED from
+            those quotes; this one shows the tradeable price they came from. Rebuilt this way
+            it reprices every quoted FX swap point to under a pip. Beyond 2Y no FX points are
+            quoted at all, so the forwards there are implied by the basis alone.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             EURIBOR is solved on discrete 6M forwards, one per instrument date. A FRA pins the
