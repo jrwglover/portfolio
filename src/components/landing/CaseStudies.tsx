@@ -23,7 +23,7 @@ const CASES: Case[] = [
       'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 240 calibration instruments down both paths and difference them.',
     ],
     results: [
-      'GPU marks match QuantLib to 10⁻⁶ or better on all eight curves',
+      'GPU marks match QuantLib to 10⁻¹⁴ on all eight curves',
       '240 calibration instruments repriced identically on CPU and GPU',
       'PV01 ladders per market quote: per ECB meeting, per futures contract, per basis pillar',
       'Seasoned and broken-dated trades priced off historical fixings, exact to machine precision',

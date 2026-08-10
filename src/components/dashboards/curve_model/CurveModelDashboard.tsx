@@ -376,25 +376,23 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Each curve is solved in the domain its instruments pin: the OIS strips on zero
             rates, the meeting-dated and IMM curves as flat forwards between policy or IMM
-            dates joined to a min-curvature forward, and the EUR/USD curve as an implied zero
-            curve against USD collateral. Every curve is reconstructed between its nodes
-            as the smoothest instantaneous forward consistent with them, rather than as a
-            spline through zero rates: minimising the curvature of the zero curve leaves
-            the forward free to ring, because f = z + t z' amplifies a spline's knot
-            discontinuities by t. Pick the instantaneous forward at 2.5Y with the ESTR
+            dates joined to a min-curvature spline, and the EUR/USD curve as an implied zero
+            curve against USD collateral. Every curve uses the same interpolation: a
+            minimum-curvature cubic spline on LOG DISCOUNT FACTORS. Pick the instantaneous forward at 2.5Y with the ESTR
             variants selected to see the step construction directly: flat between ECB
             meetings out to 1.5Y, flat between IMM dates out to 2Y, then the spline. A
             discrete forward averages over its own tenor, so a 3M rate smooths straight
             across six-week meeting steps and hides them.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            EUR/USD forwards are the outright the FX swap points and cross-currency basis
-            actually quote, rebuilt from the two bootstrapped curves by covered interest
-            parity: F(T) = spot x DF_EUR(T) / DF_USD(T), with EUR discounted under USD
-            collateral and USD on SOFR. The other domains show the zero curve DERIVED from
-            those quotes; this one shows the tradeable price they came from. Rebuilt this way
-            it reprices every quoted FX swap point to under a pip. Beyond 2Y no FX points are
-            quoted at all, so the forwards there are implied by the basis alone.
+            The domain matters more than the scheme. Interpolating zero rates makes the
+            ZERO curve smooth but leaves the forward free to ring: f = z + t z', so a
+            cubic's third derivative jumps at every knot and the jump is multiplied by t -
+            17 to 18 times amplification by the long end, worst where pillar spacing
+            changes. Interpolating log discount factors instead makes the forward the
+            spline's own first derivative, so it is a quadratic spline: continuous in
+            value and slope, with no maturity amplification. Same class, same pillars,
+            same quotes - only the interpolated quantity changes.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             EURIBOR is solved on discrete 6M forwards, one per instrument date. A FRA pins the
