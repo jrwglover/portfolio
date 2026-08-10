@@ -376,8 +376,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Each curve is solved in the domain its instruments pin: the OIS strips on zero
             rates, the meeting-dated and IMM curves as flat forwards between policy or IMM
-            dates joined to a min-curvature spline, and the EUR/USD curve as an implied zero
-            curve against USD collateral. Pick the instantaneous forward at 2.5Y with the ESTR
+            dates joined to a min-curvature forward, and the EUR/USD curve as an implied zero
+            curve against USD collateral. Every curve is reconstructed between its nodes
+            as the smoothest instantaneous forward consistent with them, rather than as a
+            spline through zero rates: minimising the curvature of the zero curve leaves
+            the forward free to ring, because f = z + t z' amplifies a spline's knot
+            discontinuities by t. Pick the instantaneous forward at 2.5Y with the ESTR
             variants selected to see the step construction directly: flat between ECB
             meetings out to 1.5Y, flat between IMM dates out to 2Y, then the spline. A
             discrete forward averages over its own tenor, so a 3M rate smooths straight
