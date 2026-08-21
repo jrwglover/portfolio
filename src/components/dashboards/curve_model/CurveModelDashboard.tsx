@@ -257,7 +257,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'inputs' && inputs && (
         <div>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Valuation {inputs.date} · {inputs.curves.length} curves · every instrument
+            {inputs.curves.length} curves · every instrument
             below is a bootstrap constraint and a PV01 risk bucket. Labels: IMM = 3rd
             Wednesday futures dates, MTG = ECB policy effective dates.
           </p>
