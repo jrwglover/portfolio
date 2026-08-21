@@ -146,7 +146,7 @@ export default function ArchitecturePanel() {
 
         <Layer kicker="curves" title="Eight curves, two of them dependent">
           <Figure src="/diagrams/curve-graph.svg" source={curveSrc}
-                  alt="Curve dependency graph: six curves build independently; EURIBOR 6M is discounted on ESTR and EUR under USD collateral takes SOFR as its USD leg." />
+                  alt="Curve dependency graph: six curves build independently; EURIBOR 6M is discounted on ESTR; the EURUSD cross-currency curve takes SOFR as its USD leg; and the EUR/USD outright forwards are derived in the browser from that curve and SOFR." />
           <div className="mt-2">
             The meeting-dated and IMM curves are built in two stages: flat forwards between
             policy or IMM dates out to the last strip date, then the spline beyond, joined by
@@ -156,9 +156,9 @@ export default function ArchitecturePanel() {
             <br /><br />
             The two dependencies force the build order. EURIBOR projects on its own curve but
             discounts every cashflow on ESTR, so ESTR has to exist first. EUR under USD
-            collateral is not bootstrapped from EUR instruments at all: it is implied from FX
-            swap points and cross-currency basis against the USD curve, so SOFR has to exist
-            first. Get that order wrong and the bootstrap either fails or silently discounts
+            collateral, the curve the engine calls EURUSD, is not bootstrapped from EUR
+            instruments at all: it is implied from FX swap points and cross-currency basis
+            against the USD curve, so SOFR has to exist first. Get that order wrong and the bootstrap either fails or silently discounts
             on a stale curve.
           </div>
         </Layer>
@@ -190,8 +190,10 @@ export default function ArchitecturePanel() {
 
         <Layer kicker="output" title="Exported JSON → this site">
           Curves, trades, cashflows, risk ladders and benchmarks are written as static JSON
-          and served with the page. Nothing on this site computes a curve in the browser; it
-          renders what the engine produced.
+          and served with the page. The browser does no curve construction and no pricing: it
+          renders what the engine produced. The one exception is the EUR/USD outright forward
+          chart, which is computed client-side as spot times the ratio of the two discount
+          factors, because it is a two-line identity off curves that are already published.
         </Layer>
       </div>
 
