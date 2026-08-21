@@ -1,26 +1,28 @@
-%% Per-curve construction: the decisions the builder makes and why each branch exists.
+%% Per-curve construction. Shape carries meaning: lean-r is input, subproc a
+%% QuantLib object, hex a solve, win-pane an in-memory curve, doc an output,
+%% diamond a branch. Dashed notes say why a branch exists at all.
 flowchart TB
-  Q["quote<br/><small>rate · tenor · instrument</small>"] --> T{"instrument<br/>type"}
-  T -->|DEPOSIT| H1["DualCurveDepositRateHelper"]
-  T -->|OIS| H2["OISRateHelper"]
-  T -->|MTG_OIS / IMM_OIS| H3["DatedOISRateHelper<br/><small>explicit start &amp; end dates</small>"]
-  T -->|FUTURE| H4["FuturesRateHelper"]
-  T -->|FRA| H5["FraRateHelper"]
-  T -->|IRS| H6["SwapRateHelper<br/><small>dual-curve: project / discount</small>"]
-  T -->|FXSWAP / XCCY| H7["FxSwapRateHelper<br/>CrossCurrencyBasisSwapRateHelper"]
+  Q@{ shape: lean-r, label: "quote<br/><small>rate · tenor · instrument</small>" } --> T{"instrument<br/>type"}
+  T -->|DEPOSIT| H1@{ shape: subproc, label: "DualCurveDepositRateHelper" }
+  T -->|OIS| H2@{ shape: subproc, label: "OISRateHelper" }
+  T -->|MTG_OIS / IMM_OIS| H3@{ shape: subproc, label: "DatedOISRateHelper<br/><small>explicit start and end dates</small>" }
+  T -->|FUTURE| H4@{ shape: subproc, label: "FuturesRateHelper" }
+  T -->|FRA| H5@{ shape: subproc, label: "FraRateHelper" }
+  T -->|IRS| H6@{ shape: subproc, label: "SwapRateHelper<br/><small>dual-curve: project / discount</small>" }
+  T -->|FXSWAP / XCCY| H7@{ shape: subproc, label: "FxSwapRateHelper<br/>CrossCurrencyBasisSwapRateHelper" }
 
   H1 & H2 & H3 & H4 & H5 & H6 & H7 --> S{"short_end_step<br/>set?"}
 
-  S -->|no| G["PiecewiseYieldCurve<br/>&lt;Discount, LogCubic, GlobalBootstrap&gt;"]
+  S -->|no| G@{ shape: hex, label: "PiecewiseYieldCurve<br/>Discount · LogCubic · GlobalBootstrap" }
 
-  S -->|yes| A1["stage 1 · strip only<br/>&lt;ForwardRate, BackwardFlat&gt;"]
-  A1 --> A2["zero at each strip date<br/>-> ZeroPinHelper"]
-  A2 --> A3["stage 2 · pins + long instruments<br/>&lt;ZeroYield, Cubic, GlobalBootstrap&gt;"]
-  A3 --> A4["StepSplineCurve composite<br/><small>stage 1 below tCut, stage 2 above</small>"]
+  S -->|yes| A1@{ shape: hex, label: "stage 1 · strip only<br/>ForwardRate · BackwardFlat" }
+  A1 --> A2@{ shape: subproc, label: "zero at each strip date<br/>becomes ZeroPinHelper" }
+  A2 --> A3@{ shape: hex, label: "stage 2 · pins + long instruments<br/>ZeroYield · Cubic · GlobalBootstrap" }
+  A3 --> A4@{ shape: win-pane, label: "StepSplineCurve composite<br/><small>stage 1 below tCut, stage 2 above</small>" }
 
-  G --> C["calibrated term structure"]
+  G --> C@{ shape: win-pane, label: "calibrated term structure" }
   A4 --> C
-  C --> X["extract pillar dates, times, zeros"]
+  C --> X@{ shape: doc, label: "pillar dates, times, zeros" }
 
   N1["staircase is correct here:<br/>the overnight rate is expected to be<br/>constant between policy meetings"] -.-> A1
   N2["log discount factors, not zeros:<br/>f = g′ is C¹ · on zeros f = z + t·z′<br/>picks up t·z‴ and rings at every knot"] -.-> G
