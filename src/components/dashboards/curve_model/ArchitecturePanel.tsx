@@ -131,8 +131,8 @@ export default function ArchitecturePanel() {
 
         <Layer kicker="construction" title="Bootstrap, via QuantLib GlobalBootstrap">
           Each curve is solved in the domain its own instruments pin, and interpolated as a
-          natural minimum-curvature cubic spline on <strong style={{ color: PRI }}>log
-          discount factors</strong>. That choice is the load-bearing one: on log-DF the
+          natural minimum-curvature cubic spline on log discount factors. That choice
+          matters more than the scheme itself: on log-DF the
           instantaneous forward is the spline&apos;s own first derivative, so it is C¹ with no
           maturity amplification. Interpolating zero rates instead leaves f = z + t·z′, where a
           cubic&apos;s third derivative jumps at every knot and is multiplied by t. Measured
@@ -191,7 +191,7 @@ export default function ArchitecturePanel() {
         <Layer kicker="the check" title="Reconcile both paths">
           All 227 calibration instruments repriced down both paths and differenced, plus a
           direct curve-vs-curve comparison across every exported point. Current worst
-          agreement <strong style={{ color: PRI }}>3.6 × 10⁻¹⁴</strong>. A separate check
+          agreement 3.6 × 10⁻¹⁴. A separate check
           re-derives every input quote from the finished curve with its own conventions.
           All eight calibrate inside 0.01bp.
         </Layer>
