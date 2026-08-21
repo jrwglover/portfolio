@@ -1,0 +1,29 @@
+%% Per-curve construction: the decisions the builder makes and why each branch exists.
+flowchart TB
+  Q["quote<br/><small>rate · tenor · instrument</small>"] --> T{"instrument<br/>type"}
+  T -->|DEPOSIT| H1["DualCurveDepositRateHelper"]
+  T -->|OIS| H2["OISRateHelper"]
+  T -->|MTG_OIS / IMM_OIS| H3["DatedOISRateHelper<br/><small>explicit start &amp; end dates</small>"]
+  T -->|FUTURE| H4["FuturesRateHelper"]
+  T -->|FRA| H5["FraRateHelper"]
+  T -->|IRS| H6["SwapRateHelper<br/><small>dual-curve: project / discount</small>"]
+  T -->|FXSWAP / XCCY| H7["FxSwapRateHelper<br/>CrossCurrencyBasisSwapRateHelper"]
+
+  H1 & H2 & H3 & H4 & H5 & H6 & H7 --> S{"short_end_step<br/>set?"}
+
+  S -->|no| G["PiecewiseYieldCurve<br/>&lt;Discount, LogCubic, GlobalBootstrap&gt;"]
+
+  S -->|yes| A1["stage 1 · strip only<br/>&lt;ForwardRate, BackwardFlat&gt;"]
+  A1 --> A2["zero at each strip date<br/>-> ZeroPinHelper"]
+  A2 --> A3["stage 2 · pins + long instruments<br/>&lt;ZeroYield, Cubic, GlobalBootstrap&gt;"]
+  A3 --> A4["StepSplineCurve composite<br/><small>stage 1 below tCut, stage 2 above</small>"]
+
+  G --> C["calibrated term structure"]
+  A4 --> C
+  C --> X["extract pillar dates, times, zeros"]
+
+  N1["staircase is correct here:<br/>the overnight rate is expected to be<br/>constant between policy meetings"] -.-> A1
+  N2["log discount factors, not zeros:<br/>f = g′ is C¹ · on zeros f = z + t·z′<br/>picks up t·z‴ and rings at every knot"] -.-> G
+
+  classDef note fill:none,stroke-dasharray:3 3
+  class N1,N2 note

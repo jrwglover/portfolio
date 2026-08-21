@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "diagrams": "mmdc -i src/components/dashboards/curve_model/diagrams/container.mmd -o public/diagrams/container.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/curve-graph.mmd -o public/diagrams/curve-graph.svg -c .mermaidrc.json -p puppeteer.json -b transparent"
+    "diagrams": "mmdc -i src/components/dashboards/curve_model/diagrams/valuation-run.mmd -o public/diagrams/valuation-run.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/construction.mmd -o public/diagrams/construction.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/curve-graph.mmd -o public/diagrams/curve-graph.svg -c .mermaidrc.json -p puppeteer.json -b transparent"
   },
   "dependencies": {
     "framer-motion": "^12.38.0",

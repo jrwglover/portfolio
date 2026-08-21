@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import containerSrc from './diagrams/container.mmd?raw';
+import runSrc from './diagrams/valuation-run.mmd?raw';
+import buildSrc from './diagrams/construction.mmd?raw';
 import curveSrc from './diagrams/curve-graph.mmd?raw';
 
 /* Architecture panel for the curve-model dashboard.
@@ -88,13 +89,19 @@ export default function ArchitecturePanel() {
         only useful if that difference stays at round-off.
       </p>
 
-      <Figure src="/diagrams/container.svg" source={containerSrc}
-              alt="Container diagram: market quotes feed curve construction, which feeds a CPU reference path and a CUDA path; both are reconciled and written to results, which the portfolio site renders."
-              caption="C4 Level 2 (Container). Written as a Mermaid flowchart rather than C4Container — the native C4 renderer stacks boundaries vertically and produced a 995x1892 diagram. Same semantics: containers with their technology, one system boundary, labelled relationships." />
-
-      <p className="text-xs mt-6 mb-3 font-mono uppercase tracking-wider" style={{ color: DIM }}>
-        The same pipeline, stage by stage
+      <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+        What happens on a valuation run
       </p>
+      <Figure src="/diagrams/valuation-run.svg" source={runSrc}
+              alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 240 instruments."
+              caption="Sequence. The two-stage branch, the simultaneous pillar solve, and the fact that the coefficient upload is an identity rather than a fit are the three things that determine whether the numbers reconcile." />
+
+      <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+        How one curve gets built
+      </p>
+      <Figure src="/diagrams/construction.svg" source={buildSrc}
+              alt="Flowchart of curve construction: each quote maps to a rate helper by instrument type; curves flagged short_end_step take a two-stage flat-forward-then-spline path composited at tCut, all others go straight to a log-cubic global bootstrap."
+              caption="Construction. Every branch here exists because of a measured failure: the instrument-typed helper mapping, the two-stage build for policy-dated curves, and the log-discount-factor domain." />
 
       <div className="flex flex-col items-center max-w-3xl">
         <Layer kicker="input" title="Market quotes">

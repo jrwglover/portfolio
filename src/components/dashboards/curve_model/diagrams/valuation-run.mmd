@@ -1,0 +1,46 @@
+%% One valuation run, in order, with the real operations named.
+%% Note: avoid "->" and angle brackets inside message text; mermaid's sequence
+%% lexer reads them as arrow tokens and fails to parse.
+sequenceDiagram
+  autonumber
+  participant MD as market_data.json
+  participant B as bootstrap_module
+  participant QL as QuantLib GlobalBootstrap
+  participant SC as spline_coeffs
+  participant GPU as CUDA device
+  participant V as reconciliation
+
+  MD->>B: 8 curves, quotes tagged (rate, tenor, instrument)
+
+  loop per curve, in dependency order
+    B->>B: map each quote to its RateHelper
+    alt meeting-dated or IMM-dated
+      B->>QL: stage 1, strip only: ForwardRate + BackwardFlat
+      QL-->>B: flat forwards, jumps only on policy or IMM dates
+      B->>B: freeze strip zeros as ZeroPinHelper
+      B->>QL: stage 2: pins plus long instruments
+      QL-->>B: StepSplineCurve composite, split at tCut
+    else single stage
+      B->>QL: Discount trait, LogCubic interpolator
+      QL-->>B: term structure
+    end
+    Note over QL: all n pillars solved simultaneously.<br/>A global interpolator has no<br/>bracketing sequential solve.
+  end
+
+  B->>SC: calibrated term structures
+  loop per pillar interval
+    SC->>SC: sample logDF at x0, x0+h/3, x0+2h/3, x1
+    SC->>SC: Newton divided differences yield c0..c3
+  end
+  SC->>GPU: cudaMemcpy CubicCoeffs [c0..c3, xL, xR, form]
+  Note over SC,GPU: the curve IS piecewise cubic in logDF,<br/>so this upload is an identity, not a fit
+
+  par CPU reference path
+    B->>V: prices and market PV01, re-bootstrapped per quote bump
+  and GPU path
+    GPU->>GPU: binary search interval, then Horner
+    GPU->>V: device prices and pillar ladder
+  end
+
+  V->>V: difference both paths over 240 instruments
+  V-->>MD: worst agreement 3.6e-14
