@@ -96,17 +96,17 @@ export default function ArchitecturePanel() {
       </p>
       <Figure src="/diagrams/c4-context.svg" source={ctxSrc}
               alt="C4 system context: a quant reads marks and risk from the portfolio site; the rates engine takes instrument-typed quotes from market data, builds curves using QuantLib, and publishes frozen JSON to the site."
-              caption="Who uses it and what it touches. Following C4 notation: every element carries a name, its [type], and a description; every relationship states intent and the technology it uses." />
+              caption="Who uses it and what it touches. Following C4 notation: every element carries a name, its [type] and a description, and every relationship states intent and the technology it uses." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 Level 2 · Containers
       </p>
       <Figure src="/diagrams/c4-container.svg" source={contSrc}
               alt="C4 container diagram: inside the host process, curve construction writes eight term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
-              caption="Each container names its technology. The host/device split is a real boundary — one cudaMemcpy crosses it, and that copy is the only place the two paths can diverge, which is why reconciliation sits downstream of both." />
+              caption="Each container names its technology. The host/device split is a real boundary. One cudaMemcpy crosses it, and that copy is the only place the two paths can diverge, which is why reconciliation sits downstream of both." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
-        C4 supplementary · Dynamic view — one valuation run
+        C4 supplementary · Dynamic view of one valuation run
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
               alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 240 instruments."
@@ -129,14 +129,14 @@ export default function ArchitecturePanel() {
         </Layer>
         <Arrow />
 
-        <Layer kicker="construction" title="Bootstrap — QuantLib GlobalBootstrap">
+        <Layer kicker="construction" title="Bootstrap, via QuantLib GlobalBootstrap">
           Each curve is solved in the domain its own instruments pin, and interpolated as a
           natural minimum-curvature cubic spline on <strong style={{ color: PRI }}>log
           discount factors</strong>. That choice is the load-bearing one: on log-DF the
           instantaneous forward is the spline&apos;s own first derivative, so it is C¹ with no
           maturity amplification. Interpolating zero rates instead leaves f = z + t·z′, where a
-          cubic&apos;s third derivative jumps at every knot and is multiplied by t — measured
-          here at 17–18× amplification by the long end.
+          cubic&apos;s third derivative jumps at every knot and is multiplied by t. Measured
+          here, that is 17 to 18 times amplification by the long end.
           <br /><br />
           The bootstrap is <em>global</em>, not pillar-by-pillar: a min-curvature spline is a
           global interpolator, so every pillar reshapes the whole curve and a sequential solve
@@ -150,20 +150,20 @@ export default function ArchitecturePanel() {
           <div className="mt-2">
             The meeting-dated and IMM curves are built in two stages: flat forwards between
             policy or IMM dates out to the last strip date, then the spline beyond, joined by
-            pinning the strip zeros. A staircase is the correct shape there — the overnight
-            rate is expected to be constant between policy meetings — so the interpolation is
+            pinning the strip zeros. A staircase is the correct shape there, because the overnight
+            rate is expected to be constant between policy meetings. The interpolation is
             deliberately not smooth below the cut.
           </div>
         </Layer>
         <Arrow label="the same curve object, two ways" />
 
         <div className="grid gap-3 w-full" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
-          <Layer kicker="path A" title="CPU — QuantLib reference" accent={CPU}>
+          <Layer kicker="path A" title="CPU: QuantLib reference" accent={CPU}>
             Prices and risks directly off the bootstrapped term structures. Market PV01 bumps
             one quote, re-runs the whole bootstrap and reprices, so the shock propagates
             through the interpolation the way it would on a desk.
           </Layer>
-          <Layer kicker="path B" title="GPU — CUDA kernels" accent={GPU}>
+          <Layer kicker="path B" title="GPU: CUDA kernels" accent={GPU}>
             The device never rebuilds a curve. Each pillar interval is uploaded as four cubic
             coefficients plus its bounds; the kernel does a binary search and one Horner
             evaluation. Because the curve genuinely <em>is</em> piecewise cubic in the
@@ -176,8 +176,8 @@ export default function ArchitecturePanel() {
           All 240 calibration instruments repriced down both paths and differenced, plus a
           direct curve-vs-curve comparison across every exported point. Current worst
           agreement <strong style={{ color: PRI }}>3.6 × 10⁻¹⁴</strong>. A separate check
-          re-derives every input quote from the finished curve with its own conventions —
-          all eight calibrate inside 0.01bp.
+          re-derives every input quote from the finished curve with its own conventions.
+          All eight calibrate inside 0.01bp.
         </Layer>
         <Arrow />
 
@@ -194,9 +194,9 @@ export default function ArchitecturePanel() {
       <div className="rounded-lg overflow-hidden max-w-3xl" style={{ border: `1px solid ${EDGE}` }}>
         {[
           ['Interpolate log discount factors, not zeros',
-           'On log-DF the forward is the spline derivative — C¹, no t-amplification. On zeros the forward inherits t·z‴ and rings at every knot.'],
+           'On log-DF the forward is the spline derivative, so it is C¹ with no t-amplification. On zeros the forward inherits t·z‴ and rings at every knot.'],
           ['Use the library spline, not a bespoke one',
-           'A hand-rolled minimum-curvature spline transposed the two off-diagonal weights in its tridiagonal system. Identical on uniform spacing, C²-discontinuous wherever spacing changes — 9 spurious turning points inside 10Y against the market path’s 1.'],
+           'A hand-rolled minimum-curvature spline transposed the two off-diagonal weights in its tridiagonal system. Identical on uniform spacing, C²-discontinuous wherever spacing changes. That gave 9 spurious turning points inside 10Y where the market path has 1.'],
           ['Solve globally, not pillar-by-pillar',
            'A global interpolator has no bracketing sequential solve; the iterative bootstrap silently failed to converge on the long end.'],
           ['Pin the short end with instruments',
