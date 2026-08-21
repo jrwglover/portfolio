@@ -153,6 +153,13 @@ export default function ArchitecturePanel() {
             pinning the strip zeros. A staircase is the correct shape there, because the overnight
             rate is expected to be constant between policy meetings. The interpolation is
             deliberately not smooth below the cut.
+            <br /><br />
+            The two dependencies force the build order. EURIBOR projects on its own curve but
+            discounts every cashflow on ESTR, so ESTR has to exist first. EUR under USD
+            collateral is not bootstrapped from EUR instruments at all: it is implied from FX
+            swap points and cross-currency basis against the USD curve, so SOFR has to exist
+            first. Get that order wrong and the bootstrap either fails or silently discounts
+            on a stale curve.
           </div>
         </Layer>
         <Arrow label="the same curve object, two ways" />
