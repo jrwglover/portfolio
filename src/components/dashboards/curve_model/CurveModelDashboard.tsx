@@ -74,7 +74,7 @@ const CURVE_LABELS: Record<string, string> = {
 const INSTR_BADGE: Record<string, string> = {
   OIS: '#5eaab5', IMM_OIS: '#5cb87a', MTG_OIS: '#e07850', FUTURE: '#b8b04a',
   DEPOSIT: '#8b8a97', FRA: '#8b8a97', IMM_FRA: '#5cb87a', IRS: '#8b7ec8',
-  FXSWAP: '#4a9a68', XCCY: '#d4a853',
+  FXSWAP: '#4a9a68', XCCY: '#d4a853', SPOT: '#c9a227',
 };
 
 const chartGrid = '#1a1a28';
@@ -305,7 +305,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                           </span>
                         </td>
                         <td className="px-3 py-1.5 text-right">
-                          {q.price != null ? q.price.toFixed(2) + ' (price)' : ((q.rate ?? 0) * 100).toFixed(4) + '%'}
+                          {q.price != null ? q.price.toFixed(2) + ' (price)'
+                            : q.instrument === 'SPOT' ? (q.rate ?? 0).toFixed(4)
+                              : q.instrument === 'FXSWAP' ? ((q.rate ?? 0) * 1e4).toFixed(2) + ' pts'
+                                : ((q.rate ?? 0) * 100).toFixed(4) + '%'}
                         </td>
                       </tr>
                     ))}

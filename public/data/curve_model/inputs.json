@@ -1137,6 +1137,11 @@
    "fx_spot": 1.112,
    "quotes": [
     {
+     "tenor": "SPOT",
+     "instrument": "SPOT",
+     "rate": 1.112
+    },
+    {
      "tenor": "1W",
      "instrument": "FXSWAP",
      "rate": 0.000631
