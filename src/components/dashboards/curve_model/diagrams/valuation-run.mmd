@@ -12,6 +12,8 @@ sequenceDiagram
 
   MD->>B: 8 curves of tagged quotes
 
+  Note over B: build order is forced, not arbitrary:<br/>ESTR before EURIBOR, SOFR before EUR/USD
+
   loop per curve, in dependency order
     B->>B: quote to RateHelper by type
     alt meeting-dated or IMM-dated
@@ -20,7 +22,11 @@ sequenceDiagram
       B->>B: freeze strip zeros as ZeroPinHelper
       B->>QL: stage 2: pins + long instruments
       QL-->>B: StepSplineCurve, split at tCut
-    else single stage
+    else dual-curve or cross-currency
+      B->>B: attach the already-built foreign curve<br/>ESTR discounts EURIBOR, SOFR is the USD leg
+      B->>QL: FxSwap and XccyBasis helpers, two curves in play
+      QL-->>B: EUR curve implied under USD collateral
+    else single currency, single stage
       B->>QL: Discount + LogCubic
       QL-->>B: term structure
     end
