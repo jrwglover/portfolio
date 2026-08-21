@@ -39,11 +39,11 @@
    "id": "pricing",
    "name": "Portfolio repricing",
    "workload": "150,000 swaps, 6,339,223 cashflows, priced end to end",
-   "baseline": "CPU: QuantLib, spline curve",
-   "note": "The GPU lane prices off the same spline the CPU used, so the comparison is like for like. Read the multiple against QuantLib rather than against the CPU: the scaling chart below shows most of this gap is the QuantLib object model, not the device, and a flattened CPU pricer on one core closes almost all of it. The dense-grid lanes are faster still and are shown because they are what the accuracy table rules out.",
+   "baseline": "CPU: flat loop, QuantLib curve lookup",
+   "note": "The baseline here is NOT QuantLib pricing the portfolio. It is already a flat loop over the same cashflow arrays the GPU gets, and the only QuantLib left in it is the curve lookup, one virtual discount() call per cashflow. So this multiple measures the curve evaluation path rather than the device: the scaling chart below runs the same loop against the raw spline coefficients on one CPU core and recovers most of it. The dense-grid lanes are faster still and are shown because they are what the accuracy table rules out.",
    "lanes": [
     {
-     "lane": "CPU: QuantLib, spline curve",
+     "lane": "CPU: flat loop, QuantLib curve lookup",
      "ms": 1575.36,
      "kind": "cpu"
     },
@@ -67,28 +67,28 @@
   {
    "id": "sensi",
    "name": "Market-quote PV01 ladders",
-   "workload": "4 trades, 227 market quotes bumped 1bp, curve family re-bootstrapped per bump",
+   "workload": "4 trades, 228 market quotes bumped 1bp, curve family re-bootstrapped per bump",
    "baseline": "CPU lane, total",
    "note": "The honest result. Almost all of the wall clock is sequential curve re-bootstrapping on the CPU, which the GPU cannot help with, and the only part it does own is the repricing.",
    "lanes": [
     {
      "lane": "CPU lane, total",
-     "ms": 253474.0,
+     "ms": 278251.0,
      "kind": "cpu"
     },
     {
      "lane": "GPU lane, total",
-     "ms": 276292.0,
+     "ms": 352530.0,
      "kind": "gpu"
     },
     {
      "lane": "GPU lane, curve rebuilds (CPU-bound)",
-     "ms": 276073,
+     "ms": 351483,
      "kind": "cpu"
     },
     {
      "lane": "GPU lane, repricing kernel only",
-     "ms": 219.0,
+     "ms": 1047.0,
      "kind": "gpu"
     }
    ]
@@ -112,134 +112,134 @@
   }
  ],
  "scaling": {
-  "buckets": 28,
+  "buckets": 29,
   "points": [
    {
     "trades": 1,
-    "repricings": 28,
-    "cpu": 0.848,
-    "flat": 0.039,
-    "gpu": 4.55,
-    "upload": 3.879,
-    "kernel": 0.544
+    "repricings": 29,
+    "cpu": 0.864,
+    "flat": 0.041,
+    "gpu": 5.967,
+    "upload": 5.292,
+    "kernel": 0.534
    },
    {
     "trades": 2,
-    "repricings": 56,
-    "cpu": 1.726,
-    "flat": 0.079,
-    "gpu": 8.43,
-    "upload": 7.029,
-    "kernel": 1.096
+    "repricings": 58,
+    "cpu": 1.803,
+    "flat": 0.082,
+    "gpu": 4.622,
+    "upload": 3.693,
+    "kernel": 0.659
    },
    {
     "trades": 4,
-    "repricings": 112,
-    "cpu": 3.571,
-    "flat": 0.157,
-    "gpu": 8.399,
-    "upload": 7.163,
-    "kernel": 0.612
+    "repricings": 116,
+    "cpu": 3.865,
+    "flat": 0.179,
+    "gpu": 5.279,
+    "upload": 3.888,
+    "kernel": 0.852
    },
    {
     "trades": 8,
-    "repricings": 224,
-    "cpu": 7.342,
-    "flat": 0.308,
-    "gpu": 5.9,
-    "upload": 4.116,
-    "kernel": 0.735
+    "repricings": 232,
+    "cpu": 7.111,
+    "flat": 0.322,
+    "gpu": 4.476,
+    "upload": 2.939,
+    "kernel": 0.515
    },
    {
     "trades": 16,
-    "repricings": 448,
-    "cpu": 13.945,
-    "flat": 0.608,
-    "gpu": 8.932,
-    "upload": 5.723,
-    "kernel": 1.146
+    "repricings": 464,
+    "cpu": 14.635,
+    "flat": 0.677,
+    "gpu": 6.775,
+    "upload": 3.478,
+    "kernel": 1.126
    },
    {
     "trades": 32,
-    "repricings": 896,
-    "cpu": 27.719,
-    "flat": 1.273,
-    "gpu": 12.565,
-    "upload": 7.007,
-    "kernel": 1.338
+    "repricings": 928,
+    "cpu": 29.594,
+    "flat": 1.324,
+    "gpu": 7.577,
+    "upload": 2.785,
+    "kernel": 0.709
    },
    {
     "trades": 64,
-    "repricings": 1792,
-    "cpu": 58.099,
-    "flat": 2.519,
-    "gpu": 12.108,
-    "upload": 2.65,
-    "kernel": 0.927
+    "repricings": 1856,
+    "cpu": 58.384,
+    "flat": 2.549,
+    "gpu": 12.121,
+    "upload": 2.988,
+    "kernel": 0.978
    },
    {
     "trades": 128,
-    "repricings": 3584,
-    "cpu": 117.166,
-    "flat": 5.334,
-    "gpu": 20.316,
-    "upload": 2.848,
-    "kernel": 1.067
+    "repricings": 3712,
+    "cpu": 118.353,
+    "flat": 5.29,
+    "gpu": 22.074,
+    "upload": 3.055,
+    "kernel": 1.328
    },
    {
     "trades": 256,
-    "repricings": 7168,
-    "cpu": 248.16,
-    "flat": 10.526,
-    "gpu": 42.364,
-    "upload": 7.104,
-    "kernel": 1.836
+    "repricings": 7424,
+    "cpu": 258.71,
+    "flat": 10.621,
+    "gpu": 41.47,
+    "upload": 5.353,
+    "kernel": 2.462
    },
    {
     "trades": 512,
-    "repricings": 14336,
-    "cpu": 497.549,
-    "flat": 20.617,
-    "gpu": 76.931,
-    "upload": 7.111,
-    "kernel": 2.849
+    "repricings": 14848,
+    "cpu": 527.562,
+    "flat": 21.531,
+    "gpu": 72.463,
+    "upload": 2.823,
+    "kernel": 2.862
    },
    {
     "trades": 1024,
-    "repricings": 28672,
-    "cpu": 1051.08,
-    "flat": 42.693,
-    "gpu": 148.88,
-    "upload": 7.618,
-    "kernel": 5.618
+    "repricings": 29696,
+    "cpu": 1161.92,
+    "flat": 44.24,
+    "gpu": 152.961,
+    "upload": 6.057,
+    "kernel": 6.405
    },
    {
     "trades": 2048,
-    "repricings": 57344,
-    "cpu": 2113.64,
-    "flat": 80.614,
-    "gpu": 294.074,
-    "upload": 5.545,
-    "kernel": 10.902
+    "repricings": 59392,
+    "cpu": 2258.69,
+    "flat": 93.387,
+    "gpu": 285.67,
+    "upload": 3.486,
+    "kernel": 11.143
    },
    {
     "trades": 4096,
-    "repricings": 114688,
-    "cpu": 4324.75,
-    "flat": 172.406,
-    "gpu": 1230.94,
-    "upload": 4.037,
-    "kernel": 39.421
+    "repricings": 118784,
+    "cpu": 4559.76,
+    "flat": 172.926,
+    "gpu": 591.937,
+    "upload": 5.276,
+    "kernel": 22.85
    }
   ],
   "crossoverBelow": {
    "trades": 4096,
-   "repricings": 114688,
-   "cpu": 4324.75,
-   "flat": 172.406,
-   "gpu": 1230.94,
-   "upload": 4.037,
-   "kernel": 39.421
+   "repricings": 118784,
+   "cpu": 4559.76,
+   "flat": 172.926,
+   "gpu": 591.937,
+   "upload": 5.276,
+   "kernel": 22.85
   },
   "crossoverAbove": null
  },
@@ -248,193 +248,193 @@
    {
     "trades": 1,
     "cashflows": 45,
-    "quantlib": 0.153,
-    "flat": 0.006,
-    "gpu": 1.073,
-    "kernel": 0.576
+    "quantlib": 0.106,
+    "flat": 0.004,
+    "gpu": 1.257,
+    "kernel": 0.651
    },
    {
     "trades": 2,
     "cashflows": 93,
-    "quantlib": 0.194,
+    "quantlib": 0.217,
     "flat": 0.005,
-    "gpu": 0.981,
-    "kernel": 0.664
+    "gpu": 0.632,
+    "kernel": 0.431
    },
    {
     "trades": 4,
     "cashflows": 188,
-    "quantlib": 0.507,
-    "flat": 0.011,
-    "gpu": 1.001,
-    "kernel": 0.553
+    "quantlib": 0.362,
+    "flat": 0.009,
+    "gpu": 1.334,
+    "kernel": 0.986
    },
    {
     "trades": 8,
     "cashflows": 377,
-    "quantlib": 0.773,
-    "flat": 0.017,
-    "gpu": 0.844,
-    "kernel": 0.5
+    "quantlib": 0.751,
+    "flat": 0.016,
+    "gpu": 1.398,
+    "kernel": 0.946
    },
    {
     "trades": 16,
     "cashflows": 756,
-    "quantlib": 1.659,
-    "flat": 0.028,
-    "gpu": 1.415,
-    "kernel": 0.915
+    "quantlib": 1.48,
+    "flat": 0.027,
+    "gpu": 1.303,
+    "kernel": 0.861
    },
    {
     "trades": 32,
     "cashflows": 1512,
-    "quantlib": 3.136,
-    "flat": 0.053,
-    "gpu": 1.251,
-    "kernel": 0.732
+    "quantlib": 2.844,
+    "flat": 0.049,
+    "gpu": 1.522,
+    "kernel": 1.02
    },
    {
     "trades": 64,
     "cashflows": 3023,
-    "quantlib": 5.968,
-    "flat": 0.096,
-    "gpu": 1.828,
-    "kernel": 1.252
+    "quantlib": 6.034,
+    "flat": 0.091,
+    "gpu": 2.061,
+    "kernel": 1.426
    },
    {
     "trades": 128,
     "cashflows": 6058,
-    "quantlib": 12.202,
-    "flat": 0.184,
-    "gpu": 1.265,
-    "kernel": 0.77
+    "quantlib": 13.367,
+    "flat": 0.195,
+    "gpu": 1.298,
+    "kernel": 0.833
    },
    {
     "trades": 256,
     "cashflows": 12113,
-    "quantlib": 28.745,
-    "flat": 0.566,
-    "gpu": 1.675,
-    "kernel": 0.895
+    "quantlib": 23.301,
+    "flat": 0.372,
+    "gpu": 1.031,
+    "kernel": 0.639
    },
    {
     "trades": 512,
     "cashflows": 24225,
-    "quantlib": 57.563,
-    "flat": 0.943,
-    "gpu": 1.472,
-    "kernel": 0.956
+    "quantlib": 47.309,
+    "flat": 0.704,
+    "gpu": 1.386,
+    "kernel": 0.903
    },
    {
     "trades": 1024,
     "cashflows": 48455,
-    "quantlib": 161.293,
-    "flat": 2.155,
-    "gpu": 2.825,
-    "kernel": 2.263
+    "quantlib": 92.653,
+    "flat": 1.531,
+    "gpu": 2.679,
+    "kernel": 2.16
    },
    {
     "trades": 2048,
     "cashflows": 96905,
-    "quantlib": 195.356,
-    "flat": 3.746,
-    "gpu": 7.478,
-    "kernel": 6.69
+    "quantlib": 187.78,
+    "flat": 2.843,
+    "gpu": 4.171,
+    "kernel": 3.513
    },
    {
     "trades": 4096,
     "cashflows": 193819,
-    "quantlib": 385.503,
-    "flat": 7.657,
-    "gpu": 8.823,
-    "kernel": 7.883
+    "quantlib": 375.654,
+    "flat": 5.832,
+    "gpu": 7.433,
+    "kernel": 6.602
    },
    {
     "trades": 8192,
     "cashflows": 387637,
-    "quantlib": 768.926,
-    "flat": 11.606,
-    "gpu": 11.388,
-    "kernel": 10.446
+    "quantlib": 740.328,
+    "flat": 11.994,
+    "gpu": 17.595,
+    "kernel": 16.343
    },
    {
     "trades": 16384,
     "cashflows": 775271,
-    "quantlib": 1534.59,
-    "flat": 25.124,
-    "gpu": 16.672,
-    "kernel": 14.954
+    "quantlib": 1833.31,
+    "flat": 24.636,
+    "gpu": 18.142,
+    "kernel": 16.551
    },
    {
     "trades": 32768,
     "cashflows": 1550545,
-    "quantlib": 2928.29,
-    "flat": 61.235,
-    "gpu": 26.305,
-    "kernel": 24.2
+    "quantlib": 3059.89,
+    "flat": 48.76,
+    "gpu": 30.134,
+    "kernel": 27.573
    },
    {
     "trades": 65536,
     "cashflows": 3101099,
-    "quantlib": 5794.46,
-    "flat": 92.348,
-    "gpu": 48.15,
-    "kernel": 44.658
+    "quantlib": 6183.77,
+    "flat": 99.586,
+    "gpu": 48.563,
+    "kernel": 44.029
    },
    {
     "trades": 131072,
     "cashflows": 6202193,
-    "quantlib": 11558.7,
-    "flat": 179.261,
-    "gpu": 109.566,
-    "kernel": 81.057
+    "quantlib": 12196.3,
+    "flat": 187.103,
+    "gpu": 109.325,
+    "kernel": 77.449
    }
   ],
   "crossoverBelow": {
-   "trades": 4096,
-   "cashflows": 193819,
-   "quantlib": 385.503,
-   "flat": 7.657,
-   "gpu": 8.823,
-   "kernel": 7.883
-  },
-  "crossoverAbove": {
    "trades": 8192,
    "cashflows": 387637,
-   "quantlib": 768.926,
-   "flat": 11.606,
-   "gpu": 11.388,
-   "kernel": 10.446
+   "quantlib": 740.328,
+   "flat": 11.994,
+   "gpu": 17.595,
+   "kernel": 16.343
   },
-  "topFlatVsQuantLib": 64.5,
-  "topGpuVsFlat": 1.64,
+  "crossoverAbove": {
+   "trades": 16384,
+   "cashflows": 775271,
+   "quantlib": 1833.31,
+   "flat": 24.636,
+   "gpu": 18.142,
+   "kernel": 16.551
+  },
+  "topFlatVsQuantLib": 65.2,
+  "topGpuVsFlat": 1.71,
   "singleThreaded": true
  },
  "agreement": [
   {
    "scope": "NPV",
    "comparison": "gpu_vs_quantlib",
-   "value": "1.7\u00d710\u207b\u00b9\u00b2"
+   "value": "2.0\u00d710\u207b\u00b9\u00b2"
   },
   {
    "scope": "NPV",
    "comparison": "flatcpu_vs_quantlib",
-   "value": "1.7\u00d710\u207b\u00b9\u00b2"
+   "value": "1.5\u00d710\u207b\u00b9\u00b2"
   },
   {
    "scope": "NPV",
    "comparison": "gpu_vs_flatcpu",
-   "value": "4.3\u00d710\u207b\u00b9\u00b3"
+   "value": "6.8\u00d710\u207b\u00b9\u00b3"
   },
   {
    "scope": "curve risk",
    "comparison": "scenario_vs_cpu_worst_rel_npv",
-   "value": "2.2\u00d710\u207b\u2079"
+   "value": "2.7\u00d710\u207b\u2079"
   },
   {
    "scope": "curve risk",
    "comparison": "flatcpu_vs_cpu_worst_rel_npv",
-   "value": "1.6\u00d710\u207b\u00b9\u00b2"
+   "value": "1.5\u00d710\u207b\u00b9\u00b2"
   }
  ]
 }
