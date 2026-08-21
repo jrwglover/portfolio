@@ -11,7 +11,7 @@ flowchart TB
   SITE@{ shape: curv-trap, label: "Portfolio site<br/><b>[Software System · external]</b><br/><small>React · Cloudflare Workers</small>" }
 
   MKT -->|"supplies quotes and fixings<br/><b>[JSON file, read at start of run]</b>"| SYS
-  SYS -->|"constructs curves and prices instruments with<br/><b>[C++ API, in-process]</b>"| QLIB
+  SYS -->|"constructs curves and prices instruments<br/><b>[C++ API, in-process]</b>"| QLIB
   SYS -->|"publishes frozen curves, ladders and cashflows<br/><b>[JSON, static files]</b>"| SITE
   Q -->|"reads marks, risk ladders and reconciliation results<br/><b>[HTTPS]</b>"| SITE
 
