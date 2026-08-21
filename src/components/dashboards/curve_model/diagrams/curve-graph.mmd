@@ -1,3 +1,7 @@
+%% Which curve needs which, and what is derived from them.
+%% The FX curve is named EURUSD in the engine and labelled "EUR under USD
+%% collateral" on the chart; both names are given here because neither on its
+%% own makes it obvious that this is the FX/cross-currency curve.
 flowchart TB
   subgraph IND [Independent builds]
     direction LR
@@ -9,11 +13,17 @@ flowchart TB
     SONIA["SONIA<br/><small>GBP OIS</small>"]
   end
 
-  E6["EURIBOR 6M<br/><small>projection curve</small>"]
-  XC["EUR under USD collateral<br/><small>implied zero · FX swaps + xccy basis</small>"]
+  E6["EURIBOR 6M<br/><small>projection curve · discounted on ESTR</small>"]
+  XC["EURUSD — the FX / cross-currency curve<br/><small>EUR discounted under USD collateral</small><br/><small>built from FX swap points + xccy basis</small>"]
 
   ESTR -- "discounts" --> E6
   SOFR -- "USD leg" --> XC
 
+  FWD["EUR/USD outright forwards<br/><small>spot × DF_EUR / DF_USD</small><br/><small>derived in the browser, not by the engine</small>"]
+  XC -- "EUR leg" --> FWD
+  SOFR -- "USD leg" --> FWD
+
   classDef dep stroke-width:1.5px
+  classDef derived stroke-dasharray:4 3
   class E6,XC dep
+  class FWD derived
