@@ -985,36 +985,6 @@
    "settlement_days": 2,
    "quotes": [
     {
-     "tenor": "1W",
-     "instrument": "DEPOSIT",
-     "rate": 0.020552
-    },
-    {
-     "tenor": "1M",
-     "instrument": "DEPOSIT",
-     "rate": 0.020428
-    },
-    {
-     "tenor": "2M",
-     "instrument": "DEPOSIT",
-     "rate": 0.02026
-    },
-    {
-     "tenor": "3M",
-     "instrument": "DEPOSIT",
-     "rate": 0.020091
-    },
-    {
-     "tenor": "4M",
-     "instrument": "DEPOSIT",
-     "rate": 0.019901
-    },
-    {
-     "tenor": "5M",
-     "instrument": "DEPOSIT",
-     "rate": 0.019728
-    },
-    {
      "tenor": "6M",
      "instrument": "DEPOSIT",
      "rate": 0.019559

@@ -109,7 +109,7 @@ export default function ArchitecturePanel() {
         C4 supplementary · Dynamic view of one valuation run
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
-              alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 233 instruments."
+              alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 227 instruments."
               caption="Sequence. The two-stage branch, the simultaneous pillar solve, and the fact that the coefficient upload is an identity rather than a fit are the three things that determine whether the numbers reconcile." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
@@ -160,6 +160,15 @@ export default function ArchitecturePanel() {
             instruments at all: it is implied from FX swap points and cross-currency basis
             against the USD curve, so SOFR has to exist first. Get that order wrong and the bootstrap either fails or silently discounts
             on a stale curve.
+            <br /><br />
+            EURIBOR is the 6M fixing plus the overlapping FRA strip, which is how a desk
+            quotes it: consecutive FRAs share five of their six months. That overlap is
+            visible if you plot the instantaneous forward, which ripples by about 3bp
+            between 6M and 2.5Y. It is deconvolution noise rather than a defect. Recovering
+            a pointwise forward from a stack of near-identical six-month averages means
+            differencing numbers that barely differ, and the noise lands in the derivative.
+            The 6M forward the FRAs actually quote is smooth and accurate to 0.63bp, which
+            is why this never shows up on a trading screen.
           </div>
         </Layer>
         <Arrow label="the same curve object, two ways" />
@@ -180,7 +189,7 @@ export default function ArchitecturePanel() {
         <Arrow />
 
         <Layer kicker="the check" title="Reconcile both paths">
-          All 233 calibration instruments repriced down both paths and differenced, plus a
+          All 227 calibration instruments repriced down both paths and differenced, plus a
           direct curve-vs-curve comparison across every exported point. Current worst
           agreement <strong style={{ color: PRI }}>3.6 × 10⁻¹⁴</strong>. A separate check
           re-derives every input quote from the finished curve with its own conventions.
