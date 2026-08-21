@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-  LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ReferenceLine, LabelList, ResponsiveContainer,
+  Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
 import ArchitecturePanel from './ArchitecturePanel';
@@ -43,8 +42,13 @@ interface Trade {
 interface TradesFile { date: string; bump_bps: number; trades: Trade[] }
 
 interface PerfLane { lane: string; ms: number; kind: 'cpu' | 'gpu' }
+interface ScalePt { trades: number; repricings: number; cpu: number; flat: number; gpu: number; upload: number; kernel: number }
+interface NpvPt { trades: number; cashflows: number; quantlib: number; flat: number; gpu: number; kernel: number }
+interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number; topGpuVsFlat: number; singleThreaded: boolean }
+interface Agree { scope: string; comparison: string; value: string }
+interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null }
 interface PerfPattern { id: string; name: string; workload: string; note: string; lanes: PerfLane[]; baseline: string }
-interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[] }
+interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Scaling; npvScaling?: NpvScaling; agreement?: Agree[] }
 
 const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
 const fmtMs = (v: number) =>
@@ -624,9 +628,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'perf' && perf && (
         <div>
           <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Where GPU acceleration actually pays, measured per workload pattern on this
-            machine. Bars are wall-clock milliseconds on a log scale; the multiple is
-            against the CPU baseline for that pattern.
+            Where GPU acceleration actually pays, and where it does not, measured per
+            workload on this machine. Bars are wall-clock milliseconds on a log scale and
+            the multiple is against the CPU baseline for that pattern. Every figure here
+            is read from the engine&apos;s own timing output rather than typed in.
           </p>
 
           {perf.patterns.map(p => {
@@ -640,7 +645,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             const hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
             return (
               <div key={p.id} className="mb-10">
-                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{p.name}</h3>
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{p.name}</h3>
+                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>{p.note}</p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>{p.workload}</p>
                 <ResponsiveContainer width="100%" height={44 + data.length * 40}>
                   <BarChart data={data} layout="vertical" margin={{ left: 8, right: 96, top: 4, bottom: 4 }}>
@@ -668,10 +674,189 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     </span>
                   ))}
                 </div>
-                <p className="text-xs max-w-3xl" style={{ color: 'var(--text-dim)' }}>{p.note}</p>
               </div>
             );
           })}
+
+          {perf.scaling && (() => {
+            const sc = perf.scaling;
+            const lo = sc.crossoverBelow, hi = sc.crossoverAbove;
+            return (
+              <div className="mb-10">
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Where the GPU starts paying: book size against wall clock
+                </h3>
+                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The same {sc.buckets} forward buckets repriced across books of growing size.
+                  Two CPU lines, and the gap between them is the point: QuantLib revalues
+                  through its object model, while the flattened lane prices the same
+                  cashflows from the same spline coefficients the device uses, on one core.
+                  Measuring a GPU against the first mostly measures the object model. The
+                  GPU pays a fixed upload per bucket regardless of book size, and on this
+                  workload it does not overtake the flattened CPU at any size measured.
+                </p>
+                <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
+                  {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
+                  up to {sc.points[sc.points.length - 1].repricings.toLocaleString()} repricings
+                </p>
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={sc.points} margin={{ left: 8, right: 24, top: 8, bottom: 20 }}>
+                    <CartesianGrid stroke={chartGrid} />
+                    <XAxis dataKey="trades" scale="log" type="number"
+                      domain={['dataMin', 'dataMax']} stroke={chartAxis}
+                      tick={{ fontSize: 10 }} tickFormatter={(v: any) => Number(v).toLocaleString()}
+                      label={{ value: 'trades in book', position: 'insideBottom', offset: -12,
+                               style: { fill: 'var(--text-dim)', fontSize: 11 } }} />
+                    <YAxis scale="log" domain={['dataMin', 'dataMax']} allowDataOverflow
+                      stroke={chartAxis} tick={{ fontSize: 10 }} width={64}
+                      tickFormatter={fmtMs} />
+                    <Tooltip {...tt}
+                      labelFormatter={(v: any) => Number(v).toLocaleString() + ' trades'}
+                      formatter={(v: any, n: any) => [fmtMs(Number(v)),
+                        n === 'cpu' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
+                          : n === 'gpu' ? 'GPU total' : 'GPU kernel only']} />
+                    <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
+                      {v === 'cpu' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
+                        : v === 'gpu' ? 'GPU total' : 'GPU kernel only'}</span>} />
+                    {lo && hi && (
+                      <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
+                        label={{ value: 'crossover', position: 'insideTop',
+                                 style: { fill: 'var(--text-dim)', fontSize: 10 } }} />
+                    )}
+                    <Line type="monotone" dataKey="cpu" stroke="#5b8fc9" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="flat" stroke="#b07fc9" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="gpu" stroke="#d4a853" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
+                      strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div className="grid md:grid-cols-3 gap-3 mt-3">
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      {lo && hi ? lo.trades + ' to ' + hi.trades + ' trades' : 'not reached'}
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      {lo && hi ? 'between ' + lo.repricings.toLocaleString() + ' and ' +
+                        hi.repricings.toLocaleString() + ' repricings, bracketed by measured sizes rather than interpolated'
+                        : 'the GPU did not overtake at any size measured'}
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Below it</div>
+                    <div className="font-mono text-sm" style={{ color: '#c86e6e' }}>CPU wins</div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      the per-bucket curve upload is fixed in book size, so a small book
+                      never spreads it far enough
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>At the largest book</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      {(sc.points[sc.points.length - 1].cpu / sc.points[sc.points.length - 1].gpu).toFixed(1)}&times;
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      the dashed line is the kernel alone; the gap above it is flattening the
+                      book on the host, which a live system does once and keeps
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {perf.npvScaling && (() => {
+            const ns = perf.npvScaling;
+            const lo = ns.crossoverBelow, hi = ns.crossoverAbove;
+            const top = ns.points[ns.points.length - 1];
+            return (
+              <div className="mb-10">
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Portfolio NPV: where the GPU starts paying
+                </h3>
+                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  A whole book priced once, across books of growing size, with all four
+                  lanes in one process on one machine. Most of the distance is covered
+                  before the GPU is reached: flattening the book out of QuantLib&apos;s object
+                  model is worth {ns.topFlatVsQuantLib}&times; on a single core, and the
+                  device adds {ns.topGpuVsFlat}&times; on top of that. Quoting the GPU
+                  against QuantLib alone would fold the first number into the second.
+                </p>
+                <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
+                  1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
+                </p>
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={ns.points} margin={{ left: 8, right: 24, top: 8, bottom: 20 }}>
+                    <CartesianGrid stroke={chartGrid} />
+                    <XAxis dataKey="trades" scale="log" type="number"
+                      domain={['dataMin', 'dataMax']} stroke={chartAxis}
+                      tick={{ fontSize: 10 }} tickFormatter={(v: any) => Number(v).toLocaleString()}
+                      label={{ value: 'swaps in book', position: 'insideBottom', offset: -12,
+                               style: { fill: 'var(--text-dim)', fontSize: 11 } }} />
+                    <YAxis scale="log" domain={['dataMin', 'dataMax']} allowDataOverflow
+                      stroke={chartAxis} tick={{ fontSize: 10 }} width={64} tickFormatter={fmtMs} />
+                    <Tooltip {...tt}
+                      labelFormatter={(v: any) => Number(v).toLocaleString() + ' swaps'}
+                      formatter={(v: any, n: any) => [fmtMs(Number(v)),
+                        n === 'quantlib' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
+                          : n === 'gpu' ? 'GPU total' : 'GPU kernel only']} />
+                    <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
+                      {v === 'quantlib' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
+                        : v === 'gpu' ? 'GPU total' : 'GPU kernel only'}</span>} />
+                    {lo && hi && (
+                      <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
+                        label={{ value: 'crossover', position: 'insideTop',
+                                 style: { fill: 'var(--text-dim)', fontSize: 10 } }} />
+                    )}
+                    <Line type="monotone" dataKey="quantlib" stroke="#5b8fc9" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="flat" stroke="#b07fc9" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="gpu" stroke="#d4a853" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
+                      strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div className="grid md:grid-cols-3 gap-3 mt-3">
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Leaving the object model</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{ns.topFlatVsQuantLib}&times;</div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      same arithmetic, same curve, one CPU core, no device
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Then the GPU</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{ns.topGpuVsFlat}&times;</div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      over the flattened CPU at the largest book
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      {lo && hi ? lo.trades.toLocaleString() + ' to ' + hi.trades.toLocaleString() + ' swaps' : 'not reached'}
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      against the flattened CPU, not against QuantLib
+                    </div>
+                  </div>
+                </div>
+                {ns.singleThreaded && (
+                  <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                    Both CPU lanes are single threaded, so this is one core against a whole
+                    GPU. On a multi core box the flattened CPU would take back most of the
+                    remaining gap, which is worth knowing before choosing a device over a
+                    thread pool.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
             Accuracy of the accelerated path
@@ -685,6 +870,34 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               </div>
             ))}
           </div>
+
+          {perf.agreement && perf.agreement.length > 0 && (
+            <>
+              <h3 className="text-sm font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
+                Do the lanes agree?
+              </h3>
+              <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                Every lane above is checked against QuantLib per instrument, at every book
+                size. A faster lane is only worth reporting if it computes the same number,
+                and a fan out kernel that indexes the wrong scenario still returns entirely
+                plausible figures.
+              </p>
+              <div className="grid md:grid-cols-3 gap-3">
+                {perf.agreement.map(a => (
+                  <div key={a.scope + a.comparison} className="rounded px-3 py-2"
+                    style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>
+                      {a.comparison.replace(/_/g, ' ')}
+                    </div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{a.value}</div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      worst relative difference, {a.scope}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
