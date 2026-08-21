@@ -4,6 +4,7 @@ import {
   ReferenceLine, LabelList, ResponsiveContainer,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
+import ArchitecturePanel from './ArchitecturePanel';
 
 /* ── Types ── */
 type Pt = [number, number, number]; // [t, fwd%, zero%]
@@ -16,12 +17,13 @@ interface MarketCurve {
 }
 interface Inputs { date: string; fixings?: unknown[]; curves: MarketCurve[] }
 
-type Tab = 'inputs' | 'curves' | 'sensis' | 'perf';
+type Tab = 'inputs' | 'curves' | 'sensis' | 'perf' | 'arch';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
   { key: 'sensis', label: 'Trade Risk & Cashflows' },
   { key: 'perf', label: 'CPU vs GPU' },
+  { key: 'arch', label: 'Architecture' },
 ];
 
 interface LadderRow { tenor: string; instrument: string; rate: number; cpu: number; gpu: number | null }
@@ -609,6 +611,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           )}
         </div>
       )}
+
+      {tab === 'arch' && <ArchitecturePanel />}
 
       {tab === 'perf' && perf && (
         <div>
