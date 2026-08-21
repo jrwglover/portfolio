@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import systemSrc from './diagrams/system.mmd?raw';
 import runSrc from './diagrams/valuation-run.mmd?raw';
 import buildSrc from './diagrams/construction.mmd?raw';
 import curveSrc from './diagrams/curve-graph.mmd?raw';
@@ -88,6 +89,13 @@ export default function ArchitecturePanel() {
         differenced against the QuantLib reference on the same inputs, and the engine is
         only useful if that difference stays at round-off.
       </p>
+
+      <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+        System and deployment
+      </p>
+      <Figure src="/diagrams/system.svg" source={systemSrc}
+              alt="System diagram: quote and fixing files feed a single host C++ process containing the bootstrap, the coefficient extractor and the risk engine over eight in-memory term structures; coefficients are copied to CUDA device memory where evaluation and pricing kernels read them; the CPU reference and GPU results meet at a reconciliation gate before being written to files and exported as frozen JSON for the site."
+              caption="Shape carries meaning — see the legend. The two boundaries are a real deployment split: everything in Host is one C++ process; everything in Device lives in GPU memory and is only reached by kernel launch." />
 
       <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         What happens on a valuation run
