@@ -1,0 +1,51 @@
+%% C4 Level 2 — Container.
+%% C4 notation rules followed: every element carries name, [type: technology]
+%% and a description; every relationship is labelled with intent, and the ones
+%% that cross a process or device boundary also carry the protocol. Shapes are
+%% secondary to the labels and are explained in the key.
+flowchart LR
+  MD@{ shape: lin-cyl, label: "Market data<br/><b>[External · JSON file]</b><br/><small>Quotes and fixings, instrument-typed</small>" }
+
+  subgraph HOST["Multi-curve rates engine — host process"]
+    direction TB
+    BOOT@{ shape: subproc, label: "Curve construction<br/><b>[Container: C++17 / QuantLib]</b><br/><small>Helpers per instrument type;<br/>all pillars solved at once</small>" }
+    TS@{ shape: win-pane, label: "Term structures<br/><b>[Container: in-process memory]</b><br/><small>Eight curves, log-cubic on<br/>discount factors</small>" }
+    COEF@{ shape: subproc, label: "Coefficient extraction<br/><b>[Container: C++17]</b><br/><small>Four logDF samples per interval<br/>solved for c0..c3</small>" }
+    RISK@{ shape: subproc, label: "Risk engine<br/><b>[Container: C++17 / OpenMP]</b><br/><small>PV01 by re-bootstrapping<br/>each bumped quote</small>" }
+    RECON@{ shape: diam, label: "Reconciliation<br/><b>[Container: C++17 / Python]</b><br/><small>Differences both paths;<br/>re-derives every quote</small>" }
+  end
+
+  subgraph DEV["CUDA device"]
+    direction TB
+    CMEM@{ shape: win-pane, label: "Curve coefficient store<br/><b>[Container: CUDA global memory]</b><br/><small>CubicCoeffs per slot:<br/>c0..c3, bounds, form</small>" }
+    KERN@{ shape: hex, label: "Evaluation and pricing kernels<br/><b>[Container: CUDA C++]</b><br/><small>Binary search then Horner;<br/>never rebuilds a curve</small>" }
+  end
+
+  OUT@{ shape: docs, label: "Engine results<br/><b>[Container: CSV / JSON files]</b><br/><small>Curves, ladders, cashflows</small>" }
+  PUB@{ shape: lin-cyl, label: "Published dataset<br/><b>[External · static JSON]</b><br/><small>Frozen, served with the page</small>" }
+
+  MD -->|"reads at start of run<br/><b>[file]</b>"| BOOT
+  BOOT -->|"stores curves in"| TS
+  TS -->|"sampled by"| COEF
+  COEF -->|"uploads coefficients<br/><b>[cudaMemcpy H2D]</b>"| CMEM
+  CMEM -->|"read by every thread"| KERN
+  TS -->|"reference path prices"| RISK
+  KERN -->|"device prices, ladders<br/><b>[kernel launch]</b>"| RISK
+  TS -->|"CPU reference values"| RECON
+  KERN -->|"device values<br/><b>[kernel launch]</b>"| RECON
+  RECON -->|"worst 3.6e-14"| OUT
+  RISK -->|"ladders, cashflows"| OUT
+  OUT -->|"exported by Python<br/><b>[file write]</b>"| PUB
+
+  subgraph KEY[" Key "]
+    direction TB
+    K1@{ shape: lin-cyl, label: "file / dataset" }
+    K2@{ shape: subproc, label: "code container" }
+    K3@{ shape: win-pane, label: "memory container" }
+    K4@{ shape: hex, label: "GPU kernel" }
+    K5@{ shape: diam, label: "check / gate" }
+    K6@{ shape: docs, label: "output files" }
+  end
+
+  classDef bnd fill:none,stroke:#2a2a3e
+  class HOST,DEV,KEY bnd

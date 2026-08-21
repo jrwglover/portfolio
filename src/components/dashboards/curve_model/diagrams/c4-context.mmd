@@ -1,0 +1,27 @@
+%% C4 Level 1 — System Context.
+%% C4 notation rules followed here: every element carries name, [type], and a
+%% description; every relationship is labelled with intent AND technology.
+flowchart TB
+  Q(["Quant / rates desk<br/><b>[Person]</b><br/><small>Needs marks and risk that reconcile<br/>before they reach a book</small>"])
+
+  SYS["Multi-curve rates pricing and risk engine<br/><b>[Software System]</b><br/><small>Bootstraps eight curves, prices and risks them on<br/>CPU and GPU, and proves the two agree</small>"]
+
+  MKT@{ shape: lin-cyl, label: "Market data<br/><b>[Software System · external]</b><br/><small>Instrument-typed quote set per valuation date</small>" }
+  QLIB["QuantLib<br/><b>[Software System · external]</b><br/><small>Reference term-structure, helper and<br/>instrument library</small>"]
+  SITE@{ shape: curv-trap, label: "Portfolio site<br/><b>[Software System · external]</b><br/><small>React · Cloudflare Workers</small>" }
+
+  MKT -->|"supplies quotes and fixings<br/><b>[JSON file, read at start of run]</b>"| SYS
+  SYS -->|"constructs curves and prices instruments with<br/><b>[C++ API, in-process]</b>"| QLIB
+  SYS -->|"publishes frozen curves, ladders and cashflows<br/><b>[JSON, static files]</b>"| SITE
+  Q -->|"reads marks, risk ladders and reconciliation results<br/><b>[HTTPS]</b>"| SITE
+
+  classDef ext stroke-dasharray:4 3
+  class MKT,QLIB,SITE ext
+
+  subgraph KEY[" Key "]
+    direction LR
+    K1["in scope<br/><small>solid border</small>"]
+    K2["external<br/><small>dashed border</small>"]
+    K3(["person"])
+  end
+  class K2 ext

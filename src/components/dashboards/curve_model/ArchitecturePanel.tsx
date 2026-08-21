@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import systemSrc from './diagrams/system.mmd?raw';
+import ctxSrc from './diagrams/c4-context.mmd?raw';
+import contSrc from './diagrams/c4-container.mmd?raw';
 import runSrc from './diagrams/valuation-run.mmd?raw';
 import buildSrc from './diagrams/construction.mmd?raw';
 import curveSrc from './diagrams/curve-graph.mmd?raw';
@@ -91,14 +92,21 @@ export default function ArchitecturePanel() {
       </p>
 
       <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
-        System and deployment
+        C4 Level 1 · System Context
       </p>
-      <Figure src="/diagrams/system.svg" source={systemSrc}
-              alt="System diagram: quote and fixing files feed a single host C++ process containing the bootstrap, the coefficient extractor and the risk engine over eight in-memory term structures; coefficients are copied to CUDA device memory where evaluation and pricing kernels read them; the CPU reference and GPU results meet at a reconciliation gate before being written to files and exported as frozen JSON for the site."
-              caption="Shape carries meaning — see the legend. The two boundaries are a real deployment split: everything in Host is one C++ process; everything in Device lives in GPU memory and is only reached by kernel launch." />
+      <Figure src="/diagrams/c4-context.svg" source={ctxSrc}
+              alt="C4 system context: a quant reads marks and risk from the portfolio site; the rates engine takes instrument-typed quotes from market data, builds curves using QuantLib, and publishes frozen JSON to the site."
+              caption="Who uses it and what it touches. Following C4 notation: every element carries a name, its [type], and a description; every relationship states intent and the technology it uses." />
 
-      <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
-        What happens on a valuation run
+      <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+        C4 Level 2 · Containers
+      </p>
+      <Figure src="/diagrams/c4-container.svg" source={contSrc}
+              alt="C4 container diagram: inside the host process, curve construction writes eight term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
+              caption="Each container names its technology. The host/device split is a real boundary — one cudaMemcpy crosses it, and that copy is the only place the two paths can diverge, which is why reconciliation sits downstream of both." />
+
+      <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+        C4 supplementary · Dynamic view — one valuation run
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
               alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 240 instruments."
