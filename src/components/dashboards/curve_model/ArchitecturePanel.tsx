@@ -1,3 +1,7 @@
+import { useState } from 'react';
+import containerSrc from './diagrams/container.mmd?raw';
+import curveSrc from './diagrams/curve-graph.mmd?raw';
+
 /* Architecture panel for the curve-model dashboard.
    A schematic, not a chart: structure carries the meaning, so colour stays
    recessive and is used only to separate the two evaluation paths (CPU / GPU)
@@ -38,43 +42,39 @@ function Layer({ kicker, title, children, accent }:
   );
 }
 
-/* Which curve needs which. The two dependencies are the whole reason this is a
-   framework rather than eight independent bootstraps: EURIBOR cannot be built
-   without ESTR, and EUR/USD cannot be built without SOFR. */
-function DependencyGraph() {
-  const node = (x: number, y: number, w: number, label: string, sub: string, stroke: string) => (
-    <g key={label}>
-      <rect x={x} y={y} width={w} height="42" rx="5" fill={CARD} stroke={stroke} strokeWidth="1" />
-      <text x={x + w / 2} y={y + 18} textAnchor="middle" fontSize="11.5" fill={PRI}
-            fontFamily="ui-monospace, monospace">{label}</text>
-      <text x={x + w / 2} y={y + 32} textAnchor="middle" fontSize="9.5" fill={DIM}>{sub}</text>
-    </g>
-  );
+
+/* Diagrams are Mermaid source in ./diagrams, pre-rendered to SVG by
+   `npm run diagrams` (mermaid-cli). Rendering at build time keeps mermaid out
+   of the runtime bundle and makes a broken diagram a build failure rather than
+   a blank box in production. The source is shown on demand because a diagram
+   you cannot diff is a screenshot. */
+function Figure({ src, source, alt, caption }:
+  { src: string; source: string; alt: string; caption?: string }) {
+  const [showSrc, setShowSrc] = useState(false);
   return (
-    <svg viewBox="0 0 720 250" width="100%" role="img"
-         aria-label="Curve dependency graph: EURIBOR 6M is projected on its own curve but discounted on ESTR; EUR under USD collateral is implied from SOFR plus FX swaps and cross-currency basis. The six other curves are independent.">
-      <text x="0" y="12" fontSize="10" fill={DIM} fontFamily="ui-monospace, monospace">INDEPENDENT</text>
-      {node(0, 22, 132, 'ESTR', 'tenor OIS', EDGE)}
-      {node(146, 22, 132, 'ESTR ECB', 'meeting-dated', EDGE)}
-      {node(292, 22, 132, 'ESTR IMM', 'IMM-dated', EDGE)}
-      {node(438, 22, 132, 'ESTR IMM+fut', 'IMM + futures', EDGE)}
-      {node(584, 22, 132, 'SOFR', 'USD OIS', EDGE)}
-      {node(0, 96, 132, 'SONIA', 'GBP OIS', EDGE)}
-
-      <text x="0" y="160" fontSize="10" fill={DIM} fontFamily="ui-monospace, monospace">DEPENDENT</text>
-      {node(0, 170, 200, 'EURIBOR 6M', 'projection', '#8b7ec8')}
-      {node(300, 170, 240, 'EUR under USD collateral', 'implied zero, xccy', '#4a9a68')}
-
-      {/* ESTR discounts EURIBOR */}
-      <path d="M66 64 L66 120 L100 120 L100 170" fill="none" stroke="#8b7ec8"
-            strokeWidth="1.2" strokeDasharray="3 3" />
-      <text x="106" y="124" fontSize="9.5" fill="#8b7ec8">discounts</text>
-
-      {/* SOFR is the USD leg of the xccy build */}
-      <path d="M650 64 L650 120 L420 120 L420 170" fill="none" stroke="#4a9a68"
-            strokeWidth="1.2" strokeDasharray="3 3" />
-      <text x="430" y="114" fontSize="9.5" fill="#4a9a68">USD leg</text>
-    </svg>
+    <figure className="my-3 rounded-lg overflow-hidden" style={{ border: `1px solid ${EDGE}` }}>
+      <div className="px-3 py-1.5 flex items-center justify-between"
+           style={{ background: 'var(--bg-surface)', borderBottom: `1px solid ${EDGE}` }}>
+        <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: DIM }}>
+          {src.split('/').pop()?.replace('.svg', '.mmd')} · mermaid
+        </span>
+        <button onClick={() => setShowSrc(v => !v)}
+                className="font-mono text-[10px] px-2 py-0.5 rounded"
+                style={{ color: showSrc ? PRI : DIM, border: `1px solid ${EDGE}` }}>
+          {showSrc ? 'diagram' : 'source'}
+        </button>
+      </div>
+      {showSrc ? (
+        <pre className="text-[10.5px] leading-relaxed p-3 overflow-x-auto m-0"
+             style={{ background: 'var(--bg-surface)', color: SEC }}>{source.trim()}</pre>
+      ) : (
+        <div className="p-3" style={{ background: CARD, overflowX: 'auto' }}>
+          <img src={src} alt={alt} style={{ width: '100%', minWidth: 520, display: 'block' }} />
+        </div>
+      )}
+      {caption && <figcaption className="px-3 py-2 text-[11px]"
+                              style={{ color: DIM, borderTop: `1px solid ${EDGE}` }}>{caption}</figcaption>}
+    </figure>
   );
 }
 
@@ -86,6 +86,14 @@ export default function ArchitecturePanel() {
         exists to make that last clause checkable: every number the GPU produces is
         differenced against the QuantLib reference on the same inputs, and the engine is
         only useful if that difference stays at round-off.
+      </p>
+
+      <Figure src="/diagrams/container.svg" source={containerSrc}
+              alt="Container diagram: market quotes feed curve construction, which feeds a CPU reference path and a CUDA path; both are reconciled and written to results, which the portfolio site renders."
+              caption="C4 Level 2 (Container). Written as a Mermaid flowchart rather than C4Container — the native C4 renderer stacks boundaries vertically and produced a 995x1892 diagram. Same semantics: containers with their technology, one system boundary, labelled relationships." />
+
+      <p className="text-xs mt-6 mb-3 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+        The same pipeline, stage by stage
       </p>
 
       <div className="flex flex-col items-center max-w-3xl">
@@ -114,7 +122,8 @@ export default function ArchitecturePanel() {
         <Arrow />
 
         <Layer kicker="curves" title="Eight curves, two of them dependent">
-          <DependencyGraph />
+          <Figure src="/diagrams/curve-graph.svg" source={curveSrc}
+                  alt="Curve dependency graph: six curves build independently; EURIBOR 6M is discounted on ESTR and EUR under USD collateral takes SOFR as its USD leg." />
           <div className="mt-2">
             The meeting-dated and IMM curves are built in two stages: flat forwards between
             policy or IMM dates out to the last strip date, then the spline beyond, joined by

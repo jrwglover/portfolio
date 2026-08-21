@@ -1,0 +1,40 @@
+%% C4 Level 2 (Container) for the multi-curve rates engine.
+%% Written as a flowchart rather than mermaid's native C4Container: the C4
+%% renderer stacks boundaries vertically and produced a 995x1892 diagram, which
+%% is unreadable in a panel. Same semantics - people, containers with their
+%% technology, one system boundary, labelled relationships.
+flowchart LR
+  quant(["Quant / desk<br/><small>needs marks and risk that reconcile</small>"])
+
+  subgraph engine ["mc_interp engine"]
+    direction TB
+    quotes[("Market quotes<br/><small>JSON · instrument-typed</small>")]
+    boot["Curve construction<br/><small>C++ / QuantLib · GlobalBootstrap</small>"]
+
+    subgraph eval [" two evaluation paths "]
+      direction LR
+      cpu["CPU reference<br/><small>QuantLib term structures</small>"]
+      gpu["CUDA kernels<br/><small>4 cubic coeffs per interval</small>"]
+    end
+
+    risk["Risk engine<br/><small>C++ / OpenMP · PV01 per quote</small>"]
+    check{{"Reconcile<br/><small>240 instruments, both paths</small>"}}
+    results[("Results<br/><small>CSV / JSON</small>")]
+  end
+
+  site["Portfolio site<br/><small>React + Vite · renders, never computes</small>"]
+
+  quotes -->|"read at valuation"| boot
+  boot -->|"term structures"| cpu
+  boot -->|"coefficient upload"| gpu
+  cpu --> check
+  gpu --> check
+  cpu --> risk
+  gpu --> risk
+  check -->|"worst 3.6e-14"| results
+  risk -->|"ladders, cashflows"| results
+  results -->|"static JSON"| site
+  quant --> site
+
+  classDef store stroke-dasharray:4 3
+  class quotes,results store
