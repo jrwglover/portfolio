@@ -43,6 +43,17 @@ interface Trade {
 }
 interface TradesFile { date: string; bump_bps: number; trades: Trade[] }
 
+/* Renders "3.6e-14" as 3.6x10 with a real superscript exponent. Composing the
+   exponent from unicode superscript characters instead mixes two Unicode
+   blocks, Latin-1 for one/two/three and the superscripts block for the rest,
+   and most fonts draw them at different heights, so a two-digit exponent looks
+   misaligned. A <sup> keeps the glyphs in one typeface. */
+function Sci({ v }: { v: string }) {
+  const m = /^(-?[\d.]+)e([+-]?\d+)$/.exec(v.trim());
+  if (!m) return <>{v}</>;
+  return <>{m[1]}&times;10<sup style={{ fontSize: '0.72em' }}>{Number(m[2])}</sup></>;
+}
+
 interface PerfLane { lane: string; ms: number; kind: 'cpu' | 'gpu' }
 interface ScalePt { trades: number; repricings: number; cpu: number; flat: number; gpu: number; upload: number; kernel: number }
 interface NpvPt { trades: number; cashflows: number; quantlib: number; flat: number; gpu: number; kernel: number }
@@ -903,7 +914,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     Both CPU lanes are single threaded, so this is one core against a whole
                     GPU. On a multi core box the flattened CPU would take back most of the
                     remaining gap, which is worth knowing before choosing a device over a
-                    thread pool.
+                    thread pool. The final multiple is also unstable between runs on this
+                    machine, moving between roughly parity and 1.7x, so read it as the two
+                    lanes being close at this size rather than as a fixed number. The
+                    order of magnitude to the left of it, leaving the object model, is
+                    what actually holds up.
                   </p>
                 )}
               </div>
@@ -917,7 +932,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             {perf.accuracy.map(a => (
               <div key={a.metric} className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
                 <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>{a.metric}</div>
-                <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{a.value}</div>
+                <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}><Sci v={a.value} /></div>
                 <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>{a.note}</div>
               </div>
             ))}
@@ -932,7 +947,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 Every lane above is checked against QuantLib per instrument, at every book
                 size. A faster lane is only worth reporting if it computes the same number,
                 and a fan out kernel that indexes the wrong scenario still returns entirely
-                plausible figures.
+                plausible figures. Differences are quoted against notional rather than
+                against NPV: a swap struck near par has an NPV close to zero, and dividing
+                by it turns a negligible absolute difference into a large looking relative
+                one.
               </p>
               <div className="grid md:grid-cols-3 gap-3">
                 {perf.agreement.map(a => (
@@ -941,7 +959,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>
                       {a.comparison.replace(/_/g, ' ')}
                     </div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{a.value}</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}><Sci v={a.value} /></div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
                       worst relative difference, {a.scope}
                     </div>
