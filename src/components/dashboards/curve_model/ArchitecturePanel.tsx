@@ -204,8 +204,6 @@ export default function ArchitecturePanel() {
         {[
           ['Interpolate log discount factors, not zeros',
            'On log-DF the forward is the spline derivative, so it is C¹ with no t-amplification. On zeros the forward inherits t·z‴ and rings at every knot.'],
-          ['Use the library spline, not a bespoke one',
-           'A hand-rolled minimum-curvature spline transposed the two off-diagonal weights in its tridiagonal system. Identical on uniform spacing, C²-discontinuous wherever spacing changes. That gave 9 spurious turning points inside 10Y where the market path has 1.'],
           ['Solve globally, not pillar-by-pillar',
            'A global interpolator has no bracketing sequential solve; the iterative bootstrap silently failed to converge on the long end.'],
           ['Pin the short end with instruments',
