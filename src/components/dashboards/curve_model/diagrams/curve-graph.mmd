@@ -1,0 +1,19 @@
+flowchart TB
+  subgraph IND [Independent builds]
+    direction LR
+    ESTR["ESTR<br/><small>tenor OIS</small>"]
+    ECB["ESTR ECB<br/><small>meeting-dated · step+spline</small>"]
+    IMM["ESTR IMM<br/><small>IMM-dated · step+spline</small>"]
+    IMMF["ESTR IMM+fut<br/><small>IMM + futures</small>"]
+    SOFR["SOFR<br/><small>USD OIS</small>"]
+    SONIA["SONIA<br/><small>GBP OIS</small>"]
+  end
+
+  E6["EURIBOR 6M<br/><small>projection curve</small>"]
+  XC["EUR under USD collateral<br/><small>implied zero · FX swaps + xccy basis</small>"]
+
+  ESTR -- "discounts" --> E6
+  SOFR -- "USD leg" --> XC
+
+  classDef dep stroke-width:1.5px
+  class E6,XC dep
