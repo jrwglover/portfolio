@@ -26,6 +26,7 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 interface LadderRow { tenor: string; instrument: string; rate: number; cpu: number; gpu: number | null }
+interface CurveLadderRow { tenor: string; role: string; time: number; rate: number; cpu: number; gpu: number }
 interface FxRow { instrument: string; maturity: string; bumpType: string; pillar: string; baseQuote: number; pv01: number }
 interface Cashflow {
   leg: 'fixed' | 'float'; start: string; end: string; pay: string;
@@ -35,6 +36,7 @@ interface Trade {
   id: string; label: string; product: string; notional: string; detail: string; ccy: string;
   curves: { key: string; role: string }[]; engine: string;
   ladders: Record<string, LadderRow[]>; hasGpu: boolean; fx?: FxRow[];
+  curveLadders?: Record<string, Record<string, CurveLadderRow[]>>;
   fairRate: number | null; npv: number | null;
   fixedLegNpv?: number | null; floatLegNpv?: number | null;
   cashflows: Cashflow[];
@@ -137,6 +139,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
   const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df' | 'fx'>('fwd');
+  const [measure, setMeasure] = useState<'market' | 'zero' | 'forward'>('market');
   const [fwdTenor, setFwdTenor] = useState(0.25);
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
@@ -219,16 +222,36 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   }, [curves, shown, domain, tMax, fwdTenor, fxSpot]);
 
   const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
-  const tradeCurveKeys = selTrade ? Object.keys(selTrade.ladders) : [];
+
+  // Three risk views of the same trade. Market bumps a QUOTE and re-runs the
+  // bootstrap; zero and forward bump the CURVE directly. They answer different
+  // questions and are not rescalings of each other, so they get a toggle rather
+  // than being blended.
+  const curveLadders = selTrade?.curveLadders;
+  const measureAvailable = curveLadders ? Object.keys(curveLadders) : [];
+  const activeMeasure = measure !== 'market' && measureAvailable.includes(measure)
+    ? measure : 'market';
+
+  const ladderSource = activeMeasure === 'market'
+    ? (selTrade?.ladders ?? {})
+    : (curveLadders?.[activeMeasure] ?? {});
+  const tradeCurveKeys = Object.keys(ladderSource);
   const activeCurve = tradeCurve && tradeCurveKeys.includes(tradeCurve) ? tradeCurve : tradeCurveKeys[0];
 
   const ladderChart = useMemo(() => {
-    if (!selTrade || !activeCurve) return [];
-    return (selTrade.ladders[activeCurve] ?? []).map(r => ({
-      tenor: r.tenor, instrument: r.instrument,
-      cpu: +r.cpu.toFixed(2), gpu: r.gpu == null ? undefined : +r.gpu.toFixed(2),
+    if (!activeCurve) return [];
+    const rows = ladderSource[activeCurve] ?? [];
+    return (rows as (LadderRow | CurveLadderRow)[]).map(r => ({
+      tenor: r.tenor,
+      instrument: 'instrument' in r ? r.instrument : (r as CurveLadderRow).role,
+      cpu: +r.cpu.toFixed(2),
+      gpu: r.gpu == null ? undefined : +r.gpu.toFixed(2),
     }));
-  }, [selTrade, activeCurve]);
+  }, [ladderSource, activeCurve]);
+
+  // Curve-node ladders always carry both lanes; the market ladder only does
+  // where the engine ran a GPU pillar pass.
+  const showGpu = activeMeasure !== 'market' || !!selTrade?.hasGpu;
 
   const fxInstruments = useMemo(
     () => (selTrade?.fx ? [...new Set(selTrade.fx.map(r => r.instrument))] : []), [selTrade]);
@@ -458,6 +481,20 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
           {selTrade && !selTrade.fx && (
             <div>
+              {measureAvailable.length > 0 && (
+                <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap items-center">
+                  <span className="text-[10px] uppercase mr-1" style={{ color: 'var(--text-dim)' }}>risk measure</span>
+                  {([['market', 'market quote'], ['zero', 'zero bucket'], ['forward', 'forward bucket']] as const)
+                    .filter(([k]) => k === 'market' || measureAvailable.includes(k))
+                    .map(([k, label]) => (
+                      <button key={k} onClick={() => { setMeasure(k); setTradeCurve(null); }}
+                        className="px-2.5 py-1 rounded"
+                        style={chip(activeMeasure === k, '#b07fc9')}>
+                        {label}
+                      </button>
+                    ))}
+                </div>
+              )}
               <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
                 {tradeCurveKeys.map(k => (
                   <button key={k} onClick={() => setTradeCurve(k)} className="px-2.5 py-1 rounded"
@@ -473,22 +510,30 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
                     tickFormatter={v => Number(v).toLocaleString()} />
                   <Tooltip {...tt} formatter={(v: any, n: any) =>
-                    [Number(v).toLocaleString(), n === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder']}
+                    [Number(v).toLocaleString(), n === 'cpu'
+                      ? (activeMeasure === 'market' ? 'CPU bump & re-bootstrap' : 'CPU, QuantLib')
+                      : (activeMeasure === 'market' ? 'GPU pillar ladder' : 'GPU, device cashflows')]}
                     labelFormatter={(l: any) => {
                       const row = ladderChart.find(r => r.tenor === l);
                       return `${l}${row ? ` · ${row.instrument}` : ''}`;
                     }} />
-                  {selTrade.hasGpu && <Legend formatter={(v: string) =>
-                    <span style={{ fontSize: 11 }}>{v === 'cpu' ? 'CPU bump & re-bootstrap' : 'GPU pillar ladder'}</span>} />}
+                  {showGpu && <Legend formatter={(v: string) =>
+                    <span style={{ fontSize: 11 }}>{v === 'cpu'
+                      ? (activeMeasure === 'market' ? 'CPU bump & re-bootstrap' : 'CPU, QuantLib')
+                      : (activeMeasure === 'market' ? 'GPU pillar ladder' : 'GPU, device cashflows')}</span>} />}
                   <ReferenceLine y={0} stroke={chartAxis} />
                   <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
-                  {selTrade.hasGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
+                  {showGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
                 </BarChart>
               </ResponsiveContainer>
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                {selTrade.hasGpu
-                  ? 'Two independent ladders: the CPU one bumps the market quote and re-runs the global bootstrap, so the shock propagates through the spline; the GPU one bumps the pillar directly. Where they differ is what re-bootstrapping adds: risk leaking to neighbouring buckets through the interpolation.'
-                  : 'Each bar is one market quote bumped and the curve rebuilt; the buckets are the instruments the desk hedges with.'}
+                {activeMeasure === 'market'
+                  ? (selTrade.hasGpu
+                    ? 'Two independent ladders: the CPU one bumps the market quote and re-runs the global bootstrap, so the shock propagates through the spline; the GPU one bumps the pillar directly. Where they differ is what re-bootstrapping adds: risk leaking to neighbouring buckets through the interpolation.'
+                    : 'Each bar is one market quote bumped and the curve rebuilt; the buckets are the instruments the desk hedges with.')
+                  : activeMeasure === 'zero'
+                    ? 'Each bar bumps one zero-curve node by 1bp through a tent that falls to zero at its neighbours, with no bootstrap in the loop. Both lanes price the identical perturbed curve, so any gap between them is a pricing difference and never a curve difference.'
+                    : 'Each bar bumps the instantaneous forward by 1bp across one bucket and leaves the rest of the curve untouched. No solver runs, so every bucket is independent and the whole ladder prices in a single GPU launch.'}
                 {activeCurve === 'ESTR_ECB' && ' MTG pillars are ECB policy effective dates: the ladder is per central bank meeting.'}
                 {(activeCurve === 'ESTR_IMM' || activeCurve === 'ESTR_IMMFUT') && ' IMM pillars are quarterly futures dates.'}
                 {activeCurve === 'ESTR_IMMFUT' && ' FUT buckets are convexity-adjusted futures contracts.'}
@@ -784,6 +829,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   model is worth {ns.topFlatVsQuantLib}&times; on a single core, and the
                   device adds {ns.topGpuVsFlat}&times; on top of that. Quoting the GPU
                   against QuantLib alone would fold the first number into the second.
+                </p>
+                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The QuantLib line here is full object revaluation, one priced swap at a
+                  time. It is a different and slower baseline than the one in the repricing
+                  pattern above, which is already a flat loop and keeps QuantLib only for
+                  the curve lookup. The two are not interchangeable and the gap between
+                  them is most of what that pattern&apos;s multiple is measuring.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
