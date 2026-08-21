@@ -35,18 +35,23 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            I&apos;ve worked in markets tech for about twelve years. Front-office quant,
-            quant risk analyst, product owner on a pricing engine. Mostly valuation and risk.
+            I&apos;ve spent about twelve years in markets technology: front-office quant work,
+            quant risk, and product ownership of a pricing engine. Most of it comes back to
+            the same two questions. Is the number right, and does it stay right once it has
+            moved between systems.
           </p>
 
           <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            Outside work I swim, hang out with my dog Charlie, and write code because I like
-            it. That&apos;s where this site came from.
+            Outside work I swim, spend time with my dog Charlie, and write code because I
+            enjoy it. That&apos;s how this site started.
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            The three projects below are things I wanted to figure out, so I built them.
-            They actually run. Where something&apos;s still broken or half-done, I&apos;ve said so.
+            The three projects here are problems I wanted to understand properly, so I built
+            them rather than read about them. They run end to end: the curves bootstrap with
+            real market conventions, the benchmarks are timed on this machine, and every GPU
+            number is reconciled against QuantLib. Where something is still wrong, or only
+            half solved, I&apos;ve said so.
           </p>
 
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
