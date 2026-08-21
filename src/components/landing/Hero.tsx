@@ -30,9 +30,30 @@ export default function Hero() {
             Financial Markets Engineering
           </p>
 
-          <p className="text-lg leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            I solve front-office problems in pricing, risk and trade flow, and
-            prove the solutions with numbers. Three projects, each targeting one problem:
+          <h1 className="text-3xl font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>
+            Johnathon Glover
+          </h1>
+
+          <p className="text-lg leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
+            I work in financial markets technology, mostly around rates: pricing, risk, and
+            the systems that carry trades between the desk and the books. Much of that has
+            been the unglamorous middle of it, where a number has to survive the trip from
+            one system to another and still reconcile.
+          </p>
+
+          <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
+            Away from work I swim, spend time with my dog Charlie, and write code because I
+            enjoy it, which is where most of this site came from. The three projects below
+            were problems I wanted to work through properly rather than read about.
+          </p>
+
+          <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
+            Everything here is built and measured rather than described. Where something is
+            still wrong, or only partly solved, the page says so.
+          </p>
+
+          <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
+            Each project targets one problem:
           </p>
 
           <ul className="space-y-4 mb-8">
