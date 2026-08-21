@@ -20,11 +20,11 @@ const CASES: Case[] = [
     how: [
       'Bootstrap eight interdependent curves in dependency order (ESTR discounting, EURIBOR projection, SOFR, SONIA and the FX-implied EUR/USD curve) from ten instrument types including IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, FX swaps and cross-currency basis.',
       'Build the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond, the same construction the reference library uses.',
-      'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 233 calibration instruments down both paths and difference them.',
+      'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 227 calibration instruments down both paths and difference them.',
     ],
     results: [
       'GPU marks match QuantLib to 10⁻¹⁴ on all eight curves',
-      '233 calibration instruments repriced identically on CPU and GPU',
+      '227 calibration instruments repriced identically on CPU and GPU',
       'PV01 ladders per market quote: per ECB meeting, per futures contract, per basis pillar',
       'Seasoned and broken-dated trades priced off historical fixings, exact to machine precision',
     ],
@@ -38,14 +38,14 @@ const CASES: Case[] = [
     target:
       'Cut the end-of-day trade feed from trade capture to the risk platform, where 25,000 rates and inflation trades shipped as a 700MB to 1GB extract taking 90 minutes, down to minutes, with zero trades lost or altered.',
     how: [
-      'Diagnose the real cost: the extract serializes each trade once per cashflow period, so 25,000 structured trades become a million redundant rows crawling over a 0.19 MB/s link.',
+      'Diagnose the real cost: the extract serializes each trade once per cashflow period, so 25,000 structured trades become a million rows crawling over a 0.19 MB/s link.',
       'Re-normalize in flight with Spark: schedules, exercise dates and inflation fixings nested back inside each trade, written as compressed Parquet, 15.3× smaller.',
       'Gate every trade for pricing readiness (strikes, settlement method, base fixings, LPI collars), load the risk database over eight parallel connections, and reconcile counts, notionals and id-hashes at every hop.',
     ],
     results: [
       'End-of-day feed: 89 minutes to 3.6 minutes, measured: 25× faster',
       'Database load 49× faster than the single-connection baseline, both lanes measured',
-      'Extract 15.3× smaller once redundant headers are normalized away',
+      'Extract 15.3× smaller once repeated headers are normalized away',
       'Zero breaks across 1,035,762 reconciled rows',
     ],
     stack: ['PySpark', 'Parquet', 'SQL Server', 'pyarrow', 'Docker'],

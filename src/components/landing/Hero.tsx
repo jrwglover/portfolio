@@ -2,7 +2,7 @@ const TARGETS = [
   {
     n: '01',
     goal: 'Make GPU pricing trustworthy',
-    how: 'a multi-curve rates engine whose CUDA marks match QuantLib to 10⁻¹⁴, verified on 233 instruments',
+    how: 'a multi-curve rates engine whose CUDA marks match QuantLib to 10⁻¹⁴, verified on 227 instruments',
   },
   {
     n: '02',
