@@ -497,7 +497,7 @@ export default function BondDashboard({ defaultTab, breadcrumb }: { defaultTab?:
           </p>
           {estr && (
             <p className="font-mono text-xs mb-5" style={{ color: 'var(--text-dim)' }}>
-              ESTR fixing {estr.value}% ({estr.date}) &middot; OIS pillars: {ois?.rates.map(r => r.tenor).join(' ')}
+              ESTR fixing {estr.value}% &middot; OIS pillars: {ois?.rates.map(r => r.tenor).join(' ')}
             </p>
           )}
 
@@ -560,7 +560,7 @@ export default function BondDashboard({ defaultTab, breadcrumb }: { defaultTab?:
                 ))}
               </div>
               <p className="text-[11px] mt-3" style={{ color: 'var(--text-dim)' }}>
-                Spreads over the Bund zero curve, {spreadData?.date}. Source: {spreadData?.source}
+                Spreads over the Bund zero curve. Source: {spreadData?.source}
               </p>
             </div>
           </div>

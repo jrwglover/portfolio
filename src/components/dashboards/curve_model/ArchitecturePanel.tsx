@@ -109,7 +109,7 @@ export default function ArchitecturePanel() {
         C4 supplementary · Dynamic view of one valuation run
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
-              alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 240 instruments."
+              alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 233 instruments."
               caption="Sequence. The two-stage branch, the simultaneous pillar solve, and the fact that the coefficient upload is an identity rather than a fit are the three things that determine whether the numbers reconcile." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
@@ -180,7 +180,7 @@ export default function ArchitecturePanel() {
         <Arrow />
 
         <Layer kicker="the check" title="Reconcile both paths">
-          All 240 calibration instruments repriced down both paths and differenced, plus a
+          All 233 calibration instruments repriced down both paths and differenced, plus a
           direct curve-vs-curve comparison across every exported point. Current worst
           agreement <strong style={{ color: PRI }}>3.6 × 10⁻¹⁴</strong>. A separate check
           re-derives every input quote from the finished curve with its own conventions.

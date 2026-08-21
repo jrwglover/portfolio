@@ -20,11 +20,11 @@ const CASES: Case[] = [
     how: [
       'Bootstrap eight interdependent curves in dependency order (ESTR discounting, EURIBOR projection, SOFR, SONIA and the FX-implied EUR/USD curve) from ten instrument types including IMM strips, convexity-adjusted futures, ECB meeting-dated OIS, FX swaps and cross-currency basis.',
       'Build the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond, the same construction the reference library uses.',
-      'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 240 calibration instruments down both paths and difference them.',
+      'Evaluate on GPU with the exact spline coefficients, not a dense-grid approximation, then reprice all 233 calibration instruments down both paths and difference them.',
     ],
     results: [
       'GPU marks match QuantLib to 10⁻¹⁴ on all eight curves',
-      '240 calibration instruments repriced identically on CPU and GPU',
+      '233 calibration instruments repriced identically on CPU and GPU',
       'PV01 ladders per market quote: per ECB meeting, per futures contract, per basis pillar',
       'Seasoned and broken-dated trades priced off historical fixings, exact to machine precision',
     ],
