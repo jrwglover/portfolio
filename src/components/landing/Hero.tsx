@@ -35,10 +35,12 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            I work in financial markets technology, mostly around rates: pricing, risk, and
-            the systems that carry trades between the desk and the books. Much of that has
-            been the unglamorous middle of it, where a number has to survive the trip from
-            one system to another and still reconcile.
+            Twelve years in markets technology, across front-office quant work, quant risk
+            analysis, and product ownership of a pricing engine. The through-line is
+            valuation and risk: making a number defensible, and keeping it defensible once
+            it has moved between systems. Much of that work is the unglamorous middle,
+            where a figure has to survive the trip from the desk to the books and still
+            reconcile.
           </p>
 
           <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
