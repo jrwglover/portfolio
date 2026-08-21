@@ -190,9 +190,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     if (domain === 'fx') {
       const eur = curves['EURUSD'], usd = curves['SOFR'];
       if (!eur?.length || !usd?.length || !fxSpot) return [];
-      return grid.map(t => ({
-        t, EURUSD: fxSpot * (dfAt(eur, t) / dfAt(usd, t)),
-      }));
+      // Anchor the series at spot. Every point on this curve is spot times a
+      // ratio of discount factors, so spot is where it comes from, not just
+      // where it happens to start: at t = 0 both discount factors are 1 and the
+      // forward IS spot. Beginning the line at the first grid point instead
+      // hides that, and hides how much of the curve is carry rather than level.
+      return [{ t: 0, EURUSD: fxSpot }].concat(
+        grid.map(t => ({ t, EURUSD: fxSpot * (dfAt(eur, t) / dfAt(usd, t)) })));
     }
     return grid.map(t => {
       const row: Record<string, number> = { t };
