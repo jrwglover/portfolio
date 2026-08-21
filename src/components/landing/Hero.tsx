@@ -35,23 +35,20 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            Twelve years in markets technology, across front-office quant work, quant risk
-            analysis, and product ownership of a pricing engine. The through-line is
-            valuation and risk: making a number defensible, and keeping it defensible once
-            it has moved between systems. Much of that work is the unglamorous middle,
-            where a figure has to survive the trip from the desk to the books and still
-            reconcile.
+            I have spent about twelve years in markets technology. Along the way I have
+            worked as a front-office quant, as a quant risk analyst, and as product owner
+            for a pricing engine, mostly on valuation and risk.
           </p>
 
           <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
             Away from work I swim, spend time with my dog Charlie, and write code because I
-            enjoy it, which is where most of this site came from. The three projects below
-            were problems I wanted to work through properly rather than read about.
+            enjoy it. That is where most of this site came from.
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Everything here is built and measured rather than described. Where something is
-            still wrong, or only partly solved, the page says so.
+            The three projects below are things I wanted to understand better, so I built
+            them. They are working systems rather than write-ups, and where something is
+            still wrong or only partly done, I have tried to say so.
           </p>
 
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
