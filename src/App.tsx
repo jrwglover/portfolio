@@ -13,7 +13,6 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/learn/:slug" element={<TopicDashboard />} />
           {/* Legacy redirects */}
-          <Route path="/dashboard/bondbootstrapper" element={<Navigate to="/learn/govt-bonds" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

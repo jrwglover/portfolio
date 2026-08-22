@@ -850,7 +850,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             // and QuantLib is capped part way up this sweep, so the bounds are
             // computed here over real values only. Left to recharts the whole
             // chart renders blank rather than just dropping the short series.
-            const rv = sc.points.flatMap(q => [q.cpu, q.flat, q.mt, q.gpu, q.kernel, q.nvlink]
+            const rv = sc.points.flatMap(q => [q.cpu, q.flat, q.mt, q.gpu, q.nvlink]
               .filter((x): x is number => typeof x === 'number' && x > 0));
             const rLo = Math.pow(10, Math.floor(Math.log10(Math.min(...rv))));
             const rHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...rv))));
@@ -902,14 +902,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         n === 'cpu' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
                           : n === 'mt' ? 'Flattened CPU, all cores'
                           : n === 'gpu' ? 'GPU total'
-                          : n === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
-                          : 'GPU kernel only']} />
+                          : 'Graphics card on NVLink-C2C (projected)']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'cpu' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
                         : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total'
-                        : v === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
-                        : 'GPU kernel only'}</span>} />
+                        : 'Graphics card on NVLink-C2C (projected)'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
                         label={{ value: 'crossover', position: 'insideTop',
@@ -923,8 +921,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="gpu" stroke="#d4a853" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
-                      strokeDasharray="4 3" dot={false} isAnimationActive={false} />
                     <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={2.5}
                       dot={{ r: 2 }} isAnimationActive={false} />
                   </LineChart>
@@ -968,7 +964,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           {perf.npvScaling && (() => {
             const ns = perf.npvScaling;
             const lo = ns.crossoverBelow, hi = ns.crossoverAbove;
-            const nv = ns.points.flatMap(q => [q.quantlib, q.flat, q.mt, q.gpu, q.kernel, q.nvlink]
+            const nv = ns.points.flatMap(q => [q.quantlib, q.flat, q.mt, q.gpu, q.nvlink]
               .filter((x): x is number => typeof x === 'number' && x > 0));
             const nLo = Math.pow(10, Math.floor(Math.log10(Math.min(...nv))));
             const nHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...nv))));
@@ -1016,14 +1012,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         n === 'quantlib' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
                           : n === 'mt' ? 'Flattened CPU, all cores'
                           : n === 'gpu' ? 'GPU total'
-                          : n === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
-                          : 'GPU kernel only']} />
+                          : 'Graphics card on NVLink-C2C (projected)']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'quantlib' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
                         : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total'
-                        : v === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
-                        : 'GPU kernel only'}</span>} />
+                        : 'Graphics card on NVLink-C2C (projected)'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
                         label={{ value: 'crossover', position: 'insideTop',
@@ -1037,8 +1031,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="gpu" stroke="#d4a853" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
-                      strokeDasharray="4 3" dot={false} isAnimationActive={false} />
                     <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={2.5}
                       dot={{ r: 2 }} isAnimationActive={false} />
                   </LineChart>
