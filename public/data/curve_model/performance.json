@@ -53,6 +53,35 @@
      "kind": "gpu"
     }
    ]
+  },
+  {
+   "id": "sensi",
+   "name": "Market-quote PV01 ladders",
+   "workload": "4 trades, 228 market quotes bumped 1bp, curve family re-bootstrapped per bump",
+   "baseline": "CPU lane, total",
+   "note": "The honest result. Almost all of the wall clock is sequential curve re-bootstrapping on the CPU, which the GPU cannot help with, and the only part it does own is the repricing.",
+   "lanes": [
+    {
+     "lane": "CPU lane, total",
+     "ms": 259428.0,
+     "kind": "cpu"
+    },
+    {
+     "lane": "GPU lane, total",
+     "ms": 284921.0,
+     "kind": "gpu"
+    },
+    {
+     "lane": "GPU lane, curve rebuilds (CPU-bound)",
+     "ms": 284677,
+     "kind": "cpu"
+    },
+    {
+     "lane": "GPU lane, repricing kernel only",
+     "ms": 244.0,
+     "kind": "gpu"
+    }
+   ]
   }
  ],
  "accuracy": [
@@ -331,7 +360,7 @@
     "nvlink": 0.17522
    },
    "topGpuVsMt": 1.81,
-   "threads": null,
+   "threads": 16,
    "topGpuVsFlat": 9.94
   },
   "forward": {
@@ -592,7 +621,7 @@
     "nvlink": 60.97
    },
    "topGpuVsMt": 1.8,
-   "threads": null,
+   "threads": 16,
    "topGpuVsFlat": 10.08
   }
  },
@@ -881,7 +910,7 @@
   "topSerialMtVsGpu": 3.85,
   "mtCrossoverBelow": null,
   "mtCrossoverAbove": null,
-  "threads": null,
+  "threads": 16,
   "nvlinkGBs": 900.0,
   "topNvlinkVsMt": 3.56
  },
