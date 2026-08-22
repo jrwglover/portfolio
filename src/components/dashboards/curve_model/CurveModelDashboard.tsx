@@ -60,9 +60,9 @@ function Sci({ v }: { v: string }) {
 }
 
 interface PerfLane { lane: string; ms: number; kind: 'cpu' | 'gpu' }
-interface ScalePt { trades: number; repricings: number; cpu: number | null; flat: number; mt: number; gpu: number; upload: number; kernel: number }
-interface NpvPt { trades: number; cashflows: number; quantlib: number | null; flat: number; mt: number; gpu: number; kernel: number }
-interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number | null; topGpuVsFlat: number; topGpuVsMt: number; mtCrossoverBelow: NpvPt | null; mtCrossoverAbove: NpvPt | null; threads: number | null; singleThreaded: boolean }
+interface ScalePt { trades: number; repricings: number; cpu: number | null; flat: number; mt: number; nvlink: number | null; gpu: number; upload: number; kernel: number }
+interface NpvPt { trades: number; cashflows: number; quantlib: number | null; flat: number; mt: number; ser: number; serMt: number; gpuSer: number; nvlink: number | null; gpu: number; kernel: number }
+interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number | null; topGpuVsFlat: number; topGpuVsMt: number; mtCrossoverBelow: NpvPt | null; mtCrossoverAbove: NpvPt | null; threads: number | null; nvlinkGBs: number; topNvlinkVsMt: number | null; singleThreaded: boolean }
 interface Agree { scope: string; comparison: string; value: string }
 interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null; mtCrossoverBelow: ScalePt | null; mtCrossoverAbove: ScalePt | null; topGpuVsFlat: number | null; topGpuVsMt: number | null; threads: number | null }
 interface PerfPattern { id: string; name: string; workload: string; note: string; lanes: PerfLane[]; baseline: string }
@@ -818,7 +818,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             // and QuantLib is capped part way up this sweep, so the bounds are
             // computed here over real values only. Left to recharts the whole
             // chart renders blank rather than just dropping the short series.
-            const rv = sc.points.flatMap(q => [q.cpu, q.flat, q.mt, q.gpu, q.kernel]
+            const rv = sc.points.flatMap(q => [q.cpu, q.flat, q.mt, q.gpu, q.kernel, q.nvlink]
               .filter((x): x is number => typeof x === 'number' && x > 0));
             const rLo = Math.pow(10, Math.floor(Math.log10(Math.min(...rv))));
             const rHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...rv))));
@@ -869,11 +869,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       formatter={(v: any, n: any) => [fmtMs(Number(v)),
                         n === 'cpu' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
                           : n === 'mt' ? 'Flattened CPU, all cores'
-                          : n === 'gpu' ? 'GPU total' : 'GPU kernel only']} />
+                          : n === 'gpu' ? 'GPU total'
+                          : n === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
+                          : 'GPU kernel only']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'cpu' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
                         : v === 'mt' ? 'Flattened CPU, all cores'
-                        : v === 'gpu' ? 'GPU total' : 'GPU kernel only'}</span>} />
+                        : v === 'gpu' ? 'GPU total'
+                        : v === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
+                        : 'GPU kernel only'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
                         label={{ value: 'crossover', position: 'insideTop',
@@ -889,6 +893,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
                       strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={1.5}
+                      strokeDasharray="1 4" dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
@@ -930,7 +936,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           {perf.npvScaling && (() => {
             const ns = perf.npvScaling;
             const lo = ns.crossoverBelow, hi = ns.crossoverAbove;
-            const nv = ns.points.flatMap(q => [q.quantlib, q.flat, q.mt, q.gpu, q.kernel]
+            const nv = ns.points.flatMap(q => [q.quantlib, q.flat, q.mt, q.gpu, q.kernel, q.nvlink]
               .filter((x): x is number => typeof x === 'number' && x > 0));
             const nLo = Math.pow(10, Math.floor(Math.log10(Math.min(...nv))));
             const nHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...nv))));
@@ -977,11 +983,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       formatter={(v: any, n: any) => [fmtMs(Number(v)),
                         n === 'quantlib' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
                           : n === 'mt' ? 'Flattened CPU, all cores'
-                          : n === 'gpu' ? 'GPU total' : 'GPU kernel only']} />
+                          : n === 'gpu' ? 'GPU total'
+                          : n === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
+                          : 'GPU kernel only']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'quantlib' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
                         : v === 'mt' ? 'Flattened CPU, all cores'
-                        : v === 'gpu' ? 'GPU total' : 'GPU kernel only'}</span>} />
+                        : v === 'gpu' ? 'GPU total'
+                        : v === 'nvlink' ? 'GPU on NVLink-C2C (projected)'
+                        : 'GPU kernel only'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
                         label={{ value: 'crossover', position: 'insideTop',
@@ -997,6 +1007,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
                       strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={1.5}
+                      strokeDasharray="1 4" dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
@@ -1025,7 +1037,22 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   </div>
                 </div>
                 {ns.singleThreaded && (
+                  <>
                   <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                    The dotted pink line is the only projection on this page. Every
+                    GPU figure here includes copying the book across PCIe, which on this
+                    machine runs at about 7.5 GB/s and accounts for most of the GPU&apos;s
+                    time. Banks generally do not run pricing over a consumer PCIe link, so
+                    that line rescales the copy to {ns.nvlinkGBs} GB/s, the NVLink-C2C
+                    bandwidth on an NVIDIA Grace Hopper part, and keeps the kernel time
+                    exactly as measured. On that basis the device would come out about{' '}
+                    {ns.topNvlinkVsMt}&times; ahead of all {ns.threads ?? 16} cores rather
+                    than behind them. It is a bandwidth rescale rather than a run on real
+                    hardware: a Grace Hopper would also run the kernel faster, which makes
+                    it conservative, while real NVLink will not sustain its headline figure
+                    and this assumes the copy and the kernel do not overlap.
+                  </p>
+                  <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                     The green line is the same flattened pricer across all
                     {ns.threads ?? 16} cores, which is the comparison worth making before
                     choosing a device over the cores you already own. Against one core the
@@ -1033,6 +1060,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     {ns.topGpuVsMt}&times;. The order of magnitude to the left of both,
                     leaving the object model, is larger than either and needs no hardware.
                   </p>
+                  </>
                 )}
               </div>
             );
