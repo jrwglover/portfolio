@@ -952,8 +952,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       {sc.topGpuVsFlat ? sc.topGpuVsFlat + '\u00d7' : 'n/a'}
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      the dashed line is the kernel alone; the gap above it is flattening the
-                      book on the host, which a live system does once and keeps
+                      over the flattened pricer on the same cores, at the largest book
+                      measured
                     </div>
                   </div>
                 </div>
