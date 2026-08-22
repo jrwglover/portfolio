@@ -132,17 +132,18 @@ export default function ArchitecturePanel() {
         <Arrow />
 
         <Layer kicker="2" title="Curves are solved from them">
-          Each curve is solved in the domain its own instruments pin, and interpolated as a
-          natural minimum-curvature cubic spline on log discount factors. That choice
-          matters more than the scheme itself: on log-DF the
-          instantaneous forward is the spline&apos;s own first derivative, so it is C¹ with no
-          maturity amplification. Interpolating zero rates instead leaves f = z + t·z′, where a
-          cubic&apos;s third derivative jumps at every knot and is multiplied by t. Measured
-          here, that is 17 to 18 times amplification by the long end.
+                    Each curve is solved from the instruments that pin it down, and a smooth
+          shape is fitted between them. What that shape is fitted to matters more than
+          which shape is used. Fitting it to discount factors keeps the forward rates
+          smooth, because the forward is then the slope of the thing being fitted.
+          Fitting it to zero rates instead leaves the forward depending on how fast the
+          zero curve is bending, and that error grows with maturity: measured here it is
+          seventeen to eighteen times worse at the long end. It is the kind of choice
+          that is invisible until someone asks why the risk moved between buckets.
           <br /><br />
-          The bootstrap is <em>global</em>, not pillar-by-pillar: a min-curvature spline is a
-          global interpolator, so every pillar reshapes the whole curve and a sequential solve
-          cannot bracket the long end.
+                    The curve is also solved as a whole rather than one point at a time. Because
+          the fitted shape is smooth across the join, moving any one point changes the
+          curve everywhere, so the points cannot be pinned down one after another.
         </Layer>
         <Arrow />
 
@@ -150,41 +151,44 @@ export default function ArchitecturePanel() {
           <Figure src="/diagrams/curve-graph.svg" source={curveSrc}
                   alt="Curve dependency graph: six curves build independently; EURIBOR 6M is discounted on ESTR; the EURUSD cross-currency curve takes SOFR as its USD leg; and the EUR/USD outright forwards are derived in the browser from that curve and SOFR." />
           <div className="mt-2">
-            The meeting-dated and IMM curves are built in two stages: flat forwards between
-            policy or IMM dates out to the last strip date, then the spline beyond, joined by
-            pinning the strip zeros. A staircase is the correct shape there, because the overnight
-            rate is expected to be constant between policy meetings. The interpolation is
-            deliberately not smooth below the cut.
+                        Two of the curves are built in two parts. Out to the last policy or futures
+            date the rate holds flat from one date to the next, then a smooth curve takes
+            over beyond, joined so the two agree at the handover. A staircase is the right
+            answer at the short end, because an overnight rate really does hold still
+            between central bank meetings and then step. Smoothing through that would be
+            describing something that does not happen.
             <br /><br />
-            The two dependencies force the build order. EURIBOR projects on its own curve but
-            discounts every cashflow on ESTR, so ESTR has to exist first. EUR under USD
-            collateral, the curve the engine calls EURUSD, is not bootstrapped from EUR
-            instruments at all: it is implied from FX swap points and cross-currency basis
-            against the USD curve, so SOFR has to exist first. Get that order wrong and the bootstrap either fails or silently discounts
-            on a stale curve.
+            Two of the curves cannot be built until others exist. EURIBOR projects off
+            its own prices but discounts on ESTR, so ESTR has to come first. The EUR
+            under USD collateral curve is not built from EUR prices at all: it is implied
+            from FX swap points and cross currency basis against the USD curve, so SOFR
+            has to come first. Build them in the wrong order and it either fails outright
+            or, worse, quietly builds on a curve that is out of date.
             <br /><br />
-            EURIBOR is the 6M fixing plus the overlapping FRA strip, which is how a desk
-            quotes it: consecutive FRAs share five of their six months. That overlap is
-            visible if you plot the instantaneous forward, which ripples by about 3bp
-            between 6M and 2.5Y. It is deconvolution noise rather than a defect. Recovering
-            a pointwise forward from a stack of near-identical six-month averages means
-            differencing numbers that barely differ, and the noise lands in the derivative.
-            The 6M forward the FRAs actually quote is smooth and accurate to 0.63bp, which
-            is why this never shows up on a trading screen.
+                        EURIBOR is built from the six month fixing and a run of overlapping forward
+            rate agreements, which is how a desk quotes it: each one shares five of its
+            six months with the next. Plot the most sensitive view of the curve and you
+            can see a ripple of about 3bp between 6M and 2.5Y from that overlap. It is
+            not an error in the curve. Recovering a rate at a point from a stack of
+            near-identical six month averages means taking differences between numbers
+            that barely differ, and the noise ends up there. The six month rate the
+            agreements actually quote is smooth to within 0.63bp, which is why this never
+            reaches a trading screen.
           </div>
         </Layer>
         <Arrow label="the same curve object, two ways" />
 
         <div className="grid gap-3 w-full" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
           <Layer kicker="4a" title="Valued on the processor" accent={CPU}>
-            Prices and risks directly off the bootstrapped term structures. Market PV01 bumps
-            one quote, re-runs the whole bootstrap and reprices, so the shock propagates
-            through the interpolation the way it would on a desk.
+                        Values and risk read straight off the curves as the library built them. For
+            the hedging view, one quoted price is moved, the curve is rebuilt from
+            scratch and the trade valued again, so the effect spreads through the curve
+            the way it would on a desk.
           </Layer>
           <Layer kicker="4b" title="Valued on the graphics card" accent={GPU}>
-            The device never rebuilds a curve. Each pillar interval is uploaded as four cubic
-            coefficients plus its bounds; the kernel does a binary search and one Horner
-            evaluation. Because the curve genuinely <em>is</em> piecewise cubic in the
+                        The card never rebuilds a curve. Each section of it is sent across as the
+            handful of numbers that describe that section, and the card evaluates those
+            directly. Because the curve genuinely <em>is</em> piecewise cubic in the
             interpolated quantity, that upload is an identity rather than a fit.
           </Layer>
         </div>

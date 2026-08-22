@@ -808,7 +808,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   The same {sc.buckets} {mode} buckets repriced across books of growing size.
                   Two CPU lines, and the gap between them is the point: QuantLib revalues
-                  through its object model, while the flattened lane prices the same
+                  through its object model, while the flattened one prices the same
                   cashflows from the same spline coefficients the device uses, on one core.
                   Measuring a GPU against the first mostly measures the object model. The
                   GPU pays a fixed per-bucket upload whatever the book size, so it starts
@@ -825,7 +825,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
                   up to {sc.points[sc.points.length - 1].repricings.toLocaleString()} repricings
-                  &middot; lower is faster, so QuantLib is the slowest lane throughout
+                  &middot; lower is faster, so QuantLib is the slowest throughout
                 </p>
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={sc.points} margin={{ left: 8, right: 24, top: 8, bottom: 20 }}>
@@ -838,7 +838,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     <YAxis scale="log" domain={[rLo, rHi]} allowDataOverflow
                       stroke={chartAxis} tick={{ fontSize: 10 }} width={78}
                       tickFormatter={fmtMs}
-                      label={{ value: 'wall clock, lower is faster', angle: -90,
+                      label={{ value: 'time taken, lower is faster', angle: -90,
                                position: 'insideLeft', offset: 4,
                                style: { fill: 'var(--text-dim)', fontSize: 11, textAnchor: 'middle' } }} />
                     <Tooltip {...tt}
@@ -936,7 +936,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
-                  &middot; lower is faster, so QuantLib is the slowest lane throughout
+                  &middot; lower is faster, so QuantLib is the slowest throughout
                 </p>
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={ns.points} margin={{ left: 8, right: 24, top: 8, bottom: 20 }}>
@@ -948,7 +948,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                                style: { fill: 'var(--text-dim)', fontSize: 11 } }} />
                     <YAxis scale="log" domain={[nLo, nHi]} allowDataOverflow
                       stroke={chartAxis} tick={{ fontSize: 10 }} width={78} tickFormatter={fmtMs}
-                      label={{ value: 'wall clock, lower is faster', angle: -90,
+                      label={{ value: 'time taken, lower is faster', angle: -90,
                                position: 'insideLeft', offset: 4,
                                style: { fill: 'var(--text-dim)', fontSize: 11, textAnchor: 'middle' } }} />
                     <Tooltip {...tt}
@@ -1066,10 +1066,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 Checking each method against QuantLib
               </h3>
               <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                Every lane above is checked against QuantLib per instrument, at every book
-                size. A faster lane is only worth reporting if it computes the same number,
-                and a kernel that indexes the wrong scenario still returns plausible
-                figures. Differences are quoted against notional rather than NPV, because a
+                Every method above is checked against QuantLib for each trade, at every
+                book size. A quicker method is only worth reporting if it gives the same
+                answer, and a wrong one usually returns numbers that look perfectly
+                reasonable. Differences are quoted against notional rather than NPV, because a
                 swap struck near par has an NPV close to zero and dividing by it makes a
                 negligible difference look large.
               </p>
