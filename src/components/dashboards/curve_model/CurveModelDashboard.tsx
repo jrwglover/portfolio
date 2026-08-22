@@ -55,11 +55,11 @@ function Sci({ v }: { v: string }) {
 }
 
 interface PerfLane { lane: string; ms: number; kind: 'cpu' | 'gpu' }
-interface ScalePt { trades: number; repricings: number; cpu: number; flat: number; gpu: number; upload: number; kernel: number }
-interface NpvPt { trades: number; cashflows: number; quantlib: number; flat: number; gpu: number; kernel: number }
-interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number; topGpuVsFlat: number; singleThreaded: boolean }
+interface ScalePt { trades: number; repricings: number; cpu: number; flat: number; mt: number; gpu: number; upload: number; kernel: number }
+interface NpvPt { trades: number; cashflows: number; quantlib: number; flat: number; mt: number; gpu: number; kernel: number }
+interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number; topGpuVsFlat: number; topGpuVsMt: number; mtCrossoverBelow: NpvPt | null; mtCrossoverAbove: NpvPt | null; threads: number | null; singleThreaded: boolean }
 interface Agree { scope: string; comparison: string; value: string }
-interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null; topGpuVsFlat: number | null }
+interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null; mtCrossoverBelow: ScalePt | null; mtCrossoverAbove: ScalePt | null; topGpuVsFlat: number | null; topGpuVsMt: number | null; threads: number | null }
 interface PerfPattern { id: string; name: string; workload: string; note: string; lanes: PerfLane[]; baseline: string }
 interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Record<string, Scaling>; npvScaling?: NpvScaling; agreement?: Agree[] }
 
@@ -692,12 +692,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
           {perf.patterns.map(p => {
             const base = p.lanes.find(l => l.lane === p.baseline)?.ms ?? 1;
-            const data = p.lanes.map(l => ({ ...l, x: Math.max(l.ms, 0.001) }));
-            // On a log axis recharts draws bars from domain[0], so the smallest
-            // value would render zero-width. Anchor below the minimum and leave
-            // headroom above the maximum.
-            const vals = data.map(d => d.x);
+            // A bar is drawn from the axis baseline, which on a log scale is
+            // log(0) and so has no position: recharts 3.8 renders nothing at
+            // all. Giving each bar an explicit [floor, value] range pins its
+            // start to the axis floor instead of to zero, which is the only
+            // form that survives a log axis.
+            const vals = p.lanes.map(l => Math.max(l.ms, 0.001));
             const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals))) - 1);
+            const data = p.lanes.map(l => ({ ...l, ms: l.ms,
+              x: [lo, Math.max(l.ms, 0.001)] as [number, number] }));
             const hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
             return (
               <div key={p.id} className="mb-10">
@@ -711,12 +714,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       stroke={chartAxis} tick={{ fontSize: 10 }} tickFormatter={fmtMs} />
                     <YAxis type="category" dataKey="lane" width={250} stroke={chartAxis} tick={{ fontSize: 11 }} />
                     <Tooltip {...tt} cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                      formatter={(v: any) => [fmtMs(Number(v)), 'wall clock']} />
+                      formatter={(v: any) => [fmtMs(Array.isArray(v) ? Number(v[1]) : Number(v)), 'wall clock']} />
                     <Bar dataKey="x" isAnimationActive={false} radius={[0, 3, 3, 0]} barSize={22}>
                       {data.map((d, i) => (
                         <Cell key={i} fill={d.kind === 'gpu' ? '#d4a853' : '#5b8fc9'} />
                       ))}
-                      <LabelList dataKey="x" position="right" formatter={(v: any) => fmtMs(Number(v))}
+                      <LabelList dataKey="ms" position="right" formatter={(v: any) => fmtMs(Number(v))}
                         style={{ fill: 'var(--text-secondary)', fontSize: 11, fontFamily: 'monospace' }} />
                     </Bar>
                   </BarChart>
@@ -748,10 +751,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   cashflows from the same spline coefficients the device uses, on one core.
                   Measuring a GPU against the first mostly measures the object model. The
                   GPU pays a fixed per-bucket upload whatever the book size, so it starts
-                  behind and overtakes once there are enough trades to spread that cost
-                  over. Both lanes are handed the same pre-flattened book, since a live
-                  system flattens at trade capture and reuses it, so neither is charged for
-                  a step the other gets free. Timings are the best of three after a warm-up.
+                  behind one core and overtakes it. Against the same pricer on all
+                  {sc.threads ?? 16} cores it does not overtake at any size measured, which
+                  is the comparison worth making before choosing a device over the cores you
+                  already own. All lanes are handed the same pre-flattened book, since a
+                  live system flattens at trade capture and reuses it, so none is charged
+                  for a step the others get free. Best of three after a warm-up.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
@@ -776,9 +781,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       labelFormatter={(v: any) => Number(v).toLocaleString() + ' trades'}
                       formatter={(v: any, n: any) => [fmtMs(Number(v)),
                         n === 'cpu' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
+                          : n === 'mt' ? 'Flattened CPU, all cores'
                           : n === 'gpu' ? 'GPU total' : 'GPU kernel only']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'cpu' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
+                        : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total' : 'GPU kernel only'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
@@ -788,6 +795,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     <Line type="monotone" dataKey="cpu" stroke="#5b8fc9" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="flat" stroke="#b07fc9" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="mt" stroke="#6fa8a0" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="gpu" stroke="#d4a853" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
@@ -875,9 +884,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       labelFormatter={(v: any) => Number(v).toLocaleString() + ' swaps'}
                       formatter={(v: any, n: any) => [fmtMs(Number(v)),
                         n === 'quantlib' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
+                          : n === 'mt' ? 'Flattened CPU, all cores'
                           : n === 'gpu' ? 'GPU total' : 'GPU kernel only']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'quantlib' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
+                        : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total' : 'GPU kernel only'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
@@ -887,6 +898,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     <Line type="monotone" dataKey="quantlib" stroke="#5b8fc9" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="flat" stroke="#b07fc9" strokeWidth={2}
+                      dot={{ r: 2 }} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="mt" stroke="#6fa8a0" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="gpu" stroke="#d4a853" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
@@ -921,14 +934,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </div>
                 {ns.singleThreaded && (
                   <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                    Both CPU lanes are single threaded, so this is one core against a whole
-                    GPU. On a multi core box the flattened CPU would take back most of the
-                    remaining gap, which is worth knowing before choosing a device over a
-                    thread pool. The final multiple is also unstable between runs on this
-                    machine, moving between roughly parity and 1.7x, so read it as the two
-                    lanes being close at this size rather than as a fixed number. The
-                    order of magnitude to the left of it, leaving the object model, is
-                    what actually holds up.
+                    The green line is the same flattened pricer across all
+                    {ns.threads ?? 16} cores, which is the comparison worth making before
+                    choosing a device over the cores you already own. Against one core the
+                    GPU wins {ns.topGpuVsFlat}&times; here; against the thread pool it is
+                    {ns.topGpuVsMt}&times;. The order of magnitude to the left of both,
+                    leaving the object model, is larger than either and needs no hardware.
                   </p>
                 )}
               </div>
