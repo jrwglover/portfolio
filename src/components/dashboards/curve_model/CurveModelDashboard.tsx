@@ -723,8 +723,17 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             Valuing a book of swaps means working out what every future cashflow is
             worth today. Each one needs a discount factor read off a curve, and a
             few hundred thousand trades comes to tens of millions of those reads.
-            At that point how the work is arranged matters more than it sounds like
-            it should.
+          </p>
+          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            Speed matters because of what it lets a desk do rather than for its own
+            sake. A revaluation that takes twenty minutes runs overnight and once
+            more at midday if someone asks. The same one at twenty seconds can run
+            whenever the market moves, which is the difference between marks that
+            describe this morning and marks that describe now. It also decides how
+            many scenarios are affordable: a full curve risk ladder is the book
+            repriced against every bucket of every curve, so a book that takes a
+            minute to value takes half an hour to risk, and a stress run across a
+            dozen shocks stops being something you do before lunch.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             A processor and a graphics card are good at different things. A processor
@@ -737,15 +746,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             a general rule.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Two ideas do most of the work here. The first is to stop asking QuantLib
-            for each value and instead lay the cashflows out as plain numbers, which
-            costs nothing but is worth more than any hardware change below. The
-            second is to work out every discount factor a curve can give, once,
-            straight after the curve is built, and then just look them up. A curve
-            only changes when the market moves, so recalculating the same value for
-            every cashflow is work nobody asked for. Doing it once and reading it
-            back is exact here, because cashflows fall on whole days and that is
-            what gets stored.
+            Most of the gain comes from two changes. Cashflows are held as plain
+            arrays and priced directly, without going through QuantLib for each
+            value. And the discount factors are worked out once when the curve is
+            built, then read back, rather than recalculated for every cashflow.
+            Curves only move when the market does, so the same values were being
+            recomputed many times over. Storing them daily loses no accuracy,
+            since cashflows fall on whole days.
           </p>
 
           {perf.npvScaling && perf.scaling && (() => {
@@ -781,18 +788,27 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         false)}
                 </div>
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The third depends on how much work each transfer does. Bucketed risk
-                  sends the book to the device once and reprices it against{' '}
-                  {risk.buckets} perturbed curves, so one transfer covers {risk.buckets}{' '}
-                  passes. Portfolio NPV reads each cashflow once, so most of its time goes
-                  on moving {(nTop.cashflows / 1e6).toFixed(1)}M cashflows rather than on
-                  the arithmetic. That is why the two charts below disagree.
+                  The first two are code changes and they hold anywhere. The third is a
+                  hardware question with no fixed answer: the same card earns its place on
+                  one of these jobs and not the other, and changing the link it sits behind
+                  flips one of those.
+          </p>
+          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The split comes from how much arithmetic each byte buys. Bucketed risk
+                  sends the book across once and reprices it against {risk.buckets}{' '}
+                  perturbed curves, so one crossing pays for {risk.buckets} passes and the
+                  card wins even here. Portfolio NPV reads each cashflow once, so it spends
+                  most of its time moving {(nTop.cashflows / 1e6).toFixed(1)}M cashflows
+                  rather than pricing them. The arithmetic was never the constraint: the
+                  card does the pricing in a fraction of the time it spends waiting for the
+                  data to arrive. Put it on a link where the book arrives quickly and the
+                  NPV result reverses, which is the NVLink line on the second chart.
                 </p>
                 <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  Market-quote risk is a fourth case, and none of this helps it. Every
-                  bumped quote needs the curve rebuilt, and the bootstrap runs on the CPU,
-                  so the repricing kernel is a small part of the total. It is shown below
-                  without acceleration.
+                  Market-quote risk is a fourth case and none of it helps. Every bumped
+                  quote needs the curve rebuilt, the solver runs on the processor, and the
+                  repricing beside it is a rounding error. Shown below unaccelerated,
+                  because that is what it is.
                 </p>
               </div>
             );
