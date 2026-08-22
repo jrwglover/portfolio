@@ -6,6 +6,11 @@ import DashboardHeader from '../DashboardHeader';
 import ArchitecturePanel from './ArchitecturePanel';
 
 /* ── Types ── */
+// Stamped at build time by vite.config so a redeploy cannot be served
+// from a stale edge cache. See public/_headers.
+declare const __BUILD_ID__: string;
+const BUILD_ID = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
+
 type Pt = [number, number, number]; // [t, fwd%, zero%]
 interface Quote { tenor: string; rate?: number; price?: number; instrument: string }
 interface MarketCurve {
@@ -124,7 +129,7 @@ const dfAt = (pts: Pt[], t: number) => Math.exp(-(zeroAt(pts, t) / 100) * t);
    and IMM plateaus - a 3M average over ~6-week ECB steps erases them entirely -
    so the step construction is only visible here.
 
-   Interpolated, NOT held piecewise constant. Holding it constant keeps genuine
+   Interpolated, rather than held piecewise constant. Holding it constant keeps genuine
    risers sharp but snaps every sample to the left data point, and past 3Y the
    export thins from daily to 15-day spacing - sparser than the chart grid - so
    a smooth spline quantises into ledges that look exactly like step
@@ -162,10 +167,18 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
   useEffect(() => {
     const base = '/data/curve_model';
-    fetch(`${base}/inputs.json`).then(r => r.json()).then(setInputs).catch(() => {});
-    fetch(`${base}/curves.json`).then(r => r.json()).then(setCurves).catch(() => {});
-    fetch(`${base}/trades.json`).then(r => r.json()).then(setTrades).catch(() => {});
-    fetch(`${base}/performance.json`).then(r => r.json()).then(setPerf).catch(() => {});
+    // Belt and braces with public/_headers. A deploy that rebuilds these files
+    // was still being served from Cloudflare's cache, so the panel showed the
+    // previous run's numbers with no sign anything was stale. The bundle hash
+    // changes on every build, so it doubles as a cache key for the data.
+    const v = `?v=${BUILD_ID}`;
+    const get = (name: string, set: (x: any) => void) =>
+      fetch(`${base}/${name}${v}`, { cache: 'no-store' })
+        .then(r => r.json()).then(set).catch(() => {});
+    get('inputs.json', setInputs);
+    get('curves.json', setCurves);
+    get('trades.json', setTrades);
+    get('performance.json', setPerf);
   }, []);
 
   const selMkt = inputs?.curves.find(c => c.curve === selCurve);
@@ -684,13 +697,23 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'perf' && perf && (
         <div>
           <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Three levers make this fast, and they are not equally important. The
-            largest is free: pricing the same cashflows outside QuantLib&apos;s object
-            model, on one core, with no hardware. Threading adds to that. A GPU
-            helps or hurts depending on the workload, and the honest answer is
-            not a single number. Everything below is read from the engine&apos;s own
-            timing output rather than typed in, and every lane is checked against
-            QuantLib before its speed is quoted.
+            Pricing a book of swaps means working out what every future cashflow is
+            worth today, and each one needs a value read off a curve. A few hundred
+            thousand trades comes to tens of millions of those lookups, so how they
+            are done starts to matter.
+          </p>
+          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            This tab compares a few ways of doing the same sum: through QuantLib&apos;s
+            objects, through a plain loop over the same numbers, that loop spread
+            across all the machine&apos;s cores, and the same work on the graphics card.
+            The results are all from this one machine, so treat them as a guide
+            rather than a general finding.
+          </p>
+          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The short version is that most of the speed comes from how the code is
+            arranged rather than from the hardware it runs on. A graphics card helps
+            with some of these jobs and not others, and it took a few attempts to
+            measure that fairly, which is covered below where it matters.
           </p>
 
           {perf.npvScaling && perf.scaling && (() => {
@@ -712,34 +735,32 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 <div className="grid md:grid-cols-3 gap-3">
                   {cell('1. Leave the object model',
                         ns.topFlatVsQuantLib + '\u00d7',
-                        'same arithmetic, same curve, one core, no hardware. The largest single win and the cheapest.',
+                        'same arithmetic, same curve, one core, no special hardware',
                         true)}
                   {cell('2. Use every core',
                         threadX ? threadX + '\u00d7 more' : 'n/a',
-                        (ns.threads ?? 16) + ' cores on the same pricer. Memory bound, so it scales sublinearly.',
+                        (ns.threads ?? 16) + ' cores on the same pricer. Memory bound, so it scales less than linearly.',
                         true)}
                   {cell('3. Add a GPU',
                         'it depends',
-                        'worth ' + (gpuRisk ?? '?') + '\u00d7 on bucketed risk, but ' +
-                        (gpuNpv && gpuNpv < 1 ? (1 / gpuNpv).toFixed(1) + '\u00d7 SLOWER' : 'slower') +
-                        ' on portfolio NPV, against those same cores.',
+                        (gpuRisk ?? '?') + '\u00d7 on bucketed risk, and ' +
+                        (gpuNpv && gpuNpv < 1 ? (1 / gpuNpv).toFixed(1) + '\u00d7 slower' : 'slower') +
+                        ' on portfolio NPV, against those same cores',
                         false)}
                 </div>
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The third one splits because of how each workload reuses data. Bucketed
-                  risk ships one book to the device and reprices it across {risk.buckets}{' '}
-                  perturbed curves, so the transfer is amortised {risk.buckets} times over.
-                  Portfolio NPV touches every cashflow once, so it stays bound by moving
-                  {' '}{(nTop.cashflows / 1e6).toFixed(1)}M cashflows rather than by arithmetic.
-                  A device pays for scenario-heavy work on a large book and does not pay for
-                  a single revaluation pass, which is why the two charts below disagree.
+                  The third depends on how much work each transfer does. Bucketed risk
+                  sends the book to the device once and reprices it against{' '}
+                  {risk.buckets} perturbed curves, so one transfer covers {risk.buckets}{' '}
+                  passes. Portfolio NPV reads each cashflow once, so most of its time goes
+                  on moving {(nTop.cashflows / 1e6).toFixed(1)}M cashflows rather than on
+                  the arithmetic. That is why the two charts below disagree.
                 </p>
                 <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  There is a fourth case where none of this helps. Market-quote risk
-                  re-runs the bootstrap for every bumped quote, and the solver is not on the
-                  device: the repricing kernel is a fraction of a second against minutes of
-                  sequential curve building. That pattern is shown below unaccelerated,
-                  because pretending otherwise would be the easiest number here to fake.
+                  Market-quote risk is a fourth case, and none of this helps it. Every
+                  bumped quote needs the curve rebuilt, and the bootstrap runs on the CPU,
+                  so the repricing kernel is a small part of the total. It is shown below
+                  without acceleration.
                 </p>
               </div>
             );
@@ -818,11 +839,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   same pricer on all {sc.threads ?? 16} cores at
                   {sc.mtCrossoverAbove ? sc.mtCrossoverAbove.trades.toLocaleString() + ' trades'
                     : ' no size measured'}. The thread pool is the comparison that matters,
-                  because the alternative to buying a device is usually the cores already
-                  owned, and it is why this sweep runs to book scale rather than stopping at
-                  a few thousand trades. All lanes are handed the same pre-flattened book,
-                  so none is charged for a step the others get free. Best of three after a
-                  warm-up.
+                  since the alternative to a device is usually the cores already
+                  available. The sweep runs to book scale for that reason rather than
+                  stopping at a few thousand trades. All lanes are given the same
+                  pre-flattened book, so none is charged for a step the others get free.
+                  Timings are the best of three after a warm-up.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
@@ -888,7 +909,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       {sc.mtCrossoverAbove ? sc.mtCrossoverAbove.trades.toLocaleString() + ' trades' : 'not reached'}
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      the threshold that decides it: below this, use the cores you own
+                      below this, the cores already available are quicker
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
@@ -1038,11 +1059,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                 Every lane above is checked against QuantLib per instrument, at every book
                 size. A faster lane is only worth reporting if it computes the same number,
-                and a fan out kernel that indexes the wrong scenario still returns entirely
-                plausible figures. Differences are quoted against notional rather than
-                against NPV: a swap struck near par has an NPV close to zero, and dividing
-                by it turns a negligible absolute difference into a large looking relative
-                one.
+                and a kernel that indexes the wrong scenario still returns plausible
+                figures. Differences are quoted against notional rather than NPV, because a
+                swap struck near par has an NPV close to zero and dividing by it makes a
+                negligible difference look large.
               </p>
               <div className="grid md:grid-cols-3 gap-3">
                 {perf.agreement.map(a => (

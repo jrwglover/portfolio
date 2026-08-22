@@ -1,0 +1,6 @@
+# The dashboards read these JSON files on every load, and they are regenerated
+# whenever the engine reruns. Cloudflare was serving a cached copy after a
+# deploy, so a rebuilt panel kept showing the previous run's numbers. Hashed
+# bundles under /assets can be cached hard; this data cannot.
+/data/*
+  Cache-Control: no-store, must-revalidate
