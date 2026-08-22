@@ -751,12 +751,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   cashflows from the same spline coefficients the device uses, on one core.
                   Measuring a GPU against the first mostly measures the object model. The
                   GPU pays a fixed per-bucket upload whatever the book size, so it starts
-                  behind one core and overtakes it. Against the same pricer on all
-                  {sc.threads ?? 16} cores it does not overtake at any size measured, which
-                  is the comparison worth making before choosing a device over the cores you
-                  already own. All lanes are handed the same pre-flattened book, since a
-                  live system flattens at trade capture and reuses it, so none is charged
-                  for a step the others get free. Best of three after a warm-up.
+                  behind and overtakes as the book grows: past one core early, and past the
+                  same pricer on all {sc.threads ?? 16} cores at
+                  {sc.mtCrossoverAbove ? sc.mtCrossoverAbove.trades.toLocaleString() + ' trades'
+                    : ' no size measured'}. The thread pool is the comparison that matters,
+                  because the alternative to buying a device is usually the cores already
+                  owned, and it is why this sweep runs to book scale rather than stopping at
+                  a few thousand trades. All lanes are handed the same pre-flattened book,
+                  so none is charged for a step the others get free. Best of three after a
+                  warm-up.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
@@ -806,7 +809,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </ResponsiveContainer>
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover</div>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover vs 1 core</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
                       {lo && hi ? lo.trades + ' to ' + hi.trades + ' trades' : 'not reached'}
                     </div>
@@ -817,15 +820,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Below it</div>
-                    <div className="font-mono text-sm" style={{ color: '#c86e6e' }}>CPU wins</div>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover vs {sc.threads ?? 16} cores</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      {sc.mtCrossoverAbove ? sc.mtCrossoverAbove.trades.toLocaleString() + ' trades' : 'not reached'}
+                    </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      the per-bucket curve upload is fixed in book size, so a small book
-                      never spreads it far enough
+                      the threshold that decides it: below this, use the cores you own
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>At the largest book, over flattened CPU</div>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>At the largest book, over {sc.threads ?? 16} cores</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
                       {sc.topGpuVsFlat ? sc.topGpuVsFlat + '\u00d7' : 'n/a'}
                     </div>
