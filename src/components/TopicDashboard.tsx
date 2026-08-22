@@ -1,11 +1,11 @@
 import { useParams, Navigate } from 'react-router-dom';
 import { getLeafBySlug } from '../config/topics';
-import BondDashboard from './dashboards/bondbootstrapper/BondDashboard';
+import RtEngineDashboard from './dashboards/rt_engine/RtEngineDashboard';
 import CurveModelDashboard from './dashboards/curve_model/CurveModelDashboard';
 import BridgeDashboard from './dashboards/spark_bridge/BridgeDashboard';
 
 const COMPONENTS: Record<string, React.ComponentType<any>> = {
-  BondDashboard,
+  RtEngineDashboard,
   CurveModelDashboard,
   BridgeDashboard,
 };

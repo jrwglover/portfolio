@@ -54,23 +54,23 @@ const CASES: Case[] = [
   },
   {
     n: '03',
-    title: 'Government Bond Curve & Credit Spread Engine',
+    title: 'Real-time curve engine',
     target:
-      'Imply a zero curve from German government bond prices and decompose each bond’s all-in yield into risk-free, sovereign and credit spread, and rebuild the whole curve instantly when a trader overrides a spread.',
+      'Rebuild curves as prices arrive rather than on a schedule, without rebuilding more than the change actually requires, and without a trader ever seeing a screen where half the numbers are from one moment and half from another.',
     how: [
-      'Bootstrap the zero curve from 18 Bunds with full cashflow schedules in C++/QuantLib, on top of an OIS base curve built from ECB money-market rates.',
-      'Layer a credit-spread waterfall of risk-free plus sovereign premium plus credit spread, so every basis point of yield is attributed to a source.',
-      'Serve it to a React front end that re-bootstraps the curve on every spread edit, with a step-through mode that shows the curve forming bond by bond.',
+      'Derive the dependency graph from the curve registry the batch engine already uses, so the two cannot disagree about which curve is built on which.',
+      'On a price change, work out the curves that genuinely need rebuilding and do them in dependency order, each one at most once even when several of its inputs moved at once.',
+      'Publish each set of curves as one immutable version, so anything reading it, a valuation, a risk ladder, a hypothetical trade, sees one coherent moment.',
     ],
     results: [
-      '51-point zero curve implied from 18 Bunds, validated to below 0.0001 bps',
-      '128 cashflows repriced to machine precision across three independent builds',
-      'Spread overrides from 0 to 2,000 bps with instant curve rebuild',
-      'Step-through construction: watch the curve form bond by bond',
+      'A SONIA change rebuilds SONIA alone; an ESTR change carries into EURIBOR and the cross currency curve',
+      '120 prices arriving at once collapse into a single rebuild rather than 120',
+      'Two readers checking continuously while curves rebuilt underneath them found no inconsistent set',
+      'A failed solve keeps the last good curve, marks it stale, and lets the rest carry on',
     ],
-    stack: ['C++', 'QuantLib', 'React', 'Express', 'TypeScript'],
-    link: '/learn/govt-bonds',
-    linkLabel: 'Open the curve engine',
+    stack: ['C++17', 'Lock-free publication', 'OpenMP', 'Make'],
+    link: '/learn/rt-engine',
+    linkLabel: 'Open the engine',
   },
 ];
 

@@ -11,8 +11,8 @@ const TARGETS = [
   },
   {
     n: '03',
-    goal: 'Explain a bond’s yield',
-    how: 'Bund zero curves bootstrapped from prices, with yield split into risk-free, sovereign and credit spread, rebuilt live on every edit',
+    goal: 'Keep curves current as prices move',
+    how: 'an event driven engine that rebuilds only the curves a price change actually affects, and never shows a half updated set',
   },
 ];
 
