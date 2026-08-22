@@ -275,7 +275,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
   // Curve-node ladders always carry both lanes; the market ladder only does
   // where the engine ran a GPU pillar pass.
-  const showGpu = activeMeasure !== 'market' || !!selTrade?.hasGpu;
+  // The market view's GPU column is hidden. Both lanes bump the same quote and
+  // re-bootstrap, so they should agree, and they do not: risk shifts between
+  // neighbouring pillars on the aged trade while the total is preserved. That
+  // is an unexplained difference between two ways of rebuilding the curve, not
+  // a modelling choice, so it should not be shown as though it were a result.
+  // The zero and forward views keep both lanes, where they agree to 1e-15.
+  const showGpu = activeMeasure !== 'market';
 
   const fxInstruments = useMemo(
     () => (selTrade?.fx ? [...new Set(selTrade.fx.map(r => r.instrument))] : []), [selTrade]);
@@ -534,17 +540,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
                     tickFormatter={v => Number(v).toLocaleString()} />
                   <Tooltip {...tt} formatter={(v: any, n: any) =>
-                    [Number(v).toLocaleString(), n === 'cpu'
-                      ? (activeMeasure === 'market' ? 'CPU bump & re-bootstrap' : 'CPU, QuantLib')
-                      : (activeMeasure === 'market' ? 'GPU pillar ladder' : 'GPU, device cashflows')]}
+                    [Number(v).toLocaleString(),
+                      n === 'cpu' ? 'Processor' : 'Graphics card']}
                     labelFormatter={(l: any) => {
                       const row = ladderChart.find(r => r.tenor === l);
                       return `${l}${row ? ` · ${row.instrument}` : ''}`;
                     }} />
                   {showGpu && <Legend formatter={(v: string) =>
-                    <span style={{ fontSize: 11 }}>{v === 'cpu'
-                      ? (activeMeasure === 'market' ? 'CPU bump & re-bootstrap' : 'CPU, QuantLib')
-                      : (activeMeasure === 'market' ? 'GPU pillar ladder' : 'GPU, device cashflows')}</span>} />}
+                    <span style={{ fontSize: 11 }}>
+                      {v === 'cpu' ? 'Processor' : 'Graphics card'}</span>} />}
                   <ReferenceLine y={0} stroke={chartAxis} />
                   <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
                   {showGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
@@ -716,23 +720,32 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'perf' && perf && (
         <div>
           <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Pricing a book of swaps means working out what every future cashflow is
-            worth today, and each one needs a value read off a curve. A few hundred
-            thousand trades comes to tens of millions of those lookups, so how they
-            are done starts to matter.
+            Valuing a book of swaps means working out what every future cashflow is
+            worth today. Each one needs a discount factor read off a curve, and a
+            few hundred thousand trades comes to tens of millions of those reads.
+            At that point how the work is arranged matters more than it sounds like
+            it should.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            This tab compares a few ways of doing the same sum: through QuantLib&apos;s
-            objects, through a plain loop over the same numbers, that loop spread
-            across all the machine&apos;s cores, and the same work on the graphics card.
-            The results are all from this one machine, so treat them as a guide
-            rather than a general finding.
+            A processor and a graphics card are good at different things. A processor
+            has a few dozen fast cores and the data already sits in its memory. A
+            graphics card has thousands of slower cores, but the data has to be
+            copied across to it first, and on this machine that copy takes longer
+            than the calculation does. So the graphics card tends to win when there
+            is a lot of arithmetic per byte copied, and lose when there is not.
+            Everything here is from this one machine, so it is a guide rather than
+            a general rule.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The short version is that most of the speed comes from how the code is
-            arranged rather than from the hardware it runs on. A graphics card helps
-            with some of these jobs and not others, and it took a few attempts to
-            measure that fairly, which is covered below where it matters.
+            Two ideas do most of the work here. The first is to stop asking QuantLib
+            for each value and instead lay the cashflows out as plain numbers, which
+            costs nothing but is worth more than any hardware change below. The
+            second is to work out every discount factor a curve can give, once,
+            straight after the curve is built, and then just look them up. A curve
+            only changes when the market moves, so recalculating the same value for
+            every cashflow is work nobody asked for. Doing it once and reading it
+            back is exact here, because cashflows fall on whole days and that is
+            what gets stored.
           </p>
 
           {perf.npvScaling && perf.scaling && (() => {
@@ -845,7 +858,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             return (
               <div key={mode} className="mb-10">
                 <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  {mode === 'zero' ? 'Zero' : 'Forward'} bucket risk: where the GPU starts paying
+                  Curve risk: how the cost grows with the size of the book
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   The same {sc.buckets} {mode} buckets repriced across books of growing size.
@@ -912,8 +925,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
                       strokeDasharray="4 3" dot={false} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={1.5}
-                      strokeDasharray="1 4" dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={2.5}
+                      dot={{ r: 2 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
@@ -963,7 +976,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             return (
               <div className="mb-10">
                 <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  Portfolio NPV: where the GPU starts paying
+                  Valuing the whole book: how the cost grows with its size
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   A whole book priced once, across books of growing size, with all four
@@ -1026,8 +1039,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="kernel" stroke="#7fae7f" strokeWidth={1.5}
                       strokeDasharray="4 3" dot={false} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={1.5}
-                      strokeDasharray="1 4" dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="nvlink" stroke="#d98ab0" strokeWidth={2.5}
+                      dot={{ r: 2 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
@@ -1086,7 +1099,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           })()}
 
           <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
-            Accuracy of the accelerated path
+            Do the faster methods give the same answer
           </h3>
           <div className="grid md:grid-cols-3 gap-3">
             {perf.accuracy.map(a => (
@@ -1101,7 +1114,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           {perf.agreement && perf.agreement.length > 0 && (
             <>
               <h3 className="text-sm font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
-                Do the lanes agree?
+                Checking each method against QuantLib
               </h3>
               <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                 Every lane above is checked against QuantLib per instrument, at every book
