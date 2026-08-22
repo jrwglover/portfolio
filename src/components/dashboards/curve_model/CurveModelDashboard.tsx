@@ -793,6 +793,14 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           })}
 
           {perf.scaling && Object.entries(perf.scaling).map(([mode, sc]) => {
+            // A log axis cannot resolve 'dataMin' once any series carries nulls,
+            // and QuantLib is capped part way up this sweep, so the bounds are
+            // computed here over real values only. Left to recharts the whole
+            // chart renders blank rather than just dropping the short series.
+            const rv = sc.points.flatMap(q => [q.cpu, q.flat, q.mt, q.gpu, q.kernel]
+              .filter((x): x is number => typeof x === 'number' && x > 0));
+            const rLo = Math.pow(10, Math.floor(Math.log10(Math.min(...rv))));
+            const rHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...rv))));
             const lo = sc.crossoverBelow, hi = sc.crossoverAbove;
             return (
               <div key={mode} className="mb-10">
@@ -829,7 +837,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       tick={{ fontSize: 10 }} tickFormatter={(v: any) => Number(v).toLocaleString()}
                       label={{ value: 'trades in book', position: 'insideBottom', offset: -12,
                                style: { fill: 'var(--text-dim)', fontSize: 11 } }} />
-                    <YAxis scale="log" domain={['dataMin', 'dataMax']} allowDataOverflow
+                    <YAxis scale="log" domain={[rLo, rHi]} allowDataOverflow
                       stroke={chartAxis} tick={{ fontSize: 10 }} width={78}
                       tickFormatter={fmtMs}
                       label={{ value: 'wall clock, lower is faster', angle: -90,
@@ -901,6 +909,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           {perf.npvScaling && (() => {
             const ns = perf.npvScaling;
             const lo = ns.crossoverBelow, hi = ns.crossoverAbove;
+            const nv = ns.points.flatMap(q => [q.quantlib, q.flat, q.mt, q.gpu, q.kernel]
+              .filter((x): x is number => typeof x === 'number' && x > 0));
+            const nLo = Math.pow(10, Math.floor(Math.log10(Math.min(...nv))));
+            const nHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...nv))));
             const top = ns.points[ns.points.length - 1];
             return (
               <div className="mb-10">
@@ -934,7 +946,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       tick={{ fontSize: 10 }} tickFormatter={(v: any) => Number(v).toLocaleString()}
                       label={{ value: 'swaps in book', position: 'insideBottom', offset: -12,
                                style: { fill: 'var(--text-dim)', fontSize: 11 } }} />
-                    <YAxis scale="log" domain={['dataMin', 'dataMax']} allowDataOverflow
+                    <YAxis scale="log" domain={[nLo, nHi]} allowDataOverflow
                       stroke={chartAxis} tick={{ fontSize: 10 }} width={78} tickFormatter={fmtMs}
                       label={{ value: 'wall clock, lower is faster', angle: -90,
                                position: 'insideLeft', offset: 4,
