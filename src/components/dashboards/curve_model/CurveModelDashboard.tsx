@@ -318,9 +318,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'inputs' && inputs && (
         <div>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-            {inputs.curves.length} curves · every instrument
-            below is a bootstrap constraint and a PV01 risk bucket. Labels: IMM = 3rd
-            Wednesday futures dates, MTG = ECB policy effective dates.
+            The prices each of the {inputs.curves.length} curves is built from. Every
+            one is both something the curve has to reprice correctly and a place risk
+            can sit, which is why the same list turns up again as the risk buckets on
+            the trade tab. IMM dates are the third Wednesday of the quarter, when
+            futures settle. MTG dates are when ECB decisions take effect.
           </p>
           <div className="flex gap-2 mb-5 flex-wrap">
             {inputs.curves.map(c => (
@@ -380,11 +382,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'curves' && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Every curve, in whichever domain answers the question. Discrete forwards are the
-            {' '}{fwdTenor === 0.25 ? '3M' : '6M'} rate a FRA or future actually pays, so they average out the
-            interpolation and are directly comparable to the quotes on the Market Data Model
-            tab. Zero rates discount cashflows; discount factors are the raw solved quantity.
-          </p>
+            The same curves shown four ways, because each answers a different
+            question. Forward rates are what a FRA or a future actually pays over its
+            period, so they line up with the quotes on the previous tab. Zero rates are
+            what you discount a cashflow at. Discount factors are what the solver
+            produces directly. The instantaneous forward is the most sensitive of the
+            four and shows up problems the other three hide.
+              </p>
 
           <div className="flex gap-2 mb-3 flex-wrap items-center"
                style={{ opacity: domain === 'fx' ? 0.35 : 1 }}>
@@ -475,10 +479,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'sensis' && trades && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Market-quote PV01 per trade: every input instrument bumped {trades.bump_bps}bp,
-            the curve family re-bootstrapped, the trade repriced. One example trade per
-            curve in the framework. Pick a trade to see where its risk lands.
-          </p>
+            Where a trade&apos;s risk sits, and what you would trade to hedge it. Each
+            bar is one quoted instrument moved by a basis point, the curve rebuilt, and
+            the trade valued again, so the height of the bar is what that instrument is
+            worth to this position. Risk concentrated at 5Y is hedged with the 5Y swap.
+            One example trade per curve; pick one to see how its risk is spread.
+              </p>
 
           <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
             {trades.trades.map(t => (
@@ -574,16 +580,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 );
               })()}
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                {activeMeasure === 'market'
-                  ? (selTrade.hasGpu
-                    ? 'Two different definitions of the same risk, so they are not expected to match bucket by bucket. The CPU bumps the market quote and re-runs the bootstrap, so the shock spreads through the spline into neighbouring pillars; the GPU bumps the pillar directly and keeps it local. The totals reconcile, and the gap between them is the risk the re-bootstrap moves between buckets. The machine-precision agreement quoted on the performance tab applies to the zero and forward views below, where both lanes price the same perturbed curve.'
-                    : 'Each bar is one market quote bumped and the curve rebuilt; the buckets are the instruments the desk hedges with.')
-                  : activeMeasure === 'zero'
-                    ? 'Each bar bumps one zero-curve node by 1bp through a tent that falls to zero at its neighbours, with no bootstrap in the loop. Both lanes price the identical perturbed curve, so any gap between them is a pricing difference and never a curve difference.'
-                    : 'Each bar bumps the instantaneous forward by 1bp across one bucket and leaves the rest of the curve untouched. No solver runs, so every bucket is independent and the whole ladder prices in a single GPU launch.'}
-                {activeCurve === 'ESTR_ECB' && ' MTG pillars are ECB policy effective dates: the ladder is per central bank meeting.'}
-                {(activeCurve === 'ESTR_IMM' || activeCurve === 'ESTR_IMMFUT') && ' IMM pillars are quarterly futures dates.'}
-                {activeCurve === 'ESTR_IMMFUT' && ' FUT buckets are convexity-adjusted futures contracts.'}
+            Each bar is one quoted instrument moved by a basis point and the trade
+            valued again. This is the view a desk hedges from, because every bucket is
+            something that can actually be traded.
               </p>
             </div>
           )}
@@ -631,10 +630,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 Cashflow schedule
               </h3>
               <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                Every remaining cashflow priced off the same curves as the ladder above:
-                accrual period, projected rate, amount, discount factor and present value.
-                Struck at fair so the two legs offset, leaving a residual NPV that is the
-                rounding of the quoted rate, not a mispricing.
+            Every cashflow still to come, valued off the same curves as the risk
+            above. The trade was struck at its fair rate, so the two legs very nearly
+            cancel and the small amount left over is rounding on the quoted rate rather
+            than a profit or a mispricing.
               </p>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 font-mono text-xs">
@@ -720,99 +719,29 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'perf' && perf && (
         <div>
           <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Valuing a book of swaps means working out what every future cashflow is
-            worth today. Each one needs a discount factor read off a curve, and a
-            few hundred thousand trades comes to tens of millions of those reads.
+            A desk wants its book valued and its risk refreshed while the market is
+            still moving, not overnight. This was an attempt to find where the time
+            actually goes, and whether the fix is better code or better hardware.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Speed matters because of what it lets a desk do rather than for its own
-            sake. A revaluation that takes twenty minutes runs overnight and once
-            more at midday if someone asks. The same one at twenty seconds can run
-            whenever the market moves, which is the difference between marks that
-            describe this morning and marks that describe now. It also decides how
-            many scenarios are affordable: a full curve risk ladder is the book
-            repriced against every bucket of every curve, so a book that takes a
-            minute to value takes half an hour to risk, and a stress run across a
-            dozen shocks stops being something you do before lunch.
+            Valuing a book means working out what every future cashflow is worth today,
+            and each one needs a value read off a curve. A few hundred thousand trades
+            comes to tens of millions of those reads. Risk is the same book valued again
+            against every bucket of every curve, so whatever one valuation costs, a risk
+            run costs many times over: a book that takes a minute to value takes half an
+            hour to risk.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            A processor and a graphics card are good at different things. A processor
-            has a few dozen fast cores and the data already sits in its memory. A
-            graphics card has thousands of slower cores, but the data has to be
-            copied across to it first, and on this machine that copy takes longer
-            than the calculation does. So the graphics card tends to win when there
-            is a lot of arithmetic per byte copied, and lose when there is not.
-            Everything here is from this one machine, so it is a guide rather than
-            a general rule.
+            Four measurements follow, in the order they were made: where the time goes
+            on three different jobs, how each grows with the size of the book, whether
+            the quicker methods still give the same answer, and what it all comes to.
+            Everything is from one machine, so it is a guide rather than a general rule.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Most of the gain comes from two changes. Cashflows are held as plain
-            arrays and priced directly, without going through QuantLib for each
-            value. And the discount factors are worked out once when the curve is
-            built, then read back, rather than recalculated for every cashflow.
-            Curves only move when the market does, so the same values were being
-            recomputed many times over. Storing them daily loses no accuracy,
-            since cashflows fall on whole days.
+            The short version, before the detail: nearly all of it was code rather than
+            hardware, and the two fastest arrangements both store the curve up front
+            instead of recalculating it.
           </p>
-
-          {perf.npvScaling && perf.scaling && (() => {
-            const ns = perf.npvScaling;
-            const nTop = ns.points[ns.points.length - 1];
-            const threadX = nTop.mt ? +(nTop.flat / nTop.mt).toFixed(1) : null;
-            const risk = perf.scaling['forward'] ?? Object.values(perf.scaling)[0];
-            const gpuRisk = risk.topGpuVsMt;
-            const gpuNpv = ns.topGpuVsMt;
-            const cell = (label: string, value: string, note: string, good: boolean) => (
-              <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>{label}</div>
-                <div className="font-mono text-base" style={{ color: good ? 'var(--accent-green)' : '#c86e6e' }}>{value}</div>
-                <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>{note}</div>
-              </div>
-            );
-            return (
-              <div className="mb-10">
-                <div className="grid md:grid-cols-3 gap-3">
-                  {cell('1. Leave the object model',
-                        ns.topFlatVsQuantLib + '\u00d7',
-                        'same arithmetic, same curve, one core, no special hardware',
-                        true)}
-                  {cell('2. Use every core',
-                        threadX ? threadX + '\u00d7 more' : 'n/a',
-                        (ns.threads ?? 16) + ' cores on the same pricer. Memory bound, so it scales less than linearly.',
-                        true)}
-                  {cell('3. Add a GPU',
-                        'it depends',
-                        (gpuRisk ?? '?') + '\u00d7 on bucketed risk, and ' +
-                        (gpuNpv && gpuNpv < 1 ? (1 / gpuNpv).toFixed(1) + '\u00d7 slower' : 'slower') +
-                        ' on portfolio NPV, against those same cores',
-                        false)}
-                </div>
-                <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The first two are code changes and they hold anywhere. The third is a
-                  hardware question with no fixed answer: the same card earns its place on
-                  one of these jobs and not the other, and changing the link it sits behind
-                  flips one of those.
-          </p>
-          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The split comes from how much arithmetic each byte buys. Bucketed risk
-                  sends the book across once and reprices it against {risk.buckets}{' '}
-                  perturbed curves, so one crossing pays for {risk.buckets} passes and the
-                  card wins even here. Portfolio NPV reads each cashflow once, so it spends
-                  most of its time moving {(nTop.cashflows / 1e6).toFixed(1)}M cashflows
-                  rather than pricing them. The arithmetic was never the constraint: the
-                  card does the pricing in a fraction of the time it spends waiting for the
-                  data to arrive. Put it on a link where the book arrives quickly and the
-                  NPV result reverses, which is the NVLink line on the second chart.
-                </p>
-                <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  Market-quote risk is a fourth case and none of it helps. Every bumped
-                  quote needs the curve rebuilt, the solver runs on the processor, and the
-                  repricing beside it is a rounding error. Shown below unaccelerated,
-                  because that is what it is.
-                </p>
-              </div>
-            );
-          })()}
 
           {perf.patterns.map(p => {
             const base = p.lanes.find(l => l.lane === p.baseline)?.ms ?? 1;
@@ -1051,30 +980,42 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
-                <div className="grid md:grid-cols-3 gap-3 mt-3">
-                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Leaving the object model</div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{ns.topFlatVsQuantLib ?? 0}&times;</div>
-                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      same arithmetic, same curve, one CPU core, no device
-                    </div>
-                  </div>
-                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Then the GPU</div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{ns.topGpuVsFlat}&times;</div>
-                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      over the flattened CPU at the largest book
-                    </div>
-                  </div>
-                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover</div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
-                      {lo && hi ? lo.trades.toLocaleString() + ' to ' + hi.trades.toLocaleString() + ' swaps' : 'not reached'}
-                    </div>
-                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      against the flattened CPU, not against QuantLib
-                    </div>
-                  </div>
+                <div className="rounded overflow-hidden mt-3" style={{ border: '1px solid var(--border-subtle)' }}>
+                  <table className="w-full font-mono text-[11px]">
+                    <thead>
+                      <tr style={{ color: 'var(--text-dim)' }}>
+                        <th className="text-left px-3 py-1.5 font-normal">At {top.trades.toLocaleString()} trades, quickest first</th>
+                        <th className="text-right px-3 py-1.5 font-normal">time</th>
+                        <th className="text-right px-3 py-1.5 font-normal">against the best</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {([
+                        ['Graphics card, curve stored, shared memory', top.nvlink, true],
+                        ['All ' + (ns.threads ?? 16) + ' cores, curve stored', top.serMt, false],
+                        ['All ' + (ns.threads ?? 16) + ' cores, curve recalculated', top.mt, false],
+                        ['Graphics card over this PCIe slot', top.gpuSer, false],
+                        ['One core, curve stored', top.ser, false],
+                        ['One core, curve recalculated', top.flat, false],
+                        ['Through QuantLib', top.quantlib, false],
+                      ] as [string, number | null, boolean][])
+                        .filter(r => r[1])
+                        .sort((a, b) => (a[1] as number) - (b[1] as number))
+                        .map(([name, ms, best], k) => (
+                          <tr key={name} style={{ borderTop: k ? '1px solid var(--border-subtle)' : undefined }}>
+                            <td className="px-3 py-1.5" style={{ color: best ? '#d98ab0' : 'var(--text-secondary)' }}>
+                              {name}{best ? ' (projected)' : ''}
+                            </td>
+                            <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>
+                              {fmtMs(ms as number)}
+                            </td>
+                            <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>
+                              {top.nvlink ? ((ms as number) / top.nvlink).toFixed(1) + '\u00d7' : ''}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
                 {ns.singleThreaded && (
                   <>
@@ -1148,6 +1089,75 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               </div>
             </>
           )}
+
+          {perf.npvScaling && perf.scaling && (() => {
+            const ns = perf.npvScaling;
+            const nTop = ns.points[ns.points.length - 1];
+            const threadX = nTop.mt ? +(nTop.flat / nTop.mt).toFixed(1) : null;
+            const risk = perf.scaling['forward'] ?? Object.values(perf.scaling)[0];
+            const gpuRisk = risk.topGpuVsMt;
+            const gpuNpv = ns.topGpuVsMt;
+            const cell = (label: string, value: string, note: string, good: boolean) => (
+              <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>{label}</div>
+                <div className="font-mono text-base" style={{ color: good ? 'var(--accent-green)' : '#c86e6e' }}>{value}</div>
+                <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>{note}</div>
+              </div>
+            );
+            return (
+              <div className="mt-12 pt-8" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  What it adds up to
+                </h3>
+                <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  Three things were worth doing, in this order. The first two are
+                  changes to the code and cost nothing but the work. The third is a
+                  purchase, and whether it repays depends on the job and on the
+                  machine it goes into.
+                </p>
+                <div className="grid md:grid-cols-3 gap-3">
+                  {cell('1. Leave the object model',
+                        ns.topFlatVsQuantLib + '\u00d7',
+                        'same arithmetic, same curve, one core, no special hardware',
+                        true)}
+                  {cell('2. Use every core',
+                        threadX ? threadX + '\u00d7 more' : 'n/a',
+                        (ns.threads ?? 16) + ' cores on the same pricer. Memory bound, so it scales less than linearly.',
+                        true)}
+                  {cell('3. Add a GPU',
+                        'it depends',
+                        (gpuRisk ?? '?') + '\u00d7 on bucketed risk, and ' +
+                        (gpuNpv && gpuNpv < 1 ? (1 / gpuNpv).toFixed(1) + '\u00d7 slower' : 'slower') +
+                        ' on portfolio NPV, against those same cores',
+                        false)}
+                </div>
+                <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The first two are code changes and they hold anywhere. The third is a
+                  hardware question with no fixed answer: the same card earns its place on
+                  one of these jobs and not the other, and changing the link it sits behind
+                  flips one of those.
+          </p>
+          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The split comes from how much arithmetic each byte buys. Bucketed risk
+                  sends the book across once and reprices it against {risk.buckets}{' '}
+                  perturbed curves, so one crossing pays for {risk.buckets} passes and the
+                  card wins even here. Portfolio NPV reads each cashflow once, so it spends
+                  most of its time moving {(nTop.cashflows / 1e6).toFixed(1)}M cashflows
+                  rather than pricing them. The arithmetic was never the constraint: the
+                  card does the pricing in a fraction of the time it spends waiting for the
+                  data to arrive. Put it on a link where the book arrives quickly and the
+                  NPV result reverses, which is the NVLink line on the second chart.
+                </p>
+                <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  Market-quote risk is a fourth case and none of it helps. Every bumped
+                  quote needs the curve rebuilt, the solver runs on the processor, and the
+                  repricing beside it is a rounding error. Shown below unaccelerated,
+                  because that is what it is.
+                </p>
+              </div>
+            );
+          })()}
+
         </div>
       )}
     </div>

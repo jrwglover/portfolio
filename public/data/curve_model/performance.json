@@ -5,26 +5,26 @@
    "id": "interp",
    "name": "Curve evaluation",
    "workload": "24,000,000 interpolations across the curve set",
-   "baseline": "CPU: evaluate the spline, one point at a time",
-   "note": "Pure curve evaluation, with no instrument around it. The presampled lanes do not evaluate the curve at all: it is sampled onto 727 points once and everything after that is a lookup plus a linear step between neighbours. That is the same trade as precomputing daily discount factors, only much coarser, and the accuracy table below is what it costs. 727 points across 50 years is roughly one sample every 25 days.",
+   "baseline": "Processor: work out each value when asked",
+   "note": "This measures one thing on its own: reading values off a curve, with no trade around it. There are two ways to do it. Work the value out each time it is asked for, or take a set of readings when the curve is built and use those afterwards. Reading stored values is quicker and slightly less accurate, and here the readings are spaced about 25 days apart, so a date in between has to be estimated. The accuracy table lower down shows what that costs.",
    "lanes": [
     {
-     "lane": "CPU: evaluate the spline, one point at a time",
+     "lane": "Processor: work out each value when asked",
      "ms": 1311.2,
      "kind": "cpu"
     },
     {
-     "lane": "CPU: presampled grid, read back one at a time",
+     "lane": "Processor: read stored values, one at a time",
      "ms": 235.8,
      "kind": "cpu"
     },
     {
-     "lane": "CPU: presampled grid, batched",
+     "lane": "Processor: read stored values, in bulk",
      "ms": 175.0,
      "kind": "cpu"
     },
     {
-     "lane": "GPU: presampled grid, batched",
+     "lane": "Graphics card: read stored values, in bulk",
      "ms": 75.013,
      "kind": "gpu"
     }
@@ -34,21 +34,21 @@
    "id": "pricing",
    "name": "Portfolio repricing",
    "workload": "150,000 swaps, 6,339,223 cashflows, priced end to end",
-   "baseline": "CPU: flat loop, QuantLib curve lookup",
-   "note": "The baseline is not QuantLib pricing the portfolio. It is already a flat loop over the same cashflow arrays the GPU gets, and the only QuantLib left in it is the curve lookup, one virtual discount() call per cashflow, so the multiple measures the curve evaluation path more than the device. The presampled lane is faster again because it stops evaluating the curve altogether, which is the trade the accuracy table prices.",
+   "baseline": "Processor: curve values from QuantLib",
+   "note": "The slowest bar here is not QuantLib valuing the book. The cashflows are already laid out the same way for all three, and the only QuantLib left is the request for each curve value. So the gap between the first two bars is mostly about how those values are obtained rather than about the hardware. The third bar stops working them out and reads stored ones instead, which is quicker again and costs the accuracy shown below.",
    "lanes": [
     {
-     "lane": "CPU: flat loop, QuantLib curve lookup",
+     "lane": "Processor: curve values from QuantLib",
      "ms": 1575.36,
      "kind": "cpu"
     },
     {
-     "lane": "GPU: evaluate the same spline",
+     "lane": "Graphics card: values worked out on the card",
      "ms": 194.933,
      "kind": "gpu"
     },
     {
-     "lane": "GPU: presampled grid, lookup",
+     "lane": "Graphics card: values read from storage",
      "ms": 104.446,
      "kind": "gpu"
     }
@@ -58,26 +58,26 @@
    "id": "sensi",
    "name": "Market-quote PV01 ladders",
    "workload": "4 trades, 228 market quotes bumped 1bp, curve family re-bootstrapped per bump",
-   "baseline": "CPU lane, total",
-   "note": "The honest result. Almost all of the wall clock is sequential curve re-bootstrapping on the CPU, which the GPU cannot help with, and the only part it does own is the repricing.",
+   "baseline": "Processor only, start to finish",
+   "note": "Nearly all the time here goes on rebuilding the curve, once for every quote that is nudged, and those rebuilds run on the processor one after another. The graphics card only handles the revaluation at the end, which is a small share of the total, so the two totals come out close. This is the case where faster hardware does not help and the answer would have to come from doing fewer rebuilds.",
    "lanes": [
     {
-     "lane": "CPU lane, total",
+     "lane": "Processor only, start to finish",
      "ms": 259428.0,
      "kind": "cpu"
     },
     {
-     "lane": "GPU lane, total",
+     "lane": "With the graphics card, start to finish",
      "ms": 284921.0,
      "kind": "gpu"
     },
     {
-     "lane": "GPU lane, curve rebuilds (CPU-bound)",
+     "lane": "of which rebuilding curves",
      "ms": 284677,
      "kind": "cpu"
     },
     {
-     "lane": "GPU lane, repricing kernel only",
+     "lane": "of which revaluing the trades",
      "ms": 244.0,
      "kind": "gpu"
     }
@@ -96,9 +96,9 @@
    "note": "relative, on 150,000 swaps priced down both paths"
   },
   {
-   "metric": "Presampled grid vs exact spline",
+   "metric": "Stored values vs worked out",
    "value": "2.2e-4",
-   "note": "the cost of sampling the curve onto 727 points instead of evaluating it, about one sample per 25 days. Roughly 2bp of zero rate, which is why the presampled lanes are shown but not used"
+   "note": "what it costs to read a curve from readings spaced about 25 days apart rather than working the value out. Around two hundredths of a basis point, which is why those lanes are shown but not used"
   }
  ],
  "scaling": {
