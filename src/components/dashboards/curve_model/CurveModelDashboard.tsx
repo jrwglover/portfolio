@@ -55,9 +55,9 @@ function Sci({ v }: { v: string }) {
 }
 
 interface PerfLane { lane: string; ms: number; kind: 'cpu' | 'gpu' }
-interface ScalePt { trades: number; repricings: number; cpu: number; flat: number; mt: number; gpu: number; upload: number; kernel: number }
-interface NpvPt { trades: number; cashflows: number; quantlib: number; flat: number; mt: number; gpu: number; kernel: number }
-interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number; topGpuVsFlat: number; topGpuVsMt: number; mtCrossoverBelow: NpvPt | null; mtCrossoverAbove: NpvPt | null; threads: number | null; singleThreaded: boolean }
+interface ScalePt { trades: number; repricings: number; cpu: number | null; flat: number; mt: number; gpu: number; upload: number; kernel: number }
+interface NpvPt { trades: number; cashflows: number; quantlib: number | null; flat: number; mt: number; gpu: number; kernel: number }
+interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number | null; topGpuVsFlat: number; topGpuVsMt: number; mtCrossoverBelow: NpvPt | null; mtCrossoverAbove: NpvPt | null; threads: number | null; singleThreaded: boolean }
 interface Agree { scope: string; comparison: string; value: string }
 interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null; mtCrossoverBelow: ScalePt | null; mtCrossoverAbove: ScalePt | null; topGpuVsFlat: number | null; topGpuVsMt: number | null; threads: number | null }
 interface PerfPattern { id: string; name: string; workload: string; note: string; lanes: PerfLane[]; baseline: string }
@@ -684,11 +684,66 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'perf' && perf && (
         <div>
           <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Where GPU acceleration actually pays, and where it does not, measured per
-            workload on this machine. Bars are wall-clock milliseconds on a log scale and
-            the multiple is against the CPU baseline for that pattern. Every figure here
-            is read from the engine&apos;s own timing output rather than typed in.
+            Three levers make this fast, and they are not equally important. The
+            largest is free: pricing the same cashflows outside QuantLib&apos;s object
+            model, on one core, with no hardware. Threading adds to that. A GPU
+            helps or hurts depending on the workload, and the honest answer is
+            not a single number. Everything below is read from the engine&apos;s own
+            timing output rather than typed in, and every lane is checked against
+            QuantLib before its speed is quoted.
           </p>
+
+          {perf.npvScaling && perf.scaling && (() => {
+            const ns = perf.npvScaling;
+            const nTop = ns.points[ns.points.length - 1];
+            const threadX = nTop.mt ? +(nTop.flat / nTop.mt).toFixed(1) : null;
+            const risk = perf.scaling['forward'] ?? Object.values(perf.scaling)[0];
+            const gpuRisk = risk.topGpuVsMt;
+            const gpuNpv = ns.topGpuVsMt;
+            const cell = (label: string, value: string, note: string, good: boolean) => (
+              <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>{label}</div>
+                <div className="font-mono text-base" style={{ color: good ? 'var(--accent-green)' : '#c86e6e' }}>{value}</div>
+                <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>{note}</div>
+              </div>
+            );
+            return (
+              <div className="mb-10">
+                <div className="grid md:grid-cols-3 gap-3">
+                  {cell('1. Leave the object model',
+                        ns.topFlatVsQuantLib + '\u00d7',
+                        'same arithmetic, same curve, one core, no hardware. The largest single win and the cheapest.',
+                        true)}
+                  {cell('2. Use every core',
+                        threadX ? threadX + '\u00d7 more' : 'n/a',
+                        (ns.threads ?? 16) + ' cores on the same pricer. Memory bound, so it scales sublinearly.',
+                        true)}
+                  {cell('3. Add a GPU',
+                        'it depends',
+                        'worth ' + (gpuRisk ?? '?') + '\u00d7 on bucketed risk, but ' +
+                        (gpuNpv && gpuNpv < 1 ? (1 / gpuNpv).toFixed(1) + '\u00d7 SLOWER' : 'slower') +
+                        ' on portfolio NPV, against those same cores.',
+                        false)}
+                </div>
+                <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The third one splits because of how each workload reuses data. Bucketed
+                  risk ships one book to the device and reprices it across {risk.buckets}{' '}
+                  perturbed curves, so the transfer is amortised {risk.buckets} times over.
+                  Portfolio NPV touches every cashflow once, so it stays bound by moving
+                  {' '}{(nTop.cashflows / 1e6).toFixed(1)}M cashflows rather than by arithmetic.
+                  A device pays for scenario-heavy work on a large book and does not pay for
+                  a single revaluation pass, which is why the two charts below disagree.
+                </p>
+                <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  There is a fourth case where none of this helps. Market-quote risk
+                  re-runs the bootstrap for every bumped quote, and the solver is not on the
+                  device: the repricing kernel is a fraction of a second against minutes of
+                  sequential curve building. That pattern is shown below unaccelerated,
+                  because pretending otherwise would be the easiest number here to fake.
+                </p>
+              </div>
+            );
+          })()}
 
           {perf.patterns.map(p => {
             const base = p.lanes.find(l => l.lane === p.baseline)?.ms ?? 1;
@@ -856,7 +911,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   A whole book priced once, across books of growing size, with all four
                   lanes in one process on one machine. Most of the distance is covered
                   before the GPU is reached: flattening the book out of QuantLib&apos;s object
-                  model is worth {ns.topFlatVsQuantLib}&times; on a single core, and the
+                  model is worth {ns.topFlatVsQuantLib ?? 0}&times; on a single core, and the
                   device adds {ns.topGpuVsFlat}&times; on top of that. Quoting the GPU
                   against QuantLib alone would fold the first number into the second.
                 </p>
@@ -914,7 +969,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Leaving the object model</div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{ns.topFlatVsQuantLib}&times;</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{ns.topFlatVsQuantLib ?? 0}&times;</div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
                       same arithmetic, same curve, one CPU core, no device
                     </div>
