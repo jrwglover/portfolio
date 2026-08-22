@@ -550,10 +550,29 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   {showGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
                 </BarChart>
               </ResponsiveContainer>
+              {showGpu && ladderChart.length > 0 && (() => {
+                // Bucket differences on the market view can look alarming when
+                // the two lanes are really redistributing the same total between
+                // neighbouring pillars. Showing both sums makes that visible
+                // rather than leaving it to the caption.
+                const cs = ladderChart.reduce((a, r) => a + (r.cpu ?? 0), 0);
+                const gs = ladderChart.reduce((a, r) => a + (r.gpu ?? 0), 0);
+                const rel = Math.abs(cs) > 1e-9 ? Math.abs(cs - gs) / Math.abs(cs) : 0;
+                return (
+                  <div className="font-mono text-[11px] mt-2 flex gap-4 flex-wrap"
+                    style={{ color: 'var(--text-dim)' }}>
+                    <span>ladder total, CPU {cs.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span>GPU {gs.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span style={{ color: rel < 0.01 ? 'var(--accent-green)' : 'var(--text-dim)' }}>
+                      {rel < 1e-6 ? 'identical' : 'differ by ' + (rel * 100).toFixed(2) + '%'}
+                    </span>
+                  </div>
+                );
+              })()}
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                 {activeMeasure === 'market'
                   ? (selTrade.hasGpu
-                    ? 'Two independent ladders: the CPU one bumps the market quote and re-runs the global bootstrap, so the shock propagates through the spline; the GPU one bumps the pillar directly. Where they differ is what re-bootstrapping adds: risk leaking to neighbouring buckets through the interpolation.'
+                    ? 'Two different definitions of the same risk, so they are not expected to match bucket by bucket. The CPU bumps the market quote and re-runs the bootstrap, so the shock spreads through the spline into neighbouring pillars; the GPU bumps the pillar directly and keeps it local. The totals reconcile, and the gap between them is the risk the re-bootstrap moves between buckets. The machine-precision agreement quoted on the performance tab applies to the zero and forward views below, where both lanes price the same perturbed curve.'
                     : 'Each bar is one market quote bumped and the curve rebuilt; the buckets are the instruments the desk hedges with.')
                   : activeMeasure === 'zero'
                     ? 'Each bar bumps one zero-curve node by 1bp through a tent that falls to zero at its neighbours, with no bootstrap in the loop. Both lanes price the identical perturbed curve, so any gap between them is a pricing difference and never a curve difference.'
