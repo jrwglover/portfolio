@@ -8,8 +8,12 @@
   --border-subtle: #1e1e2e;
   --border-hover: #2a2a3e;
   --text-primary: #e8e6f0;
-  --text-secondary: #8b8a97;
-  --text-dim: #55546a;
+  /* Contrast against --bg-primary #0a0a0f. The old --text-dim #55546a sat at
+     about 2.9:1, under the 4.5:1 WCAG AA minimum, and it carries most of the
+     explanatory prose and every tile label on the dashboards. Both tones are
+     lifted rather than just one, so the hierarchy between them survives. */
+  --text-secondary: #a3a2b4;  /* ~7.7:1 */
+  --text-dim: #7d7c92;        /* ~4.7:1 */
   --accent-warm: #5b8fc9;
   --accent-warm-muted: #33567e;
   --accent-cool: #5eaab5;
