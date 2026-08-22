@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Workstation, { type Timeline } from './Workstation';
 
 declare const __BUILD_ID__: string;
 const BUILD_ID = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
@@ -26,9 +27,10 @@ const chip = (on: boolean, colour: string) => ({
 });
 
 export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string }) {
-  const [tab, setTab] = useState(defaultTab ?? 'graph');
+  const [tab, setTab] = useState(defaultTab ?? 'desk');
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
+  const [tl, setTl] = useState<Timeline | null>(null);
   const [probe, setProbe] = useState('EUR_ESTR');
 
   useEffect(() => {
@@ -37,6 +39,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       .then(r => r.json()).then(setG).catch(() => {});
     fetch(`/data/rt_engine/demo.json${v}`, { cache: 'no-store' })
       .then(r => r.json()).then(setDemo).catch(() => {});
+    fetch(`/data/rt_engine/timeline.json${v}`, { cache: 'no-store' })
+      .then(r => r.json()).then(setTl).catch(() => {});
   }, []);
 
   const rebuilds = useMemo(() => {
@@ -45,9 +49,11 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
   }, [g, probe]);
 
   const TABS: [string, string][] = [
-    ['graph', 'What one price change touches'],
-    ['engine', 'Engine run'],
-    ['trader', 'Trader view'],
+    ['desk', 'Desk view'],
+    ['why', 'Why events'],
+    ['graph', 'What one price touches'],
+    ['engine', 'Engine output'],
+    ['trader', 'Trader output'],
   ];
 
   return (
@@ -58,6 +64,86 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             style={chip(tab === k, '#5b8fc9')}>{label}</button>
         ))}
       </div>
+
+      {tab === 'desk' && tl && (
+        <div>
+          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+            A session, replayed
+          </h3>
+          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            Prices arrive, the curves that depend on them are rebuilt, and
+            positions are revalued. Each step below is a real cycle of the
+            engine, recorded as it ran and replayed here. Watch which curves
+            light up when a price moves, and which are left alone.
+          </p>
+          <Workstation tl={tl} />
+        </div>
+      )}
+
+      {tab === 'why' && (
+        <div className="max-w-3xl">
+          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+            Why not just recalculate everything on a timer
+          </h3>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+            Most curve systems poll. A scheduled job wakes up every minute or
+            every few minutes, rebuilds every curve from the latest prices, and
+            publishes the lot. It is easy to write, easy to reason about, and it
+            is what almost everyone does.
+          </p>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+            The cost is that you are always choosing between stale and wasteful.
+            Poll every five minutes and a trader can be looking at a five minute
+            old curve during a move. Poll every ten seconds and you rebuild eight
+            curves six times a minute whether anything moved or not, and the
+            bootstrap is not cheap: the batch engine measures a curve solve at
+            roughly a second. Neither setting is right, because the correct
+            frequency depends on which curve and what just happened.
+          </p>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+            Event driven rebuilding does the work when the work is needed. The
+            reason it is less common is that it is genuinely harder, and the
+            difficulty is not the events, it is the dependencies.
+          </p>
+
+          <div className="rounded p-4 my-4 font-mono text-[11px]" style={{
+            border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)',
+            color: 'var(--text-secondary)', lineHeight: 1.8,
+          }}>
+            <div style={{ color: 'var(--text-dim)' }}>a price moves on SOFR</div>
+            <div>&nbsp;</div>
+            <div>SOFR ────────────┐</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──&gt; EUR/USD cross currency</div>
+            <div>ESTR ──┬─────────┘</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; EURIBOR 6M</div>
+            <div>&nbsp;</div>
+            <div style={{ color: 'var(--text-dim)' }}>SONIA (nothing is built on it)</div>
+          </div>
+
+          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+            The cross currency curve is built from both SOFR and ESTR. If a SOFR
+            price and an ESTR price arrive together and each triggers a rebuild
+            of what depends on it, the cross currency curve gets built twice, and
+            the first build used an ESTR curve that was about to be replaced.
+            Publish that first result and someone prices a trade against a set
+            that never existed as a consistent market state.
+          </p>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+            So the work has to be collected before it is done, not done as it
+            arrives: gather everything affected, order it so each curve is built
+            after the curves it depends on, build each one once, and publish the
+            whole set together. Get that wrong and the failure is quiet. Nothing
+            crashes. A number is just slightly off, on one screen, for a few
+            seconds, and nobody can reproduce it afterwards.
+          </p>
+          <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+            That is the part worth building carefully, and it is why polling
+            stays popular. Polling has none of these problems, because rebuilding
+            everything in dependency order every time is the brute force answer
+            to the same question. It just costs you either latency or hardware.
+          </p>
+        </div>
+      )}
 
       {tab === 'graph' && g && (
         <div>
@@ -145,7 +231,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
         </div>
       )}
 
-      {!g && !demo && (
+      {!g && !demo && !tl && (
         <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
     </div>
