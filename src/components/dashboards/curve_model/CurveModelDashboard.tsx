@@ -59,9 +59,9 @@ interface ScalePt { trades: number; repricings: number; cpu: number; flat: numbe
 interface NpvPt { trades: number; cashflows: number; quantlib: number; flat: number; gpu: number; kernel: number }
 interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number; topGpuVsFlat: number; singleThreaded: boolean }
 interface Agree { scope: string; comparison: string; value: string }
-interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null }
+interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null; topGpuVsFlat: number | null }
 interface PerfPattern { id: string; name: string; workload: string; note: string; lanes: PerfLane[]; baseline: string }
-interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Scaling; npvScaling?: NpvScaling; agreement?: Agree[] }
+interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Record<string, Scaling>; npvScaling?: NpvScaling; agreement?: Agree[] }
 
 const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
 const fmtMs = (v: number) =>
@@ -734,26 +734,29 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             );
           })}
 
-          {perf.scaling && (() => {
-            const sc = perf.scaling;
+          {perf.scaling && Object.entries(perf.scaling).map(([mode, sc]) => {
             const lo = sc.crossoverBelow, hi = sc.crossoverAbove;
             return (
-              <div className="mb-10">
+              <div key={mode} className="mb-10">
                 <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  Where the GPU starts paying: book size against wall clock
+                  {mode === 'zero' ? 'Zero' : 'Forward'} bucket risk: where the GPU starts paying
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The same {sc.buckets} forward buckets repriced across books of growing size.
+                  The same {sc.buckets} {mode} buckets repriced across books of growing size.
                   Two CPU lines, and the gap between them is the point: QuantLib revalues
                   through its object model, while the flattened lane prices the same
                   cashflows from the same spline coefficients the device uses, on one core.
                   Measuring a GPU against the first mostly measures the object model. The
-                  GPU pays a fixed upload per bucket regardless of book size, and on this
-                  workload it does not overtake the flattened CPU at any size measured.
+                  GPU pays a fixed per-bucket upload whatever the book size, so it starts
+                  behind and overtakes once there are enough trades to spread that cost
+                  over. Both lanes are handed the same pre-flattened book, since a live
+                  system flattens at trade capture and reuses it, so neither is charged for
+                  a step the other gets free. Timings are the best of three after a warm-up.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
                   up to {sc.points[sc.points.length - 1].repricings.toLocaleString()} repricings
+                  &middot; lower is faster, so QuantLib is the slowest lane throughout
                 </p>
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={sc.points} margin={{ left: 8, right: 24, top: 8, bottom: 20 }}>
@@ -764,8 +767,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       label={{ value: 'trades in book', position: 'insideBottom', offset: -12,
                                style: { fill: 'var(--text-dim)', fontSize: 11 } }} />
                     <YAxis scale="log" domain={['dataMin', 'dataMax']} allowDataOverflow
-                      stroke={chartAxis} tick={{ fontSize: 10 }} width={64}
-                      tickFormatter={fmtMs} />
+                      stroke={chartAxis} tick={{ fontSize: 10 }} width={78}
+                      tickFormatter={fmtMs}
+                      label={{ value: 'wall clock, lower is faster', angle: -90,
+                               position: 'insideLeft', offset: 4,
+                               style: { fill: 'var(--text-dim)', fontSize: 11, textAnchor: 'middle' } }} />
                     <Tooltip {...tt}
                       labelFormatter={(v: any) => Number(v).toLocaleString() + ' trades'}
                       formatter={(v: any, n: any) => [fmtMs(Number(v)),
@@ -810,9 +816,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>At the largest book</div>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>At the largest book, over flattened CPU</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
-                      {(sc.points[sc.points.length - 1].cpu / sc.points[sc.points.length - 1].gpu).toFixed(1)}&times;
+                      {sc.topGpuVsFlat ? sc.topGpuVsFlat + '\u00d7' : 'n/a'}
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
                       the dashed line is the kernel alone; the gap above it is flattening the
@@ -822,7 +828,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </div>
               </div>
             );
-          })()}
+          })}
 
           {perf.npvScaling && (() => {
             const ns = perf.npvScaling;
@@ -850,6 +856,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
+                  &middot; lower is faster, so QuantLib is the slowest lane throughout
                 </p>
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={ns.points} margin={{ left: 8, right: 24, top: 8, bottom: 20 }}>
@@ -860,7 +867,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       label={{ value: 'swaps in book', position: 'insideBottom', offset: -12,
                                style: { fill: 'var(--text-dim)', fontSize: 11 } }} />
                     <YAxis scale="log" domain={['dataMin', 'dataMax']} allowDataOverflow
-                      stroke={chartAxis} tick={{ fontSize: 10 }} width={64} tickFormatter={fmtMs} />
+                      stroke={chartAxis} tick={{ fontSize: 10 }} width={78} tickFormatter={fmtMs}
+                      label={{ value: 'wall clock, lower is faster', angle: -90,
+                               position: 'insideLeft', offset: 4,
+                               style: { fill: 'var(--text-dim)', fontSize: 11, textAnchor: 'middle' } }} />
                     <Tooltip {...tt}
                       labelFormatter={(v: any) => Number(v).toLocaleString() + ' swaps'}
                       formatter={(v: any, n: any) => [fmtMs(Number(v)),
