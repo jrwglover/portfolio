@@ -206,7 +206,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
             </div>
             <div className="text-xs leading-relaxed space-y-3 pt-1" style={{ color: 'var(--text-secondary)' }}>
               <p>
-                <span style={{ color: 'var(--text-primary)' }}>The honest benchmark:</span> on
+                <span style={{ color: 'var(--text-primary)' }}>What was measured:</span> on
                 the <em>prepare</em> leg a careful single-threaded parser beats Spark at this
                 size (8.3s vs 11.9s; JVM startup and shuffle overhead are real). Every claim
                 is attributed to its cause: compression wins the transfer, connection

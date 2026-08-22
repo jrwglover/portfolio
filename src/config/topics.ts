@@ -37,7 +37,7 @@ export const topics: Topic[] = [
             title: 'Curve Market Data Model',
             subtitle: '8 curves, 10 instrument types: quotes in, curves out',
             description:
-              'Explore the full market data model behind the multi-curve framework: tenor OIS, IMM-dated OIS strips, price-quoted futures with convexity adjustment, ECB meeting-dated OIS, dual-curve EURIBOR (deposits, FRAs, IMM FRAs, IRS) and the FX/xccy-implied EUR-under-USD-collateral curve. Every quote is a bootstrap constraint and a PV01 bucket.',
+              'The prices every curve is built from, curve by curve: overnight index swaps, futures, forward rate agreements, swaps, FX swap points and cross currency basis. Each price is both something the curve has to reprice correctly and a place risk can sit.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap', 'CUDA'],
             highlights: ['8 curves incl. 4 ESTR variants', 'IMM + ECB meeting-dated strips', 'FX swaps + xccy basis'],
             status: 'live',
@@ -99,7 +99,7 @@ export const topics: Topic[] = [
             title: 'Trade Risk & Cashflows',
             subtitle: 'Bump-and-rebuild ladders and full cashflow schedules, 8 trades',
             description:
-              'Market-quote PV01 trade by trade: eight example trades covering every curve in the framework: a seasoned broken-dated EURIBOR swap, swaps discounted on the ECB meeting-dated and IMM ESTR curves, ESTR/SOFR/SONIA OIS, and EUR/USD forwards on the xccy curve. Each ladder is a 1bp bump and full re-bootstrap, with per-ECB-meeting and per-futures-contract buckets, followed by the trade\'s complete cashflow schedule: accrual periods, projected rates, discount factors and present values.',
+              'Where the risk of each trade sits, and what a desk would trade to hedge it. Eight examples covering every curve in the framework: an aged broken-dated swap, the meeting-dated and futures-dated variants, overnight index swaps in three currencies, and an FX forward.',
             techBadges: ['C++', 'CUDA', 'QuantLib', 'GlobalBootstrap'],
             highlights: ['8 trades, 8 curves', 'Per-meeting & per-future buckets', 'Cashflow-level PV breakdown'],
             status: 'live',
