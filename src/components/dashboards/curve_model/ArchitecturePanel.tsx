@@ -120,16 +120,18 @@ export default function ArchitecturePanel() {
               caption="Construction. Every branch here exists because of a measured failure: the instrument-typed helper mapping, the two-stage build for policy-dated curves, and the log-discount-factor domain." />
 
       <div className="flex flex-col items-center max-w-3xl">
-        <Layer kicker="input" title="Market quotes">
-          One JSON file per valuation date: deposits, OIS, meeting-dated and IMM-dated OIS,
-          futures, FRAs, swaps, FX swap points and cross-currency basis. Every quote carries
-          its instrument type, so the builder picks the helper rather than guessing from the
-          tenor. Provenance is recorded in the file: these are synthetic, derived from one
-          arbitrage-free forward path so the whole set stays mutually consistent.
+        <Layer kicker="1" title="Prices come in">
+          The prices each curve is built from: deposits, OIS, futures, FRAs, swaps,
+          FX swap points and cross currency basis, one file per valuation date. Each
+          quote states what kind of instrument it is rather than leaving the builder
+          to work it out from the tenor, which is where this usually goes wrong.
+          The prices are synthetic, generated from a single arbitrage free forward
+          path so the set is consistent with itself, and the file says so rather
+          than leaving it to be assumed.
         </Layer>
         <Arrow />
 
-        <Layer kicker="construction" title="Bootstrap, via QuantLib GlobalBootstrap">
+        <Layer kicker="2" title="Curves are solved from them">
           Each curve is solved in the domain its own instruments pin, and interpolated as a
           natural minimum-curvature cubic spline on log discount factors. That choice
           matters more than the scheme itself: on log-DF the
@@ -144,7 +146,7 @@ export default function ArchitecturePanel() {
         </Layer>
         <Arrow />
 
-        <Layer kicker="curves" title="Eight curves, two of them dependent">
+        <Layer kicker="3" title="Some curves are built on others">
           <Figure src="/diagrams/curve-graph.svg" source={curveSrc}
                   alt="Curve dependency graph: six curves build independently; EURIBOR 6M is discounted on ESTR; the EURUSD cross-currency curve takes SOFR as its USD leg; and the EUR/USD outright forwards are derived in the browser from that curve and SOFR." />
           <div className="mt-2">
@@ -174,12 +176,12 @@ export default function ArchitecturePanel() {
         <Arrow label="the same curve object, two ways" />
 
         <div className="grid gap-3 w-full" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
-          <Layer kicker="path A" title="CPU: QuantLib reference" accent={CPU}>
+          <Layer kicker="4a" title="Valued on the processor" accent={CPU}>
             Prices and risks directly off the bootstrapped term structures. Market PV01 bumps
             one quote, re-runs the whole bootstrap and reprices, so the shock propagates
             through the interpolation the way it would on a desk.
           </Layer>
-          <Layer kicker="path B" title="GPU: CUDA kernels" accent={GPU}>
+          <Layer kicker="4b" title="Valued on the graphics card" accent={GPU}>
             The device never rebuilds a curve. Each pillar interval is uploaded as four cubic
             coefficients plus its bounds; the kernel does a binary search and one Horner
             evaluation. Because the curve genuinely <em>is</em> piecewise cubic in the
@@ -188,7 +190,7 @@ export default function ArchitecturePanel() {
         </div>
         <Arrow />
 
-        <Layer kicker="the check" title="Reconcile both paths">
+        <Layer kicker="5" title="The two are checked against each other">
           All 227 calibration instruments repriced down both paths and differenced, plus a
           direct curve-vs-curve comparison across every exported point. Current worst
           agreement 3.6 × 10⁻¹⁴. A separate check
@@ -197,7 +199,7 @@ export default function ArchitecturePanel() {
         </Layer>
         <Arrow />
 
-        <Layer kicker="output" title="Exported JSON → this site">
+        <Layer kicker="6" title="Results published to this site">
           Curves, trades, cashflows, risk ladders and benchmarks are written as static JSON
           and served with the page. The browser does no curve construction and no pricing: it
           renders what the engine produced. The one exception is the EUR/USD outright forward
