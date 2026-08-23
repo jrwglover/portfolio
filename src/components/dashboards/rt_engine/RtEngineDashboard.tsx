@@ -68,22 +68,19 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       {tab === 'desk' && tl && (
         <div>
           <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-            A desk, on a recorded session
+            The desk
           </h3>
           <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            A book of {tl.trades.toLocaleString()} trades across eight curves, driven by
-            a stream of price changes. Each step is one cycle of the engine: prices
-            arrive, the curves that depend on them are rebuilt, and the book is revalued
-            against the set that comes out. Watch which curves light up when a price
-            moves and which are left alone.
+            A recorded session, replayed. {tl.trades.toLocaleString()} trades over eight
+            curves. A price arrives, whatever depends on it rebuilds, the book reprices.
+            Watch which curves light up and which sit still.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Three jobs, three speeds, and the figures above each panel are the engine&apos;s
-            own. Rebuilding a curve takes seconds, so it cannot sit on a timer. Revaluing
-            all {tl.trades.toLocaleString()} trades takes about a tenth of a second, so it
-            can run on every published set. A full ladder takes a few seconds, so it is
-            asked for rather than pushed, and it stays stamped with the set it describes.
-            Keeping those three apart is most of what the design is.
+            The timings above came out of the engine, and they are why the screen is
+            arranged like this. A curve solve runs into seconds. Repricing the whole book
+            takes about a tenth of that, cheap enough to do on every set the engine
+            publishes, so the blotter is genuinely live. A full ladder is slower again.
+            You ask for it, and it stays stamped with the set it was run against.
           </p>
           <Workstation tl={tl} />
         </div>
