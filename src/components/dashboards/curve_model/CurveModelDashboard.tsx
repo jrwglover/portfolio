@@ -1229,9 +1229,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   solver started, against 4.8 ms for a EURIBOR curve, because thirty-one
                   overnight swaps each lay out a daily fixing schedule to fifty years and
                   none of that structure changes when a quote does. Holding the helpers and
-                  moving the quote instead took this ladder from 259 seconds to 21, with every
-                  one of the 228 sensitivities identical to the digit. It was never a
-                  hardware question.
+                  moving the quote took it from 267 seconds to 48. Sharing each distinct bumped
+                  curve across the trades that read it took another 16, since the same 28
+                  EURIBOR curves were being solved once per trade and the curve does not
+                  depend on the trade. 267 seconds to 32, with every one of the 228
+                  sensitivities identical to the digit. It was never a hardware question.
                 </p>
               </div>
             );
