@@ -868,11 +868,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
 
           {position.type === 'FX forward' && (
             <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              This position is where the domains disagree. Toggle between them: the zero
-              ladder on the cross-currency curve is matched by an equal and opposite one
-              on SOFR, which is why the parallel DV01 above is near zero. The market
-              ladder puts the position on a single bar, the FX swap at its own maturity.
-              That is the hedge, and only the market domain names it.
+              The three domains disagree on this one, so it is worth toggling between
+              them. The zero ladder on the cross-currency curve is matched by an equal
+              and opposite one on SOFR, which is why the parallel DV01 above comes out
+              near zero. The market ladder puts the whole position on a single bar, the
+              FX swap at its own maturity, which is the instrument you would hedge it
+              with.
             </p>
           )}
         </div>

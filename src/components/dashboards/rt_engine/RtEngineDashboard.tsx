@@ -71,17 +71,18 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             The desk
           </h3>
           <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            A recorded session, replayed. {tl.trades.toLocaleString()} trades over eight
-            curves. A price arrives, whatever depends on it rebuilds, the book reprices.
-            Watch which curves light up and which sit still.
+            This is a recording of the engine running, played back. The book is{' '}
+            {tl.trades.toLocaleString()} trades on eight curves. When a price comes in, the
+            curves that depend on it get rebuilt and the book gets repriced. Watch which
+            curves light up and which ones don&apos;t.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The timings above came out of the engine, and they are why the screen is
-            arranged like this. Rebuilding the curves a price touched costs a few tenths
-            of a second, and repricing all {tl.trades.toLocaleString()} trades costs about
-            a seventh of one. Both happen on every set the engine publishes, so the
-            blotter is genuinely live. A full ladder is thirty times slower than either.
-            You ask for that one, and it stays stamped with the set it was run against.
+            The timings above come from the engine itself. Rebuilding the curves a price
+            touched takes a few tenths of a second, and repricing all{' '}
+            {tl.trades.toLocaleString()} trades takes about 140 milliseconds, so both of
+            those can run every time a new set is published. A full risk ladder takes
+            around five seconds. That is why you have to ask for it, and why it stays
+            labelled with the set it was run against.
           </p>
           <Workstation tl={tl} />
         </div>
