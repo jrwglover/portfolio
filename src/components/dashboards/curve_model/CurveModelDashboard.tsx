@@ -62,11 +62,17 @@ function Sci({ v }: { v: string }) {
 interface PerfLane { lane: string; ms: number; kind: 'cpu' | 'gpu' }
 interface ScalePt { trades: number; repricings: number; cpu: number | null; flat: number; mt: number; nvlink: number | null; gpu: number; upload: number; kernel: number }
 interface NpvPt { trades: number; cashflows: number; quantlib: number | null; flat: number; mt: number; ser: number; serMt: number; gpuSer: number; nvlink: number | null; gpu: number; kernel: number }
-interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number | null; topGpuVsFlat: number; topGpuVsMt: number; mtCrossoverBelow: NpvPt | null; mtCrossoverAbove: NpvPt | null; threads: number | null; nvlinkGBs: number; topNvlinkVsMt: number | null; singleThreaded: boolean }
+interface NpvScaling { points: NpvPt[]; crossoverBelow: NpvPt | null; crossoverAbove: NpvPt | null; topFlatVsQuantLib: number | null; flatVsQuantLibAtTrades: number | null; topGpuVsFlat: number; topGpuVsMt: number; mtCrossoverBelow: NpvPt | null; mtCrossoverAbove: NpvPt | null; threads: number | null; nvlinkGBs: number; topNvlinkVsMt: number | null; singleThreaded: boolean }
 interface Agree { scope: string; comparison: string; value: string }
 interface Scaling { buckets: number; points: ScalePt[]; crossoverBelow: ScalePt | null; crossoverAbove: ScalePt | null; mtCrossoverBelow: ScalePt | null; mtCrossoverAbove: ScalePt | null; topGpuVsFlat: number | null; topGpuVsMt: number | null; threads: number | null }
 interface PerfPattern { id: string; name: string; workload: string; note: string; lanes: PerfLane[]; baseline: string }
-interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Record<string, Scaling>; npvScaling?: NpvScaling; agreement?: Agree[] }
+interface BookScale { trades: number; cashflows: number; bumps: number; repricings: number;
+  bootstrapMs: number; hostMs: number; gpuMs: number; gpuH2dMs: number; gpuKernelMs: number;
+  gpuMB: number; threads: number; agreement: string; gpuVsHost: number; bootstrapShareHost: number }
+interface MarketLanes { bumps: number; bootstrapMs: number; quantlibMs: number; hostMs: number;
+  gpuMs: number; threads: number; hostVsQlNotional: string; gpuVsQlNotional: string;
+  hostVsQlLadder: string; gpuVsQlLadder: string }
+interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Record<string, Scaling>; npvScaling?: NpvScaling; agreement?: Agree[]; bookScale?: BookScale; marketLanes?: MarketLanes }
 
 const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
 const fmtMs = (v: number) =>
@@ -725,22 +731,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Valuing a book means working out what every future cashflow is worth today,
-            and each one needs a value read off a curve. A few hundred thousand trades
-            comes to tens of millions of those reads. Risk is the same book valued again
-            against every bucket of every curve, so whatever one valuation costs, a risk
-            run costs many times over: a book that takes a minute to value takes half an
-            hour to risk.
-          </p>
-          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Four measurements follow, in the order they were made: where the time goes
-            on three different jobs, how each grows with the size of the book, whether
-            the quicker methods still give the same answer, and what it all comes to.
-            Everything is from one machine, so it is a guide rather than a general rule.
-          </p>
-          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The short version, before the detail: nearly all of it was code rather than
-            hardware, and the two fastest arrangements both store the curve up front
-            instead of recalculating it.
+            and each one needs a value read off a curve. Risk is the same book valued
+            again against every bucket of every curve, so it costs many times what one
+            valuation does. Everything below is from one machine, so treat it as a guide
+            rather than a general rule. The short version is that nearly all of the gain
+            was code rather than hardware, and the two quickest arrangements both store
+            the curve up front instead of recalculating it.
           </p>
 
           {perf.patterns.map(p => {
@@ -813,20 +809,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </p>
                 <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   The GPU starts behind because it pays a fixed cost to receive each
-                  curve however small the book is, then overtakes as there are more
+                  curve however small the book is, then overtakes once there are enough
                   trades to spread that cost across. The line worth watching is the one
                   for all {sc.threads ?? 16} cores, since the realistic alternative to
                   buying a GPU is using the processors already in the machine.
                 </p>
-                <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  Every line is given the same prepared book, so none is charged for
-                  work the others get free, and each timing is the best of three after a
-                  warm-up run.
-              </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
                   up to {sc.points[sc.points.length - 1].repricings.toLocaleString()} repricings
-                  &middot; lower is faster, so QuantLib is the slowest throughout
+                  &middot; same prepared book for every line, best of three after a warm-up
+                  &middot; lower is faster
                 </p>
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={sc.points} margin={{ left: 8, right: 24, top: 8, bottom: 20 }}>
@@ -895,11 +887,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>At the largest book, over {sc.threads ?? 16} cores</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
-                      {sc.topGpuVsFlat ? sc.topGpuVsFlat + '\u00d7' : 'n/a'}
+                      {sc.topGpuVsMt ? sc.topGpuVsMt + '\u00d7' : 'n/a'}
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      over the flattened pricer on the same cores, at the largest book
-                      measured
+                      over the same flattened pricer on all {sc.threads ?? 16} cores. The
+                      single-core figure is {sc.topGpuVsFlat ?? '?'}&times;. A desk choosing
+                      whether to buy a GPU already owns the cores, so this is the comparison
+                      it faces.
                     </div>
                   </div>
                 </div>
@@ -922,19 +916,14 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   This shows how long it takes to value the whole book once, as the book
-                  gets bigger. All four ran on the same machine in the same program.
-                  Most of the improvement happens before the GPU is involved at
-                  all. Holding the cashflows as plain numbers rather than library objects
-                  accounts for {ns.topFlatVsQuantLib ?? 0} times on a single core. The
-                  card then adds {ns.topGpuVsMt} times on top of that. Comparing the GPU
-                  against QuantLib alone would credit it with both.
-                </p>
-                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The QuantLib line here values one swap at a time, which is how the
-                  library is normally used. That is slower than the QuantLib line in the
-                  chart above, where the cashflows are already laid out as plain numbers
-                  and the library is only asked for curve values. The two charts start
-                  from different places, so their figures are not interchangeable.
+                  gets bigger. Most of the gain happens before the GPU is involved at all:
+                  holding the cashflows as plain numbers rather than library objects
+                  accounts for {ns.topFlatVsQuantLib ?? 0} times on a single core, measured
+                  at {(ns.flatVsQuantLibAtTrades ?? 0).toLocaleString()} trades, which is
+                  the largest size both lanes ran. QuantLib is capped above that. It also
+                  values one swap at a time here, which is how the library is normally used,
+                  so it starts from a different place than the QuantLib line in the chart
+                  above and the two are not interchangeable.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
@@ -1022,26 +1011,121 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 {ns.singleThreaded && (
                   <>
                   <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  One line here is a projection rather than a measurement. Every graphics
-                  card figure includes copying the book across to the GPU, and on this
-                  machine that copy runs at about 7.5 GB/s and takes longer than the
-                  calculation. Banks do not usually run this work over a desktop slot, so
-                  that line recalculates the copy at the speed of a link where the
-                  processor and card share memory, and leaves the calculation time exactly
-                  as measured. On that basis the GPU comes out {ns.topNvlinkVsMt} times
-                  ahead of all {ns.threads ?? 16} cores rather than behind them.
-                </p>
-                  <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  That is a rescaling, not a run on such a machine. It is cautious in one
-                  direction, since that hardware would also calculate faster, and
-                  optimistic in another, since a real link will not reach its headline
-                  speed and this assumes the copying and the calculating do not overlap.
-                  One further line shows the same code running on all {ns.threads ?? 16}{' '}
-                  cores, which is the comparison that matters, because the alternative to
-                  buying a GPU is using the processors already in the machine.
+                  One line is a projection rather than a measurement. Every GPU figure
+                  includes copying the book across, and on this machine that copy runs at
+                  about 7.5 GB/s and takes longer than the calculation itself. Banks do not
+                  run this work over a desktop slot, so that line recalculates the copy at
+                  the speed of a link where the processor and GPU share memory and leaves
+                  the calculation time exactly as measured, which puts it{' '}
+                  {ns.topNvlinkVsMt} times ahead of all {ns.threads ?? 16} cores rather
+                  than behind them. It is a rescaling, not a run on such a machine:
+                  cautious in that the hardware would also calculate faster, optimistic in
+                  that a real link will not reach its headline speed.
                 </p>
                   </>
                 )}
+              </div>
+            );
+          })()}
+
+          {perf.bookScale && perf.marketLanes && (() => {
+            const b = perf.bookScale, m = perf.marketLanes;
+            const bar = (label: string, ms: number, kind: 'cpu' | 'gpu' | 'boot', max: number) => (
+              <div key={label} className="mb-2">
+                <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                  <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{fmtMs(ms)}</span>
+                </div>
+                <div style={{ height: 8, background: 'var(--bg-surface)', borderRadius: 2 }}>
+                  <div style={{
+                    height: 8, borderRadius: 2, width: `${Math.max(1, 100 * ms / max)}%`,
+                    background: kind === 'gpu' ? '#d4a853' : kind === 'boot' ? '#8b8a97' : '#5b8fc9',
+                  }} />
+                </div>
+              </div>
+            );
+            const max = Math.max(b.bootstrapMs, b.hostMs, b.gpuMs);
+            return (
+              <div className="mb-10">
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  The same hedging ladder over a desk-sized book
+                </h3>
+                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The ladder above prices four trades, which across the whole run is under a
+                  thousand valuations. At that size the GPU comes last, and what that measures
+                  is the cost of using a GPU at all. This is the same job over{' '}
+                  {b.trades.toLocaleString()} trades: {b.bumps} quoted prices moved one basis
+                  point each, the curve re-solved for every one of them, and the whole book
+                  revalued against each result. {b.repricings.toLocaleString()} valuations.
+                </p>
+                <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
+                  {b.cashflows.toLocaleString()} cashflows &middot; {b.threads} cores
+                  &middot; lower is faster
+                </p>
+                <div className="max-w-2xl">
+                  {bar('Re-solving the curve, ' + b.bumps + ' times', b.bootstrapMs, 'boot', max)}
+                  {bar('Revaluing the book, all ' + b.threads + ' cores', b.hostMs, 'cpu', max)}
+                  {bar('Revaluing the book on the GPU', b.gpuMs, 'gpu', max)}
+                </div>
+                <div className="grid md:grid-cols-3 gap-3 mt-4">
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>GPU against the cores</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{b.gpuVsHost}&times;</div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      the book crosses once and all {b.bumps} curves read the same copy, so the
+                      transfer is {fmtMs(b.gpuH2dMs)} of {fmtMs(b.gpuMs)} instead of the whole story
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Still mostly the solver</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--text-primary)' }}>{b.bootstrapShareHost}%</div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      of the run is re-solving the curve. At four trades it was 99.998%, so
+                      the pricing is now worth accelerating and the solver still sets the floor
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Same answer</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}><Sci v={b.agreement} /></div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      worst difference between the two lanes, against notional. One ulp
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
+                  Checking the ladder itself against QuantLib
+                </h3>
+                <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  Every lane reprices curves that were solved once, so a difference between them
+                  is the pricer and cannot be the curve. That matters: two lanes that each built
+                  their own bumped curve disagreed by 285 on a single bucket while their totals
+                  matched to 0.05%, and the trade it showed up on was the one whose cashflows
+                  fall between the curve&apos;s pillars.
+                </p>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Against notional</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      <Sci v={m.gpuVsQlNotional} />
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      GPU against QuantLib across all {m.bumps} bumps. This is the flattering
+                      scale, and it is the one most people quote
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Against the ladder</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      <Sci v={m.gpuVsQlLadder} />
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      against the biggest bucket in the same ladder, which is what a hedge is
+                      sized off. Eleven figures, and it is the floor for this method: a PV01 is
+                      the difference of two large numbers
+                    </div>
+                  </div>
+                </div>
               </div>
             );
           })()}
@@ -1124,33 +1208,26 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         (ns.threads ?? 16) + ' cores on the same pricer. Memory bound, so it scales less than linearly.',
                         true)}
                   {cell('3. Add a GPU',
-                        'it depends',
-                        (gpuRisk ?? '?') + '\u00d7 on bucketed risk, and ' +
+                        'it depends on the link',
+                        'Over this desktop slot, ' + (gpuRisk ?? '?') + '\u00d7 on bucketed risk but ' +
                         (gpuNpv && gpuNpv < 1 ? (1 / gpuNpv).toFixed(1) + '\u00d7 slower' : 'slower') +
-                        ' on portfolio NPV, against those same cores',
+                        ' valuing the book. On a shared memory link that second one becomes ' +
+                        (ns.topNvlinkVsMt ?? '?') + '\u00d7 ahead.',
                         false)}
                 </div>
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The first two are code changes and they hold anywhere. The third is a
-                  hardware question with no fixed answer: the same GPU earns its place on
-                  one of these jobs and not the other, and changing the link it sits behind
-                  flips one of those.
-          </p>
-          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The difference between the two jobs comes down to how much work each
-                  transfer buys. A risk run sends the book across once and values it
-                  against {risk.buckets} different versions of the curve, so one transfer
-                  covers {risk.buckets} passes. Valuing the book once reads each cashflow a
-                  single time, so most of that job is spent moving data rather than using
-                  it. Put the GPU on a faster link and the second result turns around,
-                  which is what the projected line on the chart shows.
+                  Whether the GPU earns its place comes down to how much work each transfer
+                  buys. A risk run sends the book across once and values it against{' '}
+                  {risk.buckets} versions of the curve. Valuing the book once reads each
+                  cashflow a single time, so most of that job is spent moving data rather
+                  than using it, and that is the one the link decides.
                 </p>
                 <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  There is a fourth job where none of this helps. A hedging ladder
-                  rebuilds the curve for every price it moves, and that rebuilding runs on
-                  the processor. Beside it, valuing the trades is a rounding error. It is
-                  shown further up without any acceleration, because that is the honest
-                  picture of it.
+                  There is a fourth job where none of this helps. A hedging ladder rebuilds
+                  the curve for every price it moves, and that rebuilding runs on the
+                  processor. Beside it, valuing the trades is a rounding error. It is shown
+                  further up without any acceleration, because that is the honest picture
+                  of it.
                 </p>
               </div>
             );

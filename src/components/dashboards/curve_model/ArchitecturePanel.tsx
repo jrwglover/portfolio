@@ -85,10 +85,11 @@ export default function ArchitecturePanel() {
   return (
     <div>
       <p className="text-sm mb-6 max-w-3xl" style={{ color: SEC }}>
-        Eight curves, one construction, two evaluation paths that must agree. The design
-        exists to make that last clause checkable: every number the GPU produces is
-        differenced against the QuantLib reference on the same inputs, and the engine is
-        only useful if that difference stays at round-off.
+        The diagrams below show how the engine is put together: what goes in, what it
+        builds, and where each piece of the work is done. All eight curves are built the
+        same way, and anything priced off them is worked out twice, once through QuantLib
+        and once on the GPU. Every run subtracts one answer from the other. A difference
+        bigger than rounding fails the run, and it says which two numbers disagreed.
       </p>
 
       <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
