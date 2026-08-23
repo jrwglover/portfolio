@@ -42,20 +42,19 @@ export default function Hero() {
           </p>
 
           <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            Outside work I swim, spend time with my dog Charlie, and write code because I
+            Outside work I swim and spend time with my dog Charlie. I write code because I
             enjoy it. That&apos;s how this site started.
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            The three projects here are problems I wanted to understand properly, so I built
-            them rather than read about them. They run end to end: the curves bootstrap with
-            real market conventions, the benchmarks are timed on this machine, and every GPU
-            number is reconciled against QuantLib. Where something is still wrong, or only
-            half solved, I&apos;ve said so.
+            The projects below are problems I wanted to understand properly, so I built them.
+            Each one runs. The curves bootstrap with real market conventions, and every
+            benchmark below was timed on this machine. Where something is still wrong, or
+            only half solved, I&apos;ve said so.
           </p>
 
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
-            Each project targets one problem:
+            One problem each:
           </p>
 
           <ul className="space-y-4 mb-8">
@@ -72,15 +71,13 @@ export default function Hero() {
           </ul>
 
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-            Everything on this site runs. The curves are bootstrapped, the benchmarks
-            are measured, and the reconciliations are exact. Nothing is quoted that
-            the systems did not produce.
+            Nothing on this site is quoted that the systems did not produce.
           </p>
 
           <div className="flex gap-3 mt-9">
             <a href="#projects" className="font-mono text-xs px-5 py-2.5 rounded"
               style={{ background: 'var(--accent-warm)', color: '#0a0a0f' }}>
-              The three projects &darr;
+              The projects &darr;
             </a>
             <a href="#modules" className="font-mono text-xs px-5 py-2.5 rounded"
               style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>

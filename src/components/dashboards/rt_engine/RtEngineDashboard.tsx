@@ -77,10 +77,11 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             The timings above came out of the engine, and they are why the screen is
-            arranged like this. A curve solve runs into seconds. Repricing the whole book
-            takes about a tenth of that, cheap enough to do on every set the engine
-            publishes, so the blotter is genuinely live. A full ladder is slower again.
-            You ask for it, and it stays stamped with the set it was run against.
+            arranged like this. Rebuilding the curves a price touched costs a few tenths
+            of a second, and repricing all {tl.trades.toLocaleString()} trades costs about
+            a seventh of one. Both happen on every set the engine publishes, so the
+            blotter is genuinely live. A full ladder is thirty times slower than either.
+            You ask for that one, and it stays stamped with the set it was run against.
           </p>
           <Workstation tl={tl} />
         </div>
@@ -94,27 +95,25 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
             Most curve systems poll, and with good reason. A scheduled job wakes
             up every minute or so, rebuilds every curve from the latest prices,
-            and publishes the lot. The work is bounded, the order is fixed, and
-            when something looks wrong there is one place to look. In production
-            that is worth a great deal, and on plenty of desks polling is simply
-            the right answer.
+            and publishes the lot. The work is bounded and the order is fixed.
+            When something looks wrong there is one place to look. On plenty of
+            desks that is the right answer.
           </p>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            What it asks you to choose is an interval, and the same interval has
-            to serve every curve and every kind of day. Five minutes is cheap,
-            and in a fast move a trader can be looking at a curve that is five
-            minutes old. Ten seconds is fresh, and it rebuilds all eight curves
-            six times a minute whether or not anything moved, which is not free:
-            the batch engine measures a curve solve at roughly a second. The
-            setting that suits a quiet morning is not the one that suits a
+            The cost is that you have to pick an interval, and one interval has
+            to serve every curve and every kind of day. Five minutes is cheap.
+            In a fast move it puts a trader in front of a curve five minutes
+            old. Ten seconds is fresh, and it rebuilds all eight curves six
+            times a minute whether or not anything moved. A solve costs a few
+            tenths of a second, so that is affordable. It is still eight curves
+            when one of them moved. What suits a quiet morning does not suit a
             payrolls number.
           </p>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            Rebuilding on the event removes the choice: work happens when there
-            is work to do. It also costs you the bounded batch and the fixed
-            order, which were the two things that made polling easy to operate.
-            That is the real reason it is less common, and the hard part turns
-            out to be the dependencies between curves.
+            Rebuilding on the event takes the choice away. It also costs you the
+            bounded batch and the fixed order, which are the two things that made
+            polling easy to operate. That is why it is less common. The hard part
+            is the dependencies between curves.
           </p>
 
           <div className="rounded p-4 my-4 font-mono text-[11px]" style={{
@@ -132,15 +131,15 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           </div>
 
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            The cross currency curve is built from both SOFR and ESTR. If a SOFR
-            price and an ESTR price arrive together and each triggers a rebuild
-            of what depends on it, the cross currency curve gets built twice, and
-            the first build used an ESTR curve that was about to be replaced.
-            Publish that first result and someone prices a trade against a set
-            that never existed as a consistent market state.
+            The cross currency curve is built from both SOFR and ESTR. Say a
+            SOFR price and an ESTR price arrive together, and each one triggers a
+            rebuild of whatever depends on it. The cross currency curve gets
+            built twice. The first build used an ESTR curve that was about to be
+            replaced. Publish that and someone prices a trade against a market
+            state that never existed.
           </p>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            So the work has to be collected before it is done, not done as it
+            The work has to be collected before it is done, not done as it
             arrives: gather everything affected, order it so each curve is built
             after the curves it depends on, build each one once, and publish the
             whole set together. Get that wrong and the failure is quiet. Nothing
@@ -148,10 +147,10 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             seconds, and nobody can reproduce it afterwards.
           </p>
           <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-            That is the part worth building carefully, and it is why polling
-            stays popular. Polling has none of these problems, because rebuilding
-            everything in dependency order every time is the brute force answer
-            to the same question. It just costs you either latency or hardware.
+            That is the part worth building carefully. It is also why polling
+            stays popular. Rebuilding everything in dependency order every time
+            is the brute force answer to the same question, and it has none of
+            these problems. It just costs you either latency or hardware.
           </p>
         </div>
       )}
@@ -164,9 +163,9 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Curves are not independent. EURIBOR is discounted on ESTR, and the
             cross currency curve is built on both SOFR and ESTR, so a change to
-            one can force others to be rebuilt. Rebuilding everything on every
-            price would be simpler and far too slow. Rebuilding too little leaves
-            a stale number on a screen someone is trading from.
+            one can force others to rebuild. Rebuilding everything on every price
+            would be simpler and far too slow. Too little, and a stale number
+            sits on a screen someone is trading from.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Pick a curve below to see what a change to it forces. The answer comes
@@ -223,8 +222,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           </h3>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             {tab === 'engine'
-              ? 'Output from the engine replaying a stream of price changes: which curves rebuild and in what order, repeated and out of order prices being rejected, a solver failure falling back to the last good curve and then recovering, and a burst of 120 prices collapsing into a single rebuild while two readers check that nothing they see is half updated.'
-              : 'The same engine seen the way a desk would: positions and their values, risk per curve bucket, what a sell off in ESTR does to both, profit and loss split between market moves and carry, and a hypothetical trade priced without disturbing anything published.'}
+              ? 'The engine replaying a stream of price changes. Which curves rebuild, in what order, and what happens when a price repeats or arrives out of order. A solver fails, falls back to the last good curve, and recovers. A burst of 120 prices collapses into one rebuild, while two readers check that nothing they see is half updated.'
+              : 'The same engine from the desk side. Positions and their values, risk per curve bucket, and what a sell off in ESTR does to both. Profit and loss split between market moves and carry. A hypothetical trade priced without disturbing anything published.'}
           </p>
           <pre className="rounded p-4 overflow-x-auto font-mono"
             style={{
@@ -236,8 +235,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             This is the program&apos;s own output, not a recording. The curve solver
             and the pricing kernel are stubbed behind the same interfaces the
-            batch engine implements, so the timings here describe the plumbing
-            rather than the mathematics.
+            batch engine implements. The timings here are the plumbing, not the
+            mathematics.
           </p>
         </div>
       )}

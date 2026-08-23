@@ -35,9 +35,9 @@ export const topics: Topic[] = [
             id: 'curve-data-model',
             slug: 'curve-data-model',
             title: 'Curve Market Data Model',
-            subtitle: '8 curves, 10 instrument types: quotes in, curves out',
+            subtitle: '8 curves, 10 instrument types, and the quotes behind them',
             description:
-              'The prices every curve is built from, curve by curve: overnight index swaps, futures, forward rate agreements, swaps, FX swap points and cross currency basis. Each price is both something the curve has to reprice correctly and a place risk can sit.',
+              'The prices every curve is built from, curve by curve: overnight index swaps, futures, forward rate agreements, swaps, FX swap points and cross currency basis. Every one of them is a price the curve has to reprice correctly, and a place risk can sit.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap', 'CUDA'],
             highlights: ['8 curves incl. 4 ESTR variants', 'IMM + ECB meeting-dated strips', 'FX swaps + xccy basis'],
             status: 'live',
@@ -50,7 +50,7 @@ export const topics: Topic[] = [
             title: 'Real-time curve engine',
             subtitle: 'Rebuilding only what a price change affects',
             description:
-              'Curves are built on each other, so one price can force several rebuilds and leave the rest untouched. This shows which curves move, why, and how a reader is kept from seeing a set where half the numbers are from one moment and half from another.',
+              'Curves are built on each other, so one price can force several rebuilds and leave the rest alone. This shows which ones move and why, and how a reader is kept from seeing a set that is half old and half new.',
             techBadges: ['C++17', 'Event driven', 'Lock-free publish'],
             highlights: ['Dependency scoped rebuilds', 'One coherent set at a time', 'Bursts collapse into one rebuild'],
             status: 'live',
@@ -79,9 +79,9 @@ export const topics: Topic[] = [
             id: 'curve-domains',
             slug: 'curve-domains',
             title: 'Bootstrapped Curves',
-            subtitle: 'All eight curves, in whichever domain answers the question',
+            subtitle: 'All eight curves, read as forwards, zeros or discount factors',
             description:
-              'One chart over the whole curve set. Pick curves, then read them as discrete forwards (the 3M or 6M rate a FRA or future actually pays), as zero rates, or as raw discount factors, out to 2.5, 10 or 30 years. Each curve is solved in the domain its own instruments pin: OIS strips on zero rates, the meeting-dated and IMM curves as flat forwards between policy or IMM dates joined to a min-curvature spline, EURIBOR off its FRA and swap strip, and EUR/USD as an implied zero curve against USD collateral. All eight share one interpolation: a minimum-curvature cubic spline on LOG DISCOUNT FACTORS, which makes the forward the spline first derivative rather than leaving it to inherit t times the third derivative of a spline through zero rates.',
+              'One chart over the whole curve set. Pick curves, then read them as discrete forwards (the 3M or 6M rate a FRA or future actually pays), as zero rates, or as raw discount factors, out to 2.5, 10 or 30 years. Each curve is solved in the domain its own instruments pin: OIS strips on zero rates, the meeting-dated and IMM curves as flat forwards between policy or IMM dates joined to a min-curvature spline, EURIBOR off its FRA and swap strip, and EUR/USD as an implied zero curve against USD collateral. All eight share one interpolation, a minimum-curvature cubic spline on LOG DISCOUNT FACTORS. That makes the forward the first derivative of the spline. Spline the zero rates instead and the forward inherits t times the third derivative.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap', 'CUDA'],
             highlights: ['Discrete forwards, zeros or DFs', 'Per-curve solve domain', 'Every quote repriced under 0.21bp'],
             status: 'live',
@@ -122,7 +122,7 @@ export const topics: Topic[] = [
             title: 'Front-to-Back Trade Feed',
             subtitle: 'End-of-day feed from trade capture to risk: 1.5 hours to 3.6 minutes',
             description:
-              'The end-of-day feed for a rates & inflation non-linear book shipped 25,000 trades from trade capture to the risk platform as a million-row exploded text extract taking ~1.5 hours to land. The pipeline re-normalizes trades in flight, gates them for pricing readiness (strikes, exercise schedules, inflation base fixings, LPI collars) and loads the risk database over parallel connections.',
+              'The end-of-day feed for a rates & inflation non-linear book shipped 25,000 trades from trade capture to the risk platform as a million-row exploded text extract. It took ~1.5 hours to land. The pipeline re-normalizes the trades in flight, gates them for pricing readiness (strikes, exercise schedules, inflation base fixings, LPI collars) and loads the risk database over parallel connections.',
             techBadges: ['PySpark', 'Parquet', 'SQL Server', 'Docker'],
             highlights: ['25x end-to-end (measured)', '15.3x payload compression', 'Pricing-readiness quarantine gate'],
             status: 'live',
@@ -133,9 +133,9 @@ export const topics: Topic[] = [
             id: 'bridge-benchmarks',
             slug: 'bridge-benchmarks',
             title: 'Bridge Benchmarks',
-            subtitle: 'Every speedup measured and attributed to its cause',
+            subtitle: 'Where each speedup actually came from',
             description:
-              'Honest benchmarking: the transfer leg measured through a real 0.19 MB/s throttle (25x), the SQL Server write leg measured single-connection vs 8 parallel connections (49x), and the prepare leg where careful single-threaded code beats Spark at small file sizes. Compression, parallelism and compute each credited separately.',
+              'The transfer leg was measured through a real 0.19 MB/s throttle: 25x. The SQL Server write leg, single connection against 8 parallel ones: 49x. On the prepare leg careful single-threaded code beats Spark at small file sizes, and that result is here too.',
             techBadges: ['PySpark', 'SQL Server', 'pymssql', 'pyarrow'],
             highlights: ['49x DB write (measured)', 'Throttle-measured transfer', 'Single-thread baseline included'],
             status: 'live',

@@ -641,12 +641,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         {riskSource === null ? (
           <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
             <p className="text-xs max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
-              Risk is asked for rather than pushed. Press{' '}
+              Risk is asked for, not pushed. Press{' '}
               <span style={{ color: '#5eaab5' }}>Run risk on this set</span> to take the
-              published set on screen and put a ladder against it. Every run is kept and
-              stays stamped with the set it describes, however far the feed moves on
-              afterwards, because a ladder that quietly refreshed underneath you is a
-              ladder nobody can hedge from.
+              published set on screen and put a ladder against it. Every run is kept, and
+              stays stamped with the set it describes however far the feed moves on.
             </p>
           </div>
         ) : (
@@ -699,8 +697,8 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             </p>
             <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
               This page is a recording. The engine ran a ladder against every published
-              set in the session and the timings shown are its own; the page serves them
-              back rather than running the arithmetic in your browser.
+              set in the session, and the timings shown are its own. The page serves them
+              back; it is not doing the arithmetic in your browser.
             </p>
           </>
         )}
@@ -827,8 +825,8 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 One bar per quoted instrument on {LABEL[curveShown] ?? curveShown}: the
                 quote is moved a basis point, the curve and everything built on it are
                 bootstrapped again, and this position is repriced against the result.
-                That is the number a trader hedges with, because it is denominated in
-                the instruments the hedge is actually executed in.
+                That is the number a trader hedges with. It is denominated in the
+                instruments the hedge is executed in.
               </>
             ) : posDomain === 'zero' ? (
               <>
@@ -849,17 +847,17 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </p>
 
           <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The three cost very different amounts. Zero and forward buckets are an
+            They cost very different amounts. Zero and forward buckets are an
             overlay on a curve that already exists, so the {detail.positions.length}{' '}
             positions here took {ms(detail.ladderUs)} between them. The market ladders
             ran {detail.mktRebuilds.toLocaleString()} bootstraps and took{' '}
-            {ms(detail.mktUs)}. That is why the first two run on every published set
-            and the market one is a job you ask for, stamped with the set it was
-            measured against.
+            {ms(detail.mktUs)}. So the first two run on every published set, and the
+            market one is a job you ask for, stamped with the set it was measured
+            against.
           </p>
 
           <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The curve list changes with the domain, and it should. A zero or forward
+            The curve list changes with the domain. A zero or forward
             bump only ever reaches the curves a position prices off. A market bump
             reaches through the bootstrap, so the list is wider: a swap projected on
             EURIBOR carries an ESTR market ladder whether or not it discounts on ESTR,
@@ -870,12 +868,11 @@ export default function Workstation({ tl }: { tl: Timeline }) {
 
           {position.type === 'FX forward' && (
             <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              This position is where the three domains disagree most usefully. Toggle
-              between them: the zero ladder on the cross-currency curve is matched by an
-              equal and opposite one on SOFR, which is why the parallel DV01 above is
-              near zero. The market ladder puts the position on a single bar, the FX
-              swap at its own maturity. That is the hedge, and only the market domain
-              names it.
+              This position is where the domains disagree. Toggle between them: the zero
+              ladder on the cross-currency curve is matched by an equal and opposite one
+              on SOFR, which is why the parallel DV01 above is near zero. The market
+              ladder puts the position on a single bar, the FX swap at its own maturity.
+              That is the hedge, and only the market domain names it.
             </p>
           )}
         </div>

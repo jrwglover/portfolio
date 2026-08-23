@@ -85,18 +85,19 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
           <div className="max-w-3xl text-sm leading-relaxed space-y-4" style={{ color: 'var(--text-secondary)' }}>
             <p>
               The trade capture system feeds the risk and valuation platform for a
-              rates and inflation non-linear business. Non-linear books are <em>low
-              trade count, high structure</em>: each trade carries full schedules,
+              rates and inflation non-linear business. These books are <em>low
+              trade count, high structure</em>. Each trade carries full schedules,
               per-caplet strike steps, Bermudan exercise dates, inflation base index
               fixings and LPI collars: everything the platform needs to key its
-              normal volatility surfaces and discount and projection curves.
+              normal volatility surfaces and its discount and projection curves.
             </p>
             <p>
               The legacy export explodes every trade to one row per period and
-              exercise, repeating the entire 33-field header on every row, so a 25k-trade
+              exercise, repeating the entire 33-field header on every row. A 25k-trade
               book becomes a million-row quarter-GB file, and the feed crawls at a
-              rate no network explains. The fix is a format, a normalization step,
-              and parallel database connections.
+              rate no network explains. Nothing here needs a faster link. It needs a
+              format that stores the header once, and enough connections at the far
+              end to write the rows.
             </p>
           </div>
         </div>
@@ -161,12 +162,12 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
 
           <div>
             <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-              The decisive leg: writing 1,035,762 rows to SQL Server
+              Writing 1,035,762 rows to SQL Server
             </h3>
             <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
               Same file, same three tables, both lanes reconciled exactly. Single-connection
-              inserts are bounded by round-trips and log flushes: the measured shape of why
-              single-threaded loaders take hours.
+              inserts are bounded by round-trips and log flushes. That is why single-threaded
+              loaders take hours.
             </p>
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={DBWRITE} layout="vertical" margin={{ left: 10, right: 70 }}>
@@ -208,9 +209,9 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
               <p>
                 <span style={{ color: 'var(--text-primary)' }}>What was measured:</span> on
                 the <em>prepare</em> leg a careful single-threaded parser beats Spark at this
-                size (8.3s vs 11.9s; JVM startup and shuffle overhead are real). Every claim
-                is attributed to its cause: compression wins the transfer, connection
-                parallelism wins the database, and single-thread code wins small-file compute.
+                size, 8.3s vs 11.9s. JVM startup and shuffle overhead are real. Compression
+                is what wins the transfer leg and parallel connections are what win the
+                database. Spark is not what makes the compute fast at this file size.
               </p>
               <p>
                 Delta mode ships only new/amended/cancelled trades, so a 20k-trade delta staged
