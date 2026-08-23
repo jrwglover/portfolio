@@ -547,14 +547,14 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     tickFormatter={v => Number(v).toLocaleString()} />
                   <Tooltip {...tt} formatter={(v: any, n: any) =>
                     [Number(v).toLocaleString(),
-                      n === 'cpu' ? 'Processor' : 'Graphics card']}
+                      n === 'cpu' ? 'Processor' : 'GPU']}
                     labelFormatter={(l: any) => {
                       const row = ladderChart.find(r => r.tenor === l);
                       return `${l}${row ? ` · ${row.instrument}` : ''}`;
                     }} />
                   {showGpu && <Legend formatter={(v: string) =>
                     <span style={{ fontSize: 11 }}>
-                      {v === 'cpu' ? 'Processor' : 'Graphics card'}</span>} />}
+                      {v === 'cpu' ? 'Processor' : 'GPU'}</span>} />}
                   <ReferenceLine y={0} stroke={chartAxis} />
                   <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
                   {showGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
@@ -806,22 +806,23 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   Curve risk: how the cost grows with the size of the book
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The same {sc.buckets} {mode} buckets repriced across books of growing size.
-                  Two CPU lines, and the gap between them is the point: QuantLib revalues
-                  through its object model, while the flattened one prices the same
-                  cashflows from the same spline coefficients the device uses, on one core.
-                  Measuring a GPU against the first mostly measures the object model. The
-                  GPU pays a fixed per-bucket upload whatever the book size, so it starts
-                  behind and overtakes as the book grows: past one core early, and past the
-                  same pricer on all {sc.threads ?? 16} cores at
-                  {sc.mtCrossoverAbove ? sc.mtCrossoverAbove.trades.toLocaleString() + ' trades'
-                    : ' no size measured'}. The thread pool is the comparison that matters,
-                  since the alternative to a device is usually the cores already
-                  available. The sweep runs to book scale for that reason rather than
-                  stopping at a few thousand trades. All lanes are given the same
-                  pre-flattened book, so none is charged for a step the others get free.
-                  Timings are the best of three after a warm-up.
+                  This shows how long a full risk run takes as the book gets bigger,
+                  measured four ways. The two processor lines differ only in how the trades
+                  are valued: one through QuantLib, the other over the same cashflows held
+                  as plain numbers. That difference is code, not hardware.
                 </p>
+                <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The GPU starts behind because it pays a fixed cost to receive each
+                  curve however small the book is, then overtakes as there are more
+                  trades to spread that cost across. The line worth watching is the one
+                  for all {sc.threads ?? 16} cores, since the realistic alternative to
+                  buying a GPU is using the processors already in the machine.
+                </p>
+                <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  Every line is given the same prepared book, so none is charged for
+                  work the others get free, and each timing is the best of three after a
+                  warm-up run.
+              </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
                   up to {sc.points[sc.points.length - 1].repricings.toLocaleString()} repricings
@@ -847,12 +848,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         n === 'cpu' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
                           : n === 'mt' ? 'Flattened CPU, all cores'
                           : n === 'gpu' ? 'GPU total'
-                          : 'Graphics card on NVLink-C2C (projected)']} />
+                          : 'GPU on NVLink-C2C (projected)']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'cpu' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
                         : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total'
-                        : 'Graphics card on NVLink-C2C (projected)'}</span>} />
+                        : 'GPU on NVLink-C2C (projected)'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
                         label={{ value: 'crossover', position: 'insideTop',
@@ -920,19 +921,20 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   Valuing the whole book: how the cost grows with its size
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  A whole book priced once, across books of growing size, with all four
-                  lanes in one process on one machine. Most of the distance is covered
-                  before the GPU is reached: flattening the book out of QuantLib&apos;s object
-                  model is worth {ns.topFlatVsQuantLib ?? 0}&times; on a single core, and the
-                  device adds {ns.topGpuVsFlat}&times; on top of that. Quoting the GPU
-                  against QuantLib alone would fold the first number into the second.
+                  This shows how long it takes to value the whole book once, as the book
+                  gets bigger. All four ran on the same machine in the same program.
+                  Most of the improvement happens before the GPU is involved at
+                  all. Holding the cashflows as plain numbers rather than library objects
+                  accounts for {ns.topFlatVsQuantLib ?? 0} times on a single core. The
+                  card then adds {ns.topGpuVsMt} times on top of that. Comparing the GPU
+                  against QuantLib alone would credit it with both.
                 </p>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The QuantLib line here is full object revaluation, one priced swap at a
-                  time. It is a different and slower baseline than the one in the repricing
-                  pattern above, which is already a flat loop and keeps QuantLib only for
-                  the curve lookup. The two are not interchangeable and the gap between
-                  them is most of what that pattern&apos;s multiple is measuring.
+                  The QuantLib line here values one swap at a time, which is how the
+                  library is normally used. That is slower than the QuantLib line in the
+                  chart above, where the cashflows are already laid out as plain numbers
+                  and the library is only asked for curve values. The two charts start
+                  from different places, so their figures are not interchangeable.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
@@ -957,12 +959,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         n === 'quantlib' ? 'QuantLib' : n === 'flat' ? 'Flattened CPU, 1 core'
                           : n === 'mt' ? 'Flattened CPU, all cores'
                           : n === 'gpu' ? 'GPU total'
-                          : 'Graphics card on NVLink-C2C (projected)']} />
+                          : 'GPU on NVLink-C2C (projected)']} />
                     <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>
                       {v === 'quantlib' ? 'QuantLib' : v === 'flat' ? 'Flattened CPU, 1 core'
                         : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total'
-                        : 'Graphics card on NVLink-C2C (projected)'}</span>} />
+                        : 'GPU on NVLink-C2C (projected)'}</span>} />
                     {lo && hi && (
                       <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
                         label={{ value: 'crossover', position: 'insideTop',
@@ -991,10 +993,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     </thead>
                     <tbody>
                       {([
-                        ['Graphics card, curve stored, shared memory', top.nvlink, true],
+                        ['GPU, curve stored, shared memory', top.nvlink, true],
                         ['All ' + (ns.threads ?? 16) + ' cores, curve stored', top.serMt, false],
                         ['All ' + (ns.threads ?? 16) + ' cores, curve recalculated', top.mt, false],
-                        ['Graphics card over this PCIe slot', top.gpuSer, false],
+                        ['GPU over this PCIe slot', top.gpuSer, false],
                         ['One core, curve stored', top.ser, false],
                         ['One core, curve recalculated', top.flat, false],
                         ['Through QuantLib', top.quantlib, false],
@@ -1020,27 +1022,24 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 {ns.singleThreaded && (
                   <>
                   <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                    The dotted pink line is the only projection on this page. Every
-                    GPU figure here includes copying the book across PCIe, which on this
-                    machine runs at about 7.5 GB/s and accounts for most of the GPU&apos;s
-                    time. Banks generally do not run pricing over a consumer PCIe link, so
-                    that line rescales the copy to {ns.nvlinkGBs} GB/s, the NVLink-C2C
-                    bandwidth on an NVIDIA Grace Hopper part, and keeps the kernel time
-                    exactly as measured. On that basis the device would come out about{' '}
-                    {ns.topNvlinkVsMt}&times; ahead of all {ns.threads ?? 16} cores rather
-                    than behind them. It is a bandwidth rescale rather than a run on real
-                    hardware: a Grace Hopper would also run the kernel faster, which makes
-                    it conservative, while real NVLink will not sustain its headline figure
-                    and this assumes the copy and the kernel do not overlap.
-                  </p>
+                  One line here is a projection rather than a measurement. Every graphics
+                  card figure includes copying the book across to the GPU, and on this
+                  machine that copy runs at about 7.5 GB/s and takes longer than the
+                  calculation. Banks do not usually run this work over a desktop slot, so
+                  that line recalculates the copy at the speed of a link where the
+                  processor and card share memory, and leaves the calculation time exactly
+                  as measured. On that basis the GPU comes out {ns.topNvlinkVsMt} times
+                  ahead of all {ns.threads ?? 16} cores rather than behind them.
+                </p>
                   <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                    The green line is the same flattened pricer across all
-                    {ns.threads ?? 16} cores, which is the comparison worth making before
-                    choosing a device over the cores you already own. Against one core the
-                    GPU wins {ns.topGpuVsFlat}&times; here; against the thread pool it is
-                    {ns.topGpuVsMt}&times;. The order of magnitude to the left of both,
-                    leaving the object model, is larger than either and needs no hardware.
-                  </p>
+                  That is a rescaling, not a run on such a machine. It is cautious in one
+                  direction, since that hardware would also calculate faster, and
+                  optimistic in another, since a real link will not reach its headline
+                  speed and this assumes the copying and the calculating do not overlap.
+                  One further line shows the same code running on all {ns.threads ?? 16}{' '}
+                  cores, which is the comparison that matters, because the alternative to
+                  buying a GPU is using the processors already in the machine.
+                </p>
                   </>
                 )}
               </div>
@@ -1133,26 +1132,25 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </div>
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   The first two are code changes and they hold anywhere. The third is a
-                  hardware question with no fixed answer: the same card earns its place on
+                  hardware question with no fixed answer: the same GPU earns its place on
                   one of these jobs and not the other, and changing the link it sits behind
                   flips one of those.
           </p>
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The split comes from how much arithmetic each byte buys. Bucketed risk
-                  sends the book across once and reprices it against {risk.buckets}{' '}
-                  perturbed curves, so one crossing pays for {risk.buckets} passes and the
-                  card wins even here. Portfolio NPV reads each cashflow once, so it spends
-                  most of its time moving {(nTop.cashflows / 1e6).toFixed(1)}M cashflows
-                  rather than pricing them. The arithmetic was never the constraint: the
-                  card does the pricing in a fraction of the time it spends waiting for the
-                  data to arrive. Put it on a link where the book arrives quickly and the
-                  NPV result reverses, which is the NVLink line on the second chart.
+                  The difference between the two jobs comes down to how much work each
+                  transfer buys. A risk run sends the book across once and values it
+                  against {risk.buckets} different versions of the curve, so one transfer
+                  covers {risk.buckets} passes. Valuing the book once reads each cashflow a
+                  single time, so most of that job is spent moving data rather than using
+                  it. Put the GPU on a faster link and the second result turns around,
+                  which is what the projected line on the chart shows.
                 </p>
                 <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  Market-quote risk is a fourth case and none of it helps. Every bumped
-                  quote needs the curve rebuilt, the solver runs on the processor, and the
-                  repricing beside it is a rounding error. Shown below unaccelerated,
-                  because that is what it is.
+                  There is a fourth job where none of this helps. A hedging ladder
+                  rebuilds the curve for every price it moves, and that rebuilding runs on
+                  the processor. Beside it, valuing the trades is a rounding error. It is
+                  shown further up without any acceleration, because that is the honest
+                  picture of it.
                 </p>
               </div>
             );

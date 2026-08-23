@@ -185,9 +185,9 @@ export default function ArchitecturePanel() {
             scratch and the trade valued again, so the effect spreads through the curve
             the way it would on a desk.
           </Layer>
-          <Layer kicker="4b" title="Valued on the graphics card" accent={GPU}>
-                        The card never rebuilds a curve. Each section of it is sent across as the
-            handful of numbers that describe that section, and the card evaluates those
+          <Layer kicker="4b" title="Valued on the GPU" accent={GPU}>
+                        The GPU never rebuilds a curve. Each section of it is sent across as the
+            handful of numbers that describe that section, and the GPU evaluates those
             directly. Because the curve genuinely <em>is</em> piecewise cubic in the
             interpolated quantity, that upload is an identity rather than a fit.
           </Layer>
