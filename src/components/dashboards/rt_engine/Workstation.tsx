@@ -4,8 +4,15 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 
-interface Row { id: string; book: string; npv: number; dv01: number; degraded: boolean }
-type Pair = [number, number];
+interface Row {
+  id: string; book: string; npv: number; dv01: number; fair: number; degraded: boolean;
+}
+interface BookAgg {
+  book: string; trades: number; npv: number; dv01: number;
+  failed: number; degraded: number;
+}
+// [maturity, zero-bucket pv01, forward-bucket pv01]
+type Bucket = [number, number, number];
 
 interface Frame {
   label: string; note: string; ticks: string[];
@@ -13,11 +20,18 @@ interface Frame {
   rebuilt: string[]; failed: string[];
   applied: number; duplicate: number; cycleUs: number;
   status: Record<string, string>;
-  rows: Row[]; deskNpv: number; deskDv01: number;
-  curveData: Record<string, Pair[]>;
-  risk: Record<string, Pair[]>;
+  rows: Row[]; books: BookAgg[];
+  deskNpv: number; deskDv01: number;
+  npvUs: number; riskUs: number; threads: number; buckets: number;
+  // Each curve as its own coefficients, flat: [c0,c1,c2,c3,xL,xR,form] per
+  // interval. The curve itself, not a sampling of it.
+  curves: Record<string, number[]>;
+  risk: Record<string, Bucket[]>;
 }
-export interface Timeline { curves: string[]; frames: Frame[] }
+export interface Timeline {
+  trades: number; cashflows: number; aged: number; threads: number;
+  curveIds: string[]; frames: Frame[];
+}
 
 const LABEL: Record<string, string> = {
   EUR_ESTR: 'ESTR', EUR_ESTR_ECB: 'ESTR meeting', EUR_ESTR_IMM: 'ESTR IMM',
@@ -25,32 +39,81 @@ const LABEL: Record<string, string> = {
   USD_SOFR: 'SOFR', GBP_SONIA: 'SONIA', EUR_USD_XCCY: 'EUR/USD xccy',
 };
 
+// The curve model's own colours, so a curve is the same colour on both projects.
+const COLOUR: Record<string, string> = {
+  EUR_ESTR: '#d4a853', EUR_ESTR_ECB: '#e07850', EUR_ESTR_IMM: '#5cb87a',
+  EUR_ESTR_IMMFUT: '#b8b04a', EUR_EURIBOR6M: '#8b7ec8', EUR_USD_XCCY: '#4a9a68',
+  USD_SOFR: '#9a8bd8', GBP_SONIA: '#c86e6e',
+};
+
+const chip = (on: boolean, colour: string) => ({
+  border: `1px solid ${on ? colour : 'var(--border-subtle)'}`,
+  color: on ? colour : 'var(--text-dim)',
+  background: on ? colour + '18' : 'transparent',
+});
+
 const money = (v: number) =>
   (v < 0 ? '-' : '') + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
+const millions = (v: number) =>
+  (v < 0 ? '-' : '') + (Math.abs(v) / 1e6).toFixed(1) + 'm';
 
-/* Value a EURIBOR swap against whichever curve set is on screen.
+// Microseconds in, a unit a person reads out. The engine reports everything in
+// microseconds and these span five orders of magnitude, from a cycle that did
+// nothing to a four second ladder.
+const ms = (us: number) =>
+  us >= 1e6 ? (us / 1e6).toFixed(2) + ' s'
+    : us >= 1e3 ? Math.round(us / 1e3) + ' ms'
+      : us + ' µs';
 
-   Zero rates are interpolated linearly between the curve's own nodes and held
-   flat outside them, then discounting is exp(-z t). The projected rate for a
-   period comes from the ratio of two discount factors on the projection curve,
-   which is the same relationship the engine uses. The fair rate is the fixed
-   rate that makes the two legs cancel. */
-function zeroAt(pts: Pair[], t: number): number {
-  if (!pts.length) return 0;
-  if (t <= pts[0][0]) return pts[0][1];
-  if (t >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
-  for (let i = 1; i < pts.length; i++) {
-    if (t <= pts[i][0]) {
-      const [t0, z0] = pts[i - 1], [t1, z1] = pts[i];
-      return z0 + (z1 - z0) * (t - t0) / (t1 - t0);
-    }
+// ---------------------------------------------------------------------------
+// Reading a curve
+// ---------------------------------------------------------------------------
+
+interface Seg { c0: number; c1: number; c2: number; c3: number; xL: number; xR: number; form: number }
+
+const segments = (flat: number[]): Seg[] => {
+  const out: Seg[] = [];
+  for (let i = 0; i + 6 < flat.length; i += 7)
+    out.push({ c0: flat[i], c1: flat[i + 1], c2: flat[i + 2], c3: flat[i + 3],
+               xL: flat[i + 4], xR: flat[i + 5], form: flat[i + 6] });
+  return out;
+};
+
+// Which interval owns t. Outside the ends the outermost polynomial is extended,
+// which is the engine's own extrapolation.
+function owning(segs: Seg[], t: number): Seg {
+  let lo = 0, hi = segs.length - 1;
+  if (t <= segs[0].xR) return segs[0];
+  if (t >= segs[hi].xL) return segs[hi];
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (t < segs[mid].xR) hi = mid; else lo = mid + 1;
   }
-  return pts[pts.length - 1][1];
+  return segs[lo];
 }
-const dfAt = (pts: Pair[], t: number) => Math.exp(-(zeroAt(pts, t) / 100) * t);
 
-function priceSwap(proj: Pair[], disc: Pair[], years: number,
+/* The engine publishes coefficients, not samples, so this reads them the same
+   way its own csEvalZeroHost does. form 1 carries -log DF as the polynomial, so
+   the zero rate is that over t and the instantaneous forward is its derivative.
+   form 0 carries the zero rate directly. Both forwards are analytic rather than
+   a difference between two nearby points. */
+const zeroOn = (g: Seg, t: number) =>
+  g.form > 0.5 ? (t > 0 ? g.c0 / t + g.c1 + (g.c2 + g.c3 * t) * t : g.c1)
+    : ((g.c3 * t + g.c2) * t + g.c1) * t + g.c0;
+
+const instOn = (g: Seg, t: number) => {
+  const dP = g.c1 + 2 * g.c2 * t + 3 * g.c3 * t * t;
+  if (g.form > 0.5) return dP;                    // P is -log DF, so f = dP/dt
+  const z = ((g.c3 * t + g.c2) * t + g.c1) * t + g.c0;
+  return z + t * dP;                              // f = d(z t)/dt
+};
+
+const zeroAt = (segs: Seg[], t: number) => zeroOn(owning(segs, t), t);
+const dfAt = (segs: Seg[], t: number) =>
+  t <= 0 ? 1 : Math.exp(-zeroAt(segs, t) * t / 100);
+
+function priceSwap(proj: Seg[], disc: Seg[], years: number,
                    fixedRate: number, notional: number) {
   if (!proj?.length || !disc?.length) return null;
   let annuity = 0;               // fixed leg, per unit of rate
@@ -58,13 +121,43 @@ function priceSwap(proj: Pair[], disc: Pair[], years: number,
   let floatLeg = 0;              // projected coupons, discounted
   const step = 0.5;
   for (let t = step; t <= years + 1e-9; t += step) {
-    const fwd = (dfAt(proj, t - step) / dfAt(proj, t) - 1) / step;
-    floatLeg += fwd * step * dfAt(disc, t);
+    const f = (dfAt(proj, t - step) / dfAt(proj, t) - 1) / step;
+    floatLeg += f * step * dfAt(disc, t);
   }
   const fair = annuity > 0 ? floatLeg / annuity : 0;
   const npv = notional * (floatLeg - fixedRate * annuity);
   return { npv, fair: fair * 100, annuity, dv01: notional * annuity * 1e-4 };
 }
+
+// Points to draw one curve with. Each interval contributes its own endpoints, so
+// a step edge is a vertical rather than a diagonal across whatever the sampling
+// resolution happened to be, and a flat interval needs exactly two points. The
+// curved ones get a handful more, which is all a cubic needs to look like itself.
+function drawPoints(segs: Seg[], view: string, tMax: number) {
+  const pts: { t: number; y: number }[] = [];
+  const value = (t: number, g: Seg) => {
+    if (view === 'zero') return zeroOn(g, t);
+    if (view === 'inst') return instOn(g, t);
+    if (view === 'df') return Math.exp(-zeroOn(g, t) * t / 100);
+    const d0 = dfAt(segs, t), d1 = dfAt(segs, t + 0.5);
+    return d1 > 0 ? (d0 / d1 - 1) / 0.5 * 100 : 0;
+  };
+  for (const g of segs) {
+    if (g.xL > tMax) break;
+    const flat = g.form > 0.5 && Math.abs(g.c2) < 1e-14 && Math.abs(g.c3) < 1e-14;
+    const n = flat && view === 'inst' ? 1 : 8;
+    for (let k = 0; k <= n; k++) {
+      const t = g.xL + (g.xR - g.xL) * k / n;
+      if (t < 1e-9 || t > tMax) continue;
+      pts.push({ t, y: value(t, g) });
+    }
+  }
+  return pts;
+}
+
+// ---------------------------------------------------------------------------
+
+interface Snapshot { id: number; frame: number; epoch: number; at: string; label: string }
 
 export default function Workstation({ tl }: { tl: Timeline }) {
   const [i, setI] = useState(0);
@@ -76,9 +169,41 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const [tenor, setTenor] = useState(5);
   const [rate, setRate] = useState(2.10);
   const [notional, setNotional] = useState(10);
+  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df'>('zero');
+  const [tMax, setTMax] = useState(30);
+  const [shown, setShown] = useState<string[]>(
+    ['EUR_ESTR', 'EUR_EURIBOR6M', 'USD_SOFR', 'GBP_SONIA']);
+  // A risk run is taken against ONE published set and keeps saying which one,
+  // however far the feed has moved on since. Runs are kept, so a desk can hold
+  // this morning's risk beside the one it just asked for.
+  const [snaps, setSnaps] = useState<Snapshot[]>([]);
+  const [viewing, setViewing] = useState<number | null>(null);
+  const [running, setRunning] = useState(false);
+  const nextId = useRef(1);
+  const [riskCurve, setRiskCurve] = useState('EUR_ESTR');
+  const [riskMode, setRiskMode] = useState<'zero' | 'fwd'>('zero');
+
+  const takeSnapshot = () => {
+    if (running) return;
+    setPlaying(false);
+    setRunning(true);
+    const frame = i;
+    window.setTimeout(() => {
+      const id = nextId.current++;
+      const now = new Date();
+      setSnaps(list => [{
+        id, frame, epoch: tl.frames[frame].epoch,
+        at: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        label: tl.frames[frame].label,
+      }, ...list].slice(0, 8));
+      setViewing(id);
+      setRunning(false);
+    }, 900);
+  };
 
   const f = tl.frames[i];
   const prev = i > 0 ? tl.frames[i - 1] : null;
+  const open = tl.frames[0];
 
   useEffect(() => {
     setFlash(new Set(f.rebuilt));
@@ -89,7 +214,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   useEffect(() => {
     if (!playing) return;
     timer.current = window.setTimeout(
-      () => setI(x => (x + 1) % tl.frames.length), 2600);
+      () => setI(x => (x + 1) % tl.frames.length), 3200);
     return () => { if (timer.current) window.clearTimeout(timer.current); };
   }, [i, playing, tl.frames.length]);
 
@@ -102,51 +227,83 @@ export default function Workstation({ tl }: { tl: Timeline }) {
     return out;
   }, [i, tl.frames]);
 
-  const delta = (r: Row) => {
-    const p = prev?.rows.find(x => x.id === r.id);
-    return p ? r.npv - p.npv : 0;
-  };
-  const deskDelta = prev ? f.deskNpv - prev.deskNpv : 0;
+  const segsOf = useMemo(() => {
+    const m: Record<string, Seg[]> = {};
+    for (const [id, flat] of Object.entries(f.curves ?? {})) m[id] = segments(flat);
+    return m;
+  }, [f.curves]);
 
-  // One row per maturity, each curve a column, so the chart draws them together.
-  const curveChart = useMemo(() => {
-    const ts = new Set<number>();
-    Object.values(f.curveData ?? {}).forEach(pts => pts.forEach(([t]) => ts.add(t)));
-    return [...ts].sort((a, b) => a - b).map(t => {
-      const row: Record<string, number> = { t };
-      Object.entries(f.curveData ?? {}).forEach(([c, pts]) => {
-        const hit = pts.find(pp => pp[0] === t);
-        if (hit) row[c] = hit[1];
-      });
-      return row;
-    });
-  }, [f.curveData]);
+  // One point list per curve, off that curve's own intervals. Recharts takes a
+  // data array per series, so no shared grid has to be invented to hold them.
+  const curveLines = useMemo(() => shown
+    .filter(c => segsOf[c]?.length)
+    .map(c => ({ id: c, pts: drawPoints(segsOf[c], domain, tMax) })),
+    [segsOf, shown, domain, tMax]);
 
-  const riskChart = useMemo(() => (f.risk?.['EUR_ESTR'] ?? []).map(([t, v]) => ({
-    label: t < 1 ? Math.round(t * 12) + 'M' : Math.round(t) + 'Y', pv01: v,
-  })), [f.risk]);
+  const chosen = snaps.find(x => x.id === viewing) ?? null;
+  const riskSource = chosen ? tl.frames[chosen.frame] : null;
+  const riskChart = useMemo(() => {
+    if (!riskSource) return [];
+    const lad = riskSource.risk?.[riskCurve] ?? [];
+    return lad.filter(([t]) => t > 0).map(([t, z, w]) => ({
+      label: t < 1 ? Math.round(t * 12) + 'M' : Math.round(t) + 'Y',
+      pv01: riskMode === 'zero' ? z : w, t,
+    }));
+  }, [riskSource, riskCurve, riskMode]);
 
   const priced = useMemo(() => priceSwap(
-    f.curveData?.['EUR_EURIBOR6M'] ?? [], f.curveData?.['EUR_ESTR'] ?? [],
-    tenor, rate / 100, notional * 1e6), [f.curveData, tenor, rate, notional]);
+    segsOf['EUR_EURIBOR6M'] ?? [], segsOf['EUR_ESTR'] ?? [],
+    tenor, rate / 100, notional * 1e6), [segsOf, tenor, rate, notional]);
+
+  const bookMove = (b: BookAgg) => {
+    const p = prev?.books.find(x => x.book === b.book);
+    const o = open.books.find(x => x.book === b.book);
+    return { since: p ? b.npv - p.npv : 0, fromOpen: o ? b.npv - o.npv : 0 };
+  };
+  const deskSince = prev ? f.deskNpv - prev.deskNpv : 0;
+  const deskFromOpen = f.deskNpv - open.deskNpv;
+
+  const moveColour = (v: number, floor = 1) =>
+    Math.abs(v) < floor ? 'var(--text-dim)' : v > 0 ? 'var(--accent-green)' : '#c86e6e';
+  const signed = (v: number, floor = 1) =>
+    Math.abs(v) < floor ? '' : (v > 0 ? '+' : '') + millions(v);
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      {/* ---- transport ---- */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         <button onClick={() => setPlaying(p => !p)} className="px-3 py-1.5 rounded font-mono text-[11px]"
-          style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-          {playing ? 'Pause' : 'Play'}
+          style={chip(!playing, '#d4a853')}>
+          {playing ? 'Pause feed' : 'Resume feed'}
         </button>
-        <div className="flex gap-1">
+        <button onClick={takeSnapshot} disabled={running}
+          className="px-3 py-1.5 rounded font-mono text-[11px]" style={chip(running, '#5eaab5')}>
+          {running ? 'running risk…' : 'Run risk on this set'}
+        </button>
+        <div className="flex gap-1 ml-1">
           {tl.frames.map((_, k) => (
             <button key={k} onClick={() => { setI(k); setPlaying(false); }}
               className="w-6 h-1.5 rounded-sm"
               style={{ background: k === i ? '#d4a853' : 'var(--border-subtle)' }} />
           ))}
         </div>
-        <span className="font-mono text-[11px]" style={{ color: 'var(--text-dim)' }}>
-          set {f.epoch} &middot; rebuilt in {(f.cycleUs / 1000).toFixed(2)} ms
+        <span className="font-mono text-[11px] ml-1" style={{ color: 'var(--text-dim)' }}>
+          set {f.epoch} &middot; {tl.trades.toLocaleString()} trades &middot;{' '}
+          {(tl.cashflows / 1e6).toFixed(1)}m cashflows
         </span>
+      </div>
+
+      {/* ---- what each clock cost on this cycle ---- */}
+      <div className="grid sm:grid-cols-3 gap-2 mb-4 font-mono text-[11px]">
+        {[['Curves rebuilt', ms(f.cycleUs), f.rebuilt.length + ' of ' + tl.curveIds.length + ' curves'],
+          ['Book revalued', ms(f.npvUs), 'every trade, ' + tl.threads + ' cores'],
+          ['Risk ladders', ms(f.riskUs), f.buckets + ' buckets × the book']].map(([k, v, note]) => (
+          <div key={k} className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+            <div className="text-[10px] uppercase" style={{ color: 'var(--text-dim)' }}>{k}</div>
+            <div className="text-sm" style={{ color: 'var(--text-primary)' }}>{v}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>{note}</div>
+          </div>
+        ))}
       </div>
 
       <div className="rounded px-4 py-3 mb-4" style={{ border: '1px solid #d4a85355', background: '#d4a8530a' }}>
@@ -154,12 +311,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{f.note}</div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_1.1fr] gap-4">
+      <div className="grid lg:grid-cols-[1fr_1.15fr] gap-4">
         {/* ---- curve board ---- */}
         <div>
-          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Curves</div>
+          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Curve status</div>
           <div className="grid grid-cols-2 gap-2">
-            {tl.curves.map(c => {
+            {tl.curveIds.map((c: string) => {
               const st = f.status[c] ?? 'OK';
               const lit = flash.has(c);
               const stale = st !== 'OK';
@@ -198,105 +355,257 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </div>
         </div>
 
-        {/* ---- blotter ---- */}
+        {/* ---- books ---- */}
         <div>
-          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Positions</div>
-          <div className="rounded overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
+          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Books</div>
+          <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
             <table className="w-full font-mono text-[11px]">
               <thead>
                 <tr style={{ color: 'var(--text-dim)' }}>
-                  <th className="text-left px-3 py-1.5 font-normal">Trade</th>
+                  <th className="text-left px-3 py-1.5 font-normal">Book</th>
+                  <th className="text-right px-3 py-1.5 font-normal">Trades</th>
                   <th className="text-right px-3 py-1.5 font-normal">Value</th>
-                  <th className="text-right px-3 py-1.5 font-normal">Change</th>
+                  <th className="text-right px-3 py-1.5 font-normal">On this move</th>
+                  <th className="text-right px-3 py-1.5 font-normal">Since open</th>
                   <th className="text-right px-3 py-1.5 font-normal">DV01</th>
                 </tr>
               </thead>
               <tbody>
-                {f.rows.map(r => {
-                  const d = delta(r);
+                {f.books.map(b => {
+                  const d = bookMove(b);
                   return (
-                    <tr key={r.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                      <td className="px-3 py-1.5" style={{ color: r.degraded ? '#c86e6e' : 'var(--text-secondary)' }}>
-                        {r.id}{r.degraded ? ' *' : ''}
+                    <tr key={b.book} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                      <td className="px-3 py-1.5" style={{ color: b.degraded ? '#c86e6e' : 'var(--text-secondary)' }}>
+                        {b.book}{b.degraded ? ' *' : ''}
                       </td>
-                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{money(r.npv)}</td>
-                      <td className="px-3 py-1.5 text-right" style={{
-                        color: Math.abs(d) < 1 ? 'var(--text-dim)' : d > 0 ? 'var(--accent-green)' : '#c86e6e',
-                      }}>{Math.abs(d) < 1 ? '' : (d > 0 ? '+' : '') + money(d)}</td>
-                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>{money(r.dv01)}</td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>
+                        {b.trades.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{millions(b.npv)}</td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: moveColour(d.since, 1e4) }}>
+                        {signed(d.since, 1e4)}
+                      </td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: moveColour(d.fromOpen, 1e4) }}>
+                        {signed(d.fromOpen, 1e4)}
+                      </td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>{money(b.dv01)}</td>
                     </tr>
                   );
                 })}
                 <tr style={{ borderTop: '1px solid var(--border-hover)' }}>
                   <td className="px-3 py-1.5" style={{ color: 'var(--text-dim)' }}>Desk</td>
-                  <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{money(f.deskNpv)}</td>
-                  <td className="px-3 py-1.5 text-right" style={{
-                    color: Math.abs(deskDelta) < 1 ? 'var(--text-dim)' : deskDelta > 0 ? 'var(--accent-green)' : '#c86e6e',
-                  }}>{Math.abs(deskDelta) < 1 ? '' : (deskDelta > 0 ? '+' : '') + money(deskDelta)}</td>
+                  <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>
+                    {tl.trades.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{millions(f.deskNpv)}</td>
+                  <td className="px-3 py-1.5 text-right" style={{ color: moveColour(deskSince, 1e4) }}>
+                    {signed(deskSince, 1e4)}
+                  </td>
+                  <td className="px-3 py-1.5 text-right" style={{ color: moveColour(deskFromOpen, 1e4) }}>
+                    {signed(deskFromOpen, 1e4)}
+                  </td>
                   <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>{money(f.deskDv01)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          {f.rows.some(r => r.degraded) && (
-            <p className="text-[11px] mt-2" style={{ color: '#c86e6e' }}>
-              * priced on a curve that failed to rebuild and is serving its last
-              good version. The value is not wrong, it is old, and it says so
-              rather than going blank or quietly carrying on.
-            </p>
-          )}
-        </div>
-      </div>
+          <p className="text-[11px] mt-2" style={{ color: 'var(--text-dim)' }}>
+            On this move is against the previous published set. Since open is against the
+            first one, which is the mark the session starts from.
+            {f.books.some(b => b.degraded) && ' A book marked * holds trades priced on a curve that failed to rebuild and is serving its last good version.'}
+          </p>
 
-      <div className="grid lg:grid-cols-2 gap-4 mt-4">
-        <div>
-          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
-            Curves, as published
+          <div className="text-[10px] uppercase mt-4 mb-2" style={{ color: 'var(--text-dim)' }}>
+            A few of the trades behind those totals
           </div>
-          <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
-            <ResponsiveContainer width="100%" height={210}>
-              <LineChart data={curveChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="t" type="number" scale="log" domain={[0.25, 30]}
-                  ticks={[0.25, 1, 2, 5, 10, 30]} stroke="#55546a" tick={{ fontSize: 10 }}
-                  tickFormatter={(v: number) => (v < 1 ? v * 12 + 'M' : v + 'Y')} />
-                <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={42}
-                  tickFormatter={(v: number) => v.toFixed(2) + '%'} domain={['auto', 'auto']} />
-                <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
-                  labelFormatter={(v: any) => Number(v) < 1 ? Number(v) * 12 + 'M' : v + 'Y'}
-                  formatter={(v: any, n: any) => [Number(v).toFixed(3) + '%', LABEL[n] ?? n]} />
-                {['EUR_ESTR', 'EUR_EURIBOR6M', 'USD_SOFR', 'GBP_SONIA'].map((c, i) => (
-                  <Line key={c} type="monotone" dataKey={c} isAnimationActive={false}
-                    stroke={['#5b8fc9', '#d4a853', '#7fae7f', '#b07fc9'][i]}
-                    strokeWidth={flash.has(c) ? 2.5 : 1.5} dot={false} />
+          <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
+            <table className="w-full font-mono text-[10.5px]">
+              <tbody>
+                {f.rows.slice(0, 6).map(r => (
+                  <tr key={r.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <td className="px-3 py-1" style={{ color: 'var(--text-dim)' }}>{r.id}</td>
+                    <td className="px-3 py-1" style={{ color: 'var(--text-dim)' }}>{r.book}</td>
+                    <td className="px-3 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>
+                      {r.fair ? r.fair.toFixed(3) + '%' : ''}
+                    </td>
+                    <td className="px-3 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{money(r.npv)}</td>
+                    <td className="px-3 py-1 text-right" style={{ color: 'var(--text-dim)' }}>{money(r.dv01)}</td>
+                  </tr>
                 ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div>
-          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
-            Book risk by maturity, ESTR
-          </div>
-          <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={riskChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="label" stroke="#55546a" tick={{ fontSize: 10 }} interval={0} />
-                <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={52}
-                  tickFormatter={(v: number) => Math.round(v).toLocaleString()} />
-                <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
-                  formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']} />
-                <ReferenceLine y={0} stroke="#55546a" />
-                <Bar dataKey="pv01" fill="#5b8fc9" isAnimationActive={false} />
-              </BarChart>
-            </ResponsiveContainer>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
+      {/* ---- curves ---- */}
       <div className="mt-4">
+        <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Curves</div>
+        <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px]">
+          {tl.curveIds.map(k => (
+            <button key={k}
+              onClick={() => setShown(v => v.includes(k) ? v.filter(x => x !== k) : [...v, k])}
+              className="px-2 py-0.5 rounded"
+              style={chip(shown.includes(k), COLOUR[k] ?? '#8b8a97')}>{LABEL[k] ?? k}</button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
+          {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'],
+             ['zero', 'zero rates'], ['df', 'discount factors']] as const).map(([d, label]) => (
+            <button key={d} onClick={() => setDomain(d)} className="px-2 py-0.5 rounded"
+              style={chip(domain === d, '#5eaab5')}>{label}</button>
+          ))}
+          <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
+          {[2.5, 10, 30, 50].map(x => (
+            <button key={x} onClick={() => setTMax(x)} className="px-2 py-0.5 rounded"
+              style={chip(tMax === x, '#8b7ec8')}>{x}Y</button>
+          ))}
+        </div>
+        <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="t" type="number" domain={[0, tMax]} allowDataOverflow
+                allowDuplicatedCategory={false} stroke="#55546a" tick={{ fontSize: 10 }}
+                tickFormatter={(v: number) => v + 'Y'} />
+              <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={52}
+                domain={['auto', 'auto']}
+                tickFormatter={(v: number) => domain === 'df'
+                  ? Number(v).toFixed(3) : Number(v).toFixed(2) + '%'} />
+              <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
+                labelFormatter={(v: any) => 't = ' + Number(v).toFixed(2) + 'Y'}
+                formatter={(v: any, n: any) => [
+                  domain === 'df' ? Number(v).toFixed(6) : Number(v).toFixed(4) + '%',
+                  LABEL[n] ?? n]} />
+              {curveLines.map(({ id, pts }) => (
+                <Line key={id} data={pts} dataKey="y" name={id} type="linear"
+                  isAnimationActive={false} stroke={COLOUR[id] ?? '#8b8a97'}
+                  strokeWidth={flash.has(id) ? 2.6 : 1.6} dot={false} />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          The engine publishes each curve as its own cubics over log discount factors,
+          and this page evaluates them. Pick the instantaneous forward and the
+          meeting-dated curve to see the policy steps: flat between ECB dates, then a
+          spline. A discrete forward averages over its own window and smooths them away.
+        </p>
+      </div>
+
+      {/* ---- risk ---- */}
+      <div className="mt-6">
+        <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Risk</div>
+        {snaps.length > 0 && (
+          <div className="rounded overflow-x-auto mb-3" style={{ border: '1px solid var(--border-subtle)' }}>
+            <table className="w-full font-mono text-[10.5px]">
+              <thead>
+                <tr style={{ color: 'var(--text-dim)' }}>
+                  <th className="text-left px-3 py-1.5 font-normal">Run</th>
+                  <th className="text-left px-3 py-1.5 font-normal">Taken</th>
+                  <th className="text-left px-3 py-1.5 font-normal">Set</th>
+                  <th className="text-left px-3 py-1.5 font-normal">Market at the time</th>
+                  <th className="text-right px-3 py-1.5 font-normal">Buckets</th>
+                  <th className="text-right px-3 py-1.5 font-normal">Took</th>
+                </tr>
+              </thead>
+              <tbody>
+                {snaps.map(sn => {
+                  const fr = tl.frames[sn.frame];
+                  const on = sn.id === viewing;
+                  return (
+                    <tr key={sn.id} onClick={() => setViewing(sn.id)}
+                      style={{
+                        borderTop: '1px solid var(--border-subtle)', cursor: 'pointer',
+                        background: on ? '#5eaab512' : 'transparent',
+                        color: on ? 'var(--text-primary)' : 'var(--text-dim)',
+                      }}>
+                      <td className="px-3 py-1" style={{ color: on ? '#5eaab5' : 'var(--text-dim)' }}>
+                        #{sn.id}
+                      </td>
+                      <td className="px-3 py-1">{sn.at}</td>
+                      <td className="px-3 py-1">{sn.epoch}</td>
+                      <td className="px-3 py-1 truncate" style={{ maxWidth: 260 }}>{sn.label}</td>
+                      <td className="px-3 py-1 text-right">{fr.buckets}</td>
+                      <td className="px-3 py-1 text-right">{ms(fr.riskUs)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {riskSource === null ? (
+          <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
+            <p className="text-xs max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
+              Risk is asked for rather than pushed. Press{' '}
+              <span style={{ color: '#5eaab5' }}>Run risk on this set</span> to take the
+              published set on screen and put a ladder against it. Every run is kept and
+              stays stamped with the set it describes, however far the feed moves on
+              afterwards, because a ladder that quietly refreshed underneath you is a
+              ladder nobody can hedge from.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
+              {tl.curveIds.filter(c => (riskSource.risk?.[c] ?? []).length).map(c => (
+                <button key={c} onClick={() => setRiskCurve(c)} className="px-2 py-0.5 rounded"
+                  style={chip(riskCurve === c, COLOUR[c] ?? '#8b8a97')}>{LABEL[c] ?? c}</button>
+              ))}
+              <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
+              {([['zero', 'zero buckets'], ['fwd', 'forward buckets']] as const).map(([m, l]) => (
+                <button key={m} onClick={() => setRiskMode(m)} className="px-2 py-0.5 rounded"
+                  style={chip(riskMode === m, '#5eaab5')}>{l}</button>
+              ))}
+            </div>
+            <div className="rounded px-3 py-2 mb-2 font-mono text-[11px]"
+              style={{ border: '1px solid #5eaab555', background: '#5eaab50a', color: 'var(--text-secondary)' }}>
+              as of set {riskSource.epoch}
+              {riskSource.epoch !== f.epoch && (
+                <span style={{ color: '#d4a853' }}> &middot; the feed has since moved to set {f.epoch}</span>
+              )}
+              <span style={{ color: 'var(--text-dim)' }}>
+                {' '}&middot; run #{chosen?.id} at {chosen?.at} &middot; {riskSource.buckets} buckets
+                across {tl.trades.toLocaleString()} trades in {ms(riskSource.riskUs)} on{' '}
+                {riskSource.threads} cores
+              </span>
+            </div>
+            <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={riskChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="label" stroke="#55546a" tick={{ fontSize: 9 }} interval={0} />
+                  <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={62}
+                    tickFormatter={(v: number) => Math.round(v).toLocaleString()} />
+                  <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
+                    formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']} />
+                  <ReferenceLine y={0} stroke="#55546a" />
+                  <Bar dataKey="pv01" fill={COLOUR[riskCurve] ?? '#5b8fc9'} isAnimationActive={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              What the book gains or loses for one basis point at each node of{' '}
+              {LABEL[riskCurve] ?? riskCurve}. {riskMode === 'zero'
+                ? 'A zero bucket lifts the curve around one node and tapers away to its neighbours.'
+                : 'A forward bucket lifts the forward rate flat across one interval.'}{' '}
+              Both are applied as an overlay on the published curve rather than by
+              rebuilding it, so a bump moves the bucket asked for and leaves the rest of
+              the curve alone.
+            </p>
+            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              This page is a recording. The engine ran a ladder against every published
+              set in the session and the timings shown are its own; the page serves them
+              back rather than running the arithmetic in your browser.
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* ---- pricer ---- */}
+      <div className="mt-6">
         <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
           Price a EURIBOR swap against the set on screen
         </div>
@@ -338,9 +647,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             <div className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>waiting for curves</div>
           )}
           <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Priced as a payer swap against the same published curves the blotter is
-            using, so the numbers move with the session as it plays. Annual fixed
-            against six month floating, projected on EURIBOR and discounted on ESTR.
+            A payer swap against the same published curves the books above are using, so
+            the numbers move with the session as it plays. Annual fixed against six month
+            floating, projected on EURIBOR and discounted on ESTR.
           </p>
         </div>
       </div>

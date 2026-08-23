@@ -68,13 +68,22 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       {tab === 'desk' && tl && (
         <div>
           <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-            A session, replayed
+            A desk, on a recorded session
           </h3>
+          <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            A book of {tl.trades.toLocaleString()} trades across eight curves, driven by
+            a stream of price changes. Each step is one cycle of the engine: prices
+            arrive, the curves that depend on them are rebuilt, and the book is revalued
+            against the set that comes out. Watch which curves light up when a price
+            moves and which are left alone.
+          </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Prices arrive, the curves that depend on them are rebuilt, and
-            positions are revalued. Each step below is a real cycle of the
-            engine, recorded as it ran and replayed here. Watch which curves
-            light up when a price moves, and which are left alone.
+            Three jobs, three speeds, and the figures above each panel are the engine&apos;s
+            own. Rebuilding a curve takes seconds, so it cannot sit on a timer. Revaluing
+            all {tl.trades.toLocaleString()} trades takes about a tenth of a second, so it
+            can run on every published set. A full ladder takes a few seconds, so it is
+            asked for rather than pushed, and it stays stamped with the set it describes.
+            Keeping those three apart is most of what the design is.
           </p>
           <Workstation tl={tl} />
         </div>
@@ -86,24 +95,29 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             Why not just recalculate everything on a timer
           </h3>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            Most curve systems poll. A scheduled job wakes up every minute or
-            every few minutes, rebuilds every curve from the latest prices, and
-            publishes the lot. It is easy to write, easy to reason about, and it
-            is what almost everyone does.
+            Most curve systems poll, and with good reason. A scheduled job wakes
+            up every minute or so, rebuilds every curve from the latest prices,
+            and publishes the lot. The work is bounded, the order is fixed, and
+            when something looks wrong there is one place to look. In production
+            that is worth a great deal, and on plenty of desks polling is simply
+            the right answer.
           </p>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            The cost is that you are always choosing between stale and wasteful.
-            Poll every five minutes and a trader can be looking at a five minute
-            old curve during a move. Poll every ten seconds and you rebuild eight
-            curves six times a minute whether anything moved or not, and the
-            bootstrap is not cheap: the batch engine measures a curve solve at
-            roughly a second. Neither setting is right, because the correct
-            frequency depends on which curve and what just happened.
+            What it asks you to choose is an interval, and the same interval has
+            to serve every curve and every kind of day. Five minutes is cheap,
+            and in a fast move a trader can be looking at a curve that is five
+            minutes old. Ten seconds is fresh, and it rebuilds all eight curves
+            six times a minute whether or not anything moved, which is not free:
+            the batch engine measures a curve solve at roughly a second. The
+            setting that suits a quiet morning is not the one that suits a
+            payrolls number.
           </p>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            Event driven rebuilding does the work when the work is needed. The
-            reason it is less common is that it is genuinely harder, and the
-            difficulty is not the events, it is the dependencies.
+            Rebuilding on the event removes the choice: work happens when there
+            is work to do. It also costs you the bounded batch and the fixed
+            order, which were the two things that made polling easy to operate.
+            That is the real reason it is less common, and the hard part turns
+            out to be the dependencies between curves.
           </p>
 
           <div className="rounded p-4 my-4 font-mono text-[11px]" style={{
