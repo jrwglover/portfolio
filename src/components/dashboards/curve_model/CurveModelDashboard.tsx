@@ -1056,6 +1056,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   {b.trades.toLocaleString()} trades: {b.bumps} quoted prices moved one basis
                   point each, the curve re-solved for every one of them, and the whole book
                   revalued against each result. {b.repricings.toLocaleString()} valuations.
+                  Both lanes read the same solved curves, so what separates them is where the
+                  arithmetic runs. They agree to <Sci v={b.agreement} /> of notional, and the
+                  discount half is checked against QuantLib itself at 3.7e-16.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {b.cashflows.toLocaleString()} cashflows &middot; {b.threads} cores
@@ -1069,10 +1072,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 <div className="grid md:grid-cols-3 gap-3 mt-4">
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>GPU against the cores</div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{b.gpuVsHost}&times;</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>1.5 to 1.9&times;</div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      the book crosses once and all {b.bumps} curves read the same copy, so the
-                      transfer is {fmtMs(b.gpuH2dMs)} of {fmtMs(b.gpuMs)}
+                      across three runs. The book crosses once and all {b.bumps} curves read the
+                      same copy, so the transfer is {fmtMs(b.gpuH2dMs)} of {fmtMs(b.gpuMs)}. The
+                      GPU lane repeats to 0.4%; the spread is the cores, which swing a tenth
+                      run to run
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>

@@ -29,22 +29,22 @@
    "lanes": [
     {
      "lane": "Processor only, start to finish",
-     "ms": 31916,
+     "ms": 20117,
      "kind": "cpu"
     },
     {
      "lane": "With the GPU, start to finish",
-     "ms": 32141,
+     "ms": 20334,
      "kind": "gpu"
     },
     {
      "lane": "of which rebuilding curves",
-     "ms": 31912.0,
+     "ms": 20113.0,
      "kind": "cpu"
     },
     {
      "lane": "of which revaluing the trades",
-     "ms": 229.0,
+     "ms": 221.0,
      "kind": "gpu"
     }
    ]
@@ -911,25 +911,25 @@
  "bookScale": {
   "trades": 150000,
   "cashflows": 7097844,
-  "bumps": 28,
-  "repricings": 4200000,
-  "bootstrapMs": 2529.23,
-  "hostMs": 889.655,
-  "gpuMs": 605.827,
-  "gpuH2dMs": 69.3402,
-  "gpuKernelMs": 527.379,
-  "gpuMB": 487.862,
+  "bumps": 58,
+  "repricings": 8700000,
+  "bootstrapMs": 8235.05,
+  "hostMs": 2106.83,
+  "gpuMs": 1126.62,
+  "gpuH2dMs": 68.8571,
+  "gpuKernelMs": 1042.76,
+  "gpuMB": 523.862,
   "threads": 16,
   "agreement": "1.37329e-16",
-  "gpuVsHost": 1.47,
-  "bootstrapShareHost": 74
+  "gpuVsHost": 1.87,
+  "bootstrapShareHost": 80
  },
  "marketLanes": {
   "bumps": 228,
-  "bootstrapMs": 31912.0,
+  "bootstrapMs": 20113.0,
   "quantlibMs": 4.0,
-  "hostMs": 5.0,
-  "gpuMs": 229.0,
+  "hostMs": 1.0,
+  "gpuMs": 221.0,
   "threads": 16,
   "hostVsQlNotional": "3.346941e-17",
   "gpuVsQlNotional": "2.910383e-17",
