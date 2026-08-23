@@ -78,10 +78,10 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             The timings above come from the engine itself. Rebuilding the curves a price
-            touched takes a few tenths of a second, and repricing all{' '}
-            {tl.trades.toLocaleString()} trades takes about 140 milliseconds, so both of
+            touched takes up to a third of a second, and repricing all{' '}
+            {tl.trades.toLocaleString()} trades takes about a tenth of one, so both of
             those can run every time a new set is published. A full risk ladder takes
-            around five seconds. That is why you have to ask for it, and why it stays
+            about three seconds. That is why you have to ask for it, and why it stays
             labelled with the set it was run against.
           </p>
           <Workstation tl={tl} />

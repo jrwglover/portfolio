@@ -1233,12 +1233,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   an overnight curve spent 2259 ms assembling its rate helpers before the
                   solver started, against 4.8 ms for a EURIBOR curve, because thirty-one
                   overnight swaps each lay out a daily fixing schedule to fifty years and
-                  none of that structure changes when a quote does. Holding the helpers and
-                  moving the quote took it from 267 seconds to 48. Sharing each distinct bumped
-                  curve across the trades that read it took another 16, since the same 28
-                  EURIBOR curves were being solved once per trade and the curve does not
-                  depend on the trade. 267 seconds to 32, with every one of the 228
-                  sensitivities identical to the digit. It was never a hardware question.
+                  none of that structure changes when a quote does. Holding the helpers and moving
+                  the quote instead was most of it. Sharing each distinct bumped curve across
+                  the trades that read it was the rest, since the same 28 EURIBOR curves were
+                  being solved once per trade and the curve does not depend on the trade.
+                  Together they took this ladder from 267 seconds to{' '}
+                  {perf.marketLanes ? fmtMs(perf.marketLanes.bootstrapMs) : 'under half a minute'},
+                  with every one of the 228 sensitivities identical to the digit. It was never
+                  a hardware question. That last figure moves between runs by more than it
+                  should, from 20 to 48 seconds on the same binary, and I have not found out
+                  why yet.
                 </p>
               </div>
             );
