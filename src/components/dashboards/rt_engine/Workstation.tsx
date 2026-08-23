@@ -169,10 +169,13 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const [tenor, setTenor] = useState(5);
   const [rate, setRate] = useState(2.10);
   const [notional, setNotional] = useState(10);
-  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df'>('zero');
+  // The instantaneous forward is where the construction shows: flat between ECB
+  // meetings on the meeting-dated curve, then a spline. The other three views
+  // smooth that away.
+  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df'>('inst');
   const [tMax, setTMax] = useState(30);
   const [shown, setShown] = useState<string[]>(
-    ['EUR_ESTR', 'EUR_EURIBOR6M', 'USD_SOFR', 'GBP_SONIA']);
+    ['EUR_ESTR', 'EUR_ESTR_ECB', 'EUR_EURIBOR6M', 'EUR_USD_XCCY']);
   // A risk run is taken against ONE published set and keeps saying which one,
   // however far the feed has moved on since. Runs are kept, so a desk can hold
   // this morning's risk beside the one it just asked for.

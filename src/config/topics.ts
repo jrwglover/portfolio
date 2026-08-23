@@ -54,7 +54,7 @@ export const topics: Topic[] = [
             techBadges: ['C++17', 'Event driven', 'Lock-free publish'],
             highlights: ['Dependency scoped rebuilds', 'One coherent set at a time', 'Bursts collapse into one rebuild'],
             status: 'live',
-            dashboard: { component: 'RtEngineDashboard', defaultTab: 'graph' },
+            dashboard: { component: 'RtEngineDashboard', defaultTab: 'desk' },
             breadcrumb: ['Rates', 'Curve Bootstrapping', 'Real-time engine'],
           },
           {
