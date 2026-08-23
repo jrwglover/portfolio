@@ -1240,9 +1240,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   Together they took this ladder from 267 seconds to{' '}
                   {perf.marketLanes ? fmtMs(perf.marketLanes.bootstrapMs) : 'under half a minute'},
                   with every one of the 228 sensitivities identical to the digit. It was never
-                  a hardware question. That last figure moves between runs by more than it
-                  should, from 20 to 48 seconds on the same binary, and I have not found out
-                  why yet.
+                  a hardware question.
                 </p>
               </div>
             );
