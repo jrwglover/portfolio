@@ -28,9 +28,34 @@ interface Frame {
   curves: Record<string, number[]>;
   risk: Record<string, Bucket[]>;
 }
+
+// ---- position detail ------------------------------------------------------
+// [node maturity, pv01] for the two curve-node domains, [quote id, pv01] for
+// the market one. Market rows are per quoted instrument, so they carry the
+// instrument's name where the others carry a time.
+type Node = [number, number];
+type QuoteRow = [string, number];
+interface CurveLadder {
+  zero: Node[]; fwd: Node[]; mkt: QuoteRow[];
+  partial?: boolean;  // a node or a bump that did not build, dropped and flagged
+}
+interface Position {
+  id: string; book: string; kind: 'book' | 'draft'; type: string;
+  notional: number; maturity: number; strike: number;
+  npv: number; dv01: number; fair: number;
+  curves: string[]; note: string;
+}
+interface Detail {
+  frame: number; epoch: number;
+  ladderUs: number; mktUs: number; mktRebuilds: number;
+  positions: Position[];
+  tradeRisk: Record<string, Record<string, CurveLadder>>;
+}
+
 export interface Timeline {
   trades: number; cashflows: number; aged: number; threads: number;
   curveIds: string[]; frames: Frame[];
+  detail?: Detail;
 }
 
 const LABEL: Record<string, string> = {
@@ -185,6 +210,13 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const nextId = useRef(1);
   const [riskCurve, setRiskCurve] = useState('EUR_ESTR');
   const [riskMode, setRiskMode] = useState<'zero' | 'fwd'>('zero');
+  // The position panel. Market risk was measured against one published set, so
+  // all three domains are read off that same set and the panel says which.
+  const detail = tl.detail;
+  const [posId, setPosId] = useState<string | null>(
+    detail?.positions[0]?.id ?? null);
+  const [posDomain, setPosDomain] = useState<'mkt' | 'zero' | 'fwd'>('zero');
+  const [posCurve, setPosCurve] = useState<string | null>(null);
 
   const takeSnapshot = () => {
     if (running) return;
@@ -253,6 +285,49 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       pv01: riskMode === 'zero' ? z : w, t,
     }));
   }, [riskSource, riskCurve, riskMode]);
+
+  // ---- position detail ----------------------------------------------------
+  const position = detail?.positions.find(p => p.id === posId) ?? null;
+  const ladders = (position && detail?.tradeRisk[position.id]) || null;
+  const hasDetail = useMemo(
+    () => new Set((detail?.positions ?? []).map(p => p.id)), [detail]);
+
+  // Curves this position has something to show on, for the domain on screen.
+  // The market domain reaches further than the other two: a swap discounted on
+  // the meeting-dated curve has no ESTR node ladder and still has an ESTR
+  // market ladder, because bumping an ESTR quote re-solves EURIBOR, which it
+  // does project on. So the curve list is rebuilt per domain, off what the
+  // exported ladder actually holds.
+  const posCurves = useMemo(() => {
+    if (!ladders) return [];
+    return Object.keys(ladders).filter(c =>
+      posDomain === 'mkt' ? ladders[c].mkt.length : ladders[c][posDomain].length);
+  }, [ladders, posDomain]);
+  const curveShown = posCurve && posCurves.includes(posCurve) ? posCurve : posCurves[0];
+
+  const posChart = useMemo(() => {
+    if (!ladders || !curveShown) return [];
+    const l = ladders[curveShown];
+    if (posDomain === 'mkt')
+      return l.mkt.map(([qid, pv01]) => ({ label: qid.split('/')[0], full: qid, pv01 }));
+    return l[posDomain].filter(([t]) => t > 0).map(([t, pv01]) => ({
+      label: t < 1 ? Math.round(t * 12) + 'M' : Math.round(t) + 'Y',
+      full: t.toFixed(2) + 'Y', pv01,
+    }));
+  }, [ladders, curveShown, posDomain]);
+
+  // The ladder total on the curve shown, against the position's parallel DV01.
+  // A curve-node ladder over every node of every dependency curve sums to the
+  // parallel shift, so on a single-curve position these two agree; on a
+  // two-curve one each curve carries part of it.
+  const posTotal = posChart.reduce((s, r) => s + r.pv01, 0);
+  const posAllTotal = useMemo(() => {
+    if (!ladders) return 0;
+    return Object.values(ladders).reduce((s, l) => s + (
+      posDomain === 'mkt'
+        ? l.mkt.reduce((a, [, v]) => a + v, 0)
+        : l[posDomain].reduce((a, [, v]) => a + v, 0)), 0);
+  }, [ladders, posDomain]);
 
   const priced = useMemo(() => priceSwap(
     segsOf['EUR_EURIBOR6M'] ?? [], segsOf['EUR_ESTR'] ?? [],
@@ -424,20 +499,39 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
             <table className="w-full font-mono text-[10.5px]">
               <tbody>
-                {f.rows.slice(0, 6).map(r => (
-                  <tr key={r.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                    <td className="px-3 py-1" style={{ color: 'var(--text-dim)' }}>{r.id}</td>
-                    <td className="px-3 py-1" style={{ color: 'var(--text-dim)' }}>{r.book}</td>
-                    <td className="px-3 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>
-                      {r.fair ? r.fair.toFixed(3) + '%' : ''}
-                    </td>
-                    <td className="px-3 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{money(r.npv)}</td>
-                    <td className="px-3 py-1 text-right" style={{ color: 'var(--text-dim)' }}>{money(r.dv01)}</td>
-                  </tr>
-                ))}
+                {f.rows.slice(0, 8).map(r => {
+                  // Detail was exported for these eight and nothing else. A row
+                  // without it stays inert; a click there would land on an
+                  // empty panel.
+                  const has = hasDetail.has(r.id);
+                  const on = has && r.id === posId;
+                  return (
+                    <tr key={r.id}
+                      onClick={has ? () => setPosId(r.id) : undefined}
+                      style={{
+                        borderTop: '1px solid var(--border-subtle)',
+                        cursor: has ? 'pointer' : 'default',
+                        background: on ? '#5eaab518' : 'transparent',
+                        boxShadow: on ? 'inset 3px 0 0 #5eaab5' : 'none',
+                      }}>
+                      <td className="px-3 py-1" style={{ color: on ? '#5eaab5' : 'var(--text-dim)' }}>{r.id}</td>
+                      <td className="px-3 py-1" style={{ color: 'var(--text-dim)' }}>{r.book}</td>
+                      <td className="px-3 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>
+                        {r.fair ? r.fair.toFixed(3) + '%' : ''}
+                      </td>
+                      <td className="px-3 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{money(r.npv)}</td>
+                      <td className="px-3 py-1 text-right" style={{ color: 'var(--text-dim)' }}>{money(r.dv01)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          {detail && (
+            <p className="text-[11px] mt-2" style={{ color: 'var(--text-dim)' }}>
+              Pick a row to put its own ladder on screen, below.
+            </p>
+          )}
         </div>
       </div>
 
@@ -606,6 +700,181 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </>
         )}
       </div>
+
+      {/* ---- position detail ---- */}
+      {detail && position && (
+        <div className="mt-6">
+          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
+            Position detail
+          </div>
+
+          <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
+            <span style={{ color: 'var(--text-dim)' }}>Load a draft</span>
+            {detail.positions.filter(p => p.kind === 'draft').map(p => (
+              <button key={p.id} onClick={() => setPosId(p.id)} className="px-2 py-0.5 rounded"
+                style={chip(p.id === posId, '#d4a853')}>{p.id}</button>
+            ))}
+          </div>
+
+          <div className="rounded px-3 py-2 mb-2"
+            style={{ border: '1px solid #5eaab555', background: '#5eaab50a' }}>
+            <div className="flex gap-6 flex-wrap font-mono text-[11px]">
+              <span style={{ color: '#5eaab5' }}>{position.id}</span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                {position.type} &middot; {position.maturity.toFixed(1)}Y &middot;{' '}
+                {millions(position.notional)} &middot; {position.book}
+              </span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                struck at <span style={{ color: 'var(--text-primary)' }}>
+                  {position.type === 'FX forward'
+                    ? position.strike.toFixed(4) : position.strike.toFixed(3) + '%'}
+                </span>
+              </span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                fair <span style={{ color: 'var(--text-primary)' }}>
+                  {position.type === 'FX forward'
+                    ? position.fair.toFixed(4) : position.fair.toFixed(3) + '%'}
+                </span>
+              </span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                value <span style={{ color: position.npv >= 0 ? 'var(--accent-green)' : '#c86e6e' }}>
+                  {money(position.npv)}
+                </span>
+              </span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                value of 1bp <span style={{ color: 'var(--text-primary)' }}>{money(position.dv01)}</span>
+              </span>
+            </div>
+            <div className="text-[11px] mt-1.5" style={{ color: 'var(--text-secondary)' }}>
+              {position.note}
+            </div>
+            <div className="font-mono text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
+              as of set {detail.epoch}
+              {detail.epoch !== f.epoch && (
+                <span style={{ color: '#d4a853' }}>
+                  {' '}&middot; the feed has since moved to set {f.epoch}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
+            {([['mkt', 'market quotes'], ['zero', 'zero buckets'],
+               ['fwd', 'forward buckets']] as const).map(([m, l]) => (
+              <button key={m} onClick={() => setPosDomain(m)} className="px-2 py-0.5 rounded"
+                style={chip(posDomain === m, '#5eaab5')}>{l}</button>
+            ))}
+            <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
+            {posCurves.map(c => (
+              <button key={c} onClick={() => setPosCurve(c)} className="px-2 py-0.5 rounded"
+                style={chip(curveShown === c, COLOUR[c] ?? '#8b8a97')}>{LABEL[c] ?? c}</button>
+            ))}
+          </div>
+
+          {posChart.length === 0 ? (
+            <div className="rounded px-4 py-6 text-center"
+              style={{ border: '1px dashed var(--border-subtle)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                Nothing built on this domain for this position.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={posChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="label" stroke="#55546a" tick={{ fontSize: 9 }} interval={0} />
+                  <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={62}
+                    tickFormatter={(v: number) => Math.round(v).toLocaleString()} />
+                  <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
+                    labelFormatter={(_: any, p: any) => p?.[0]?.payload?.full ?? ''}
+                    formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']} />
+                  <ReferenceLine y={0} stroke="#55546a" />
+                  <Bar dataKey="pv01" fill={COLOUR[curveShown] ?? '#5b8fc9'} isAnimationActive={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          <div className="font-mono text-[10.5px] mt-2 flex gap-6 flex-wrap"
+            style={{ color: 'var(--text-dim)' }}>
+            <span>
+              {LABEL[curveShown] ?? curveShown} sums to{' '}
+              <span style={{ color: 'var(--text-primary)' }}>{money(posTotal)}</span>
+            </span>
+            <span>
+              every curve together{' '}
+              <span style={{ color: 'var(--text-primary)' }}>{money(posAllTotal)}</span>
+            </span>
+            <span>
+              parallel DV01 <span style={{ color: 'var(--text-primary)' }}>{money(position.dv01)}</span>
+            </span>
+            {ladders?.[curveShown]?.partial && (
+              <span style={{ color: '#c86e6e' }}>
+                part of this ladder did not build and is missing from it
+              </span>
+            )}
+          </div>
+
+          <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            {posDomain === 'mkt' ? (
+              <>
+                One bar per quoted instrument on {LABEL[curveShown] ?? curveShown}: the
+                quote is moved a basis point, the curve and everything built on it are
+                bootstrapped again, and this position is repriced against the result.
+                That is the number a trader hedges with, because it is denominated in
+                the instruments the hedge is actually executed in.
+              </>
+            ) : posDomain === 'zero' ? (
+              <>
+                One bar per node of {LABEL[curveShown] ?? curveShown}. The published
+                curve is lifted a basis point around one node, tapering away to its
+                neighbours, and this position is repriced. The curve is overlaid, with
+                no bootstrap anywhere in the loop, so the bump moves the node asked for
+                and leaves the rest of the curve where it was.
+              </>
+            ) : (
+              <>
+                One bar per interval of {LABEL[curveShown] ?? curveShown}. The forward
+                rate is lifted a basis point flat across the interval and this position
+                is repriced. Same overlay, a different shape of bump: it localises the
+                move to the period the cashflows actually accrue over.
+              </>
+            )}
+          </p>
+
+          <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The three cost very different amounts. Zero and forward buckets are an
+            overlay on a curve that already exists, so the {detail.positions.length}{' '}
+            positions here took {ms(detail.ladderUs)} between them. The market ladders
+            ran {detail.mktRebuilds.toLocaleString()} bootstraps and took{' '}
+            {ms(detail.mktUs)}. That is why the first two run on every published set
+            and the market one is a job you ask for, stamped with the set it was
+            measured against.
+          </p>
+
+          <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The curve list changes with the domain, and it should. A zero or forward
+            bump only ever reaches the curves a position prices off. A market bump
+            reaches through the bootstrap, so the list is wider: a swap projected on
+            EURIBOR carries an ESTR market ladder whether or not it discounts on ESTR,
+            because EURIBOR is solved with ESTR discounting. Where that comes out at
+            zero it is a measured zero across every quote on the curve, and it cost a
+            bootstrap each to establish.
+          </p>
+
+          {position.type === 'FX forward' && (
+            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              This position is where the three domains disagree most usefully. Toggle
+              between them: the zero ladder on the cross-currency curve is matched by an
+              equal and opposite one on SOFR, which is why the parallel DV01 above is
+              near zero. The market ladder puts the position on a single bar, the FX
+              swap at its own maturity. That is the hedge, and only the market domain
+              names it.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ---- pricer ---- */}
       <div className="mt-6">
