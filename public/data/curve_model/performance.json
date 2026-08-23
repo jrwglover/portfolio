@@ -25,26 +25,26 @@
    "name": "Market-quote PV01 ladders",
    "workload": "4 trades, 228 market quotes bumped 1bp, curve family re-bootstrapped per bump",
    "baseline": "Processor only, start to finish",
-   "note": "One full hedging ladder over a handful of trades. Almost all of the time is spent rebuilding the curve, once for every quoted price moved, and the remainder is valuing the trades. At this size there is barely any valuing to do, so the GPU bar measures the cost of using a GPU at all rather than anything about the device; the chart below runs the same job over a desk-sized book, where that changes. The rebuilding is not the solver: timing it apart shows an overnight curve spends 2259 ms assembling its rate helpers and the rest solving, against 4.8 ms for a EURIBOR curve, because thirty-one overnight swaps each lay out a daily fixing schedule to fifty years and none of that structure changes when a quote does. Holding the helpers and moving the quote instead took this ladder from 259 seconds to 21, with all 228 sensitivities unchanged to the digit.",
+   "note": "One full hedging ladder over a handful of trades. Almost all of the time is spent rebuilding the curve, once for every quoted price moved, and the remainder is valuing the trades. At this size there is barely any valuing to do, so the GPU bar measures the cost of using a GPU at all rather than anything about the device; the chart below runs the same job over a desk-sized book, where that changes. Both bars rebuild the same curves and differ only in what values the trades on them. The rebuilding is not the solver: timing it apart shows an overnight curve spends 2130 ms assembling its 31 rate helpers before the solver starts, against 73 ms for a EURIBOR curve, because each overnight swap lays out a daily fixing schedule to fifty years and none of that structure changes when a quote does. Holding those helpers and moving the quote value through them took the rebuild from 267 seconds to 48, and solving each distinct bump once for the whole book took it to 31, with all 228 sensitivities unchanged to the digit.",
    "lanes": [
     {
      "lane": "Processor only, start to finish",
-     "ms": 20658.0,
+     "ms": 31916,
      "kind": "cpu"
     },
     {
      "lane": "With the GPU, start to finish",
-     "ms": 48326.0,
+     "ms": 32141,
      "kind": "gpu"
     },
     {
      "lane": "of which rebuilding curves",
-     "ms": 48103,
+     "ms": 31912.0,
      "kind": "cpu"
     },
     {
      "lane": "of which revaluing the trades",
-     "ms": 223.0,
+     "ms": 229.0,
      "kind": "gpu"
     }
    ]
@@ -926,10 +926,10 @@
  },
  "marketLanes": {
   "bumps": 228,
-  "bootstrapMs": 48326.0,
-  "quantlibMs": 5.0,
-  "hostMs": 7.0,
-  "gpuMs": 223.0,
+  "bootstrapMs": 31912.0,
+  "quantlibMs": 4.0,
+  "hostMs": 5.0,
+  "gpuMs": 229.0,
   "threads": 16,
   "hostVsQlNotional": "3.346941e-17",
   "gpuVsQlNotional": "2.910383e-17",
