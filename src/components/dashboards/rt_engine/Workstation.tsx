@@ -134,9 +134,14 @@ const instOn = (g: Seg, t: number) => {
   return z + t * dP;                              // f = d(z t)/dt
 };
 
+// Coefficients carry decimals, the way the engine holds them: a 1.9% zero rate
+// is 0.019 here. Everything below works in that unit and converts once, at the
+// point of display. Treating them as percent divided every discount factor's
+// exponent by a hundred, which made the curve chart read 0.02% and the swap
+// pricer quote a fair rate of 0.019%.
 const zeroAt = (segs: Seg[], t: number) => zeroOn(owning(segs, t), t);
 const dfAt = (segs: Seg[], t: number) =>
-  t <= 0 ? 1 : Math.exp(-zeroAt(segs, t) * t / 100);
+  t <= 0 ? 1 : Math.exp(-zeroAt(segs, t) * t);
 
 function priceSwap(proj: Seg[], disc: Seg[], years: number,
                    fixedRate: number, notional: number) {
@@ -161,9 +166,9 @@ function priceSwap(proj: Seg[], disc: Seg[], years: number,
 function drawPoints(segs: Seg[], view: string, tMax: number) {
   const pts: { t: number; y: number }[] = [];
   const value = (t: number, g: Seg) => {
-    if (view === 'zero') return zeroOn(g, t);
-    if (view === 'inst') return instOn(g, t);
-    if (view === 'df') return Math.exp(-zeroOn(g, t) * t / 100);
+    if (view === 'zero') return zeroOn(g, t) * 100;
+    if (view === 'inst') return instOn(g, t) * 100;
+    if (view === 'df') return Math.exp(-zeroOn(g, t) * t);
     const d0 = dfAt(segs, t), d1 = dfAt(segs, t + 0.5);
     return d1 > 0 ? (d0 / d1 - 1) / 0.5 * 100 : 0;
   };
