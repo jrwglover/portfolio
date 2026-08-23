@@ -1077,11 +1077,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Still mostly the solver</div>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Spent rebuilding curves</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--text-primary)' }}>{b.bootstrapShareHost}%</div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      of the run is re-solving the curve. At four trades it was 99.998%, so
-                      the pricing is now worth accelerating and the solver still sets the floor
+                      of the run, against 99.998% at four trades. Most of that rebuilding is
+                      work being repeated rather than work that has to happen
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
@@ -1223,15 +1223,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   than using it, and that is the one the link decides.
                 </p>
                 <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  There is a fourth job, and it needs a different lever. A hedging ladder
-                  rebuilds the curve for every price it moves, and that rebuilding runs on
-                  the processor, so no amount of hardware touches it. Timing it apart shows
-                  where it actually goes: an overnight curve spends 2259 ms assembling its
-                  rate helpers before the solver starts, against 4.8 ms for a EURIBOR curve.
-                  Thirty-one overnight swaps each lay out a daily fixing schedule to fifty
-                  years, and none of that structure changes when a quote does. The ladder is
-                  repeating construction rather than solving, which makes it a code problem
-                  with a large win in it, not a hardware one.
+                  There is a fourth job, and it wanted a different lever entirely. A
+                  hedging ladder rebuilds the curve for every price it moves, and that
+                  rebuilding runs on the processor. Timing it apart showed where it went:
+                  an overnight curve spent 2259 ms assembling its rate helpers before the
+                  solver started, against 4.8 ms for a EURIBOR curve, because thirty-one
+                  overnight swaps each lay out a daily fixing schedule to fifty years and
+                  none of that structure changes when a quote does. Holding the helpers and
+                  moving the quote instead took this ladder from 259 seconds to 21, with every
+                  one of the 228 sensitivities identical to the digit. It was never a
+                  hardware question.
                 </p>
               </div>
             );
