@@ -20,7 +20,7 @@ const CASES: Case[] = [
     how: [
       'Build eight curves that depend on one another, in the order those dependencies require, from the ten kinds of instrument a rates desk actually quotes.',
       'Build the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond, the same construction the reference library uses.',
-      'Value the book on the graphics card from the same curve the processor built, rather than an approximation of it, then reprice every instrument both ways and compare.',
+      'Value the book on the GPU from the same curve the processor built, rather than an approximation of it, then reprice every instrument both ways and compare.',
     ],
     results: [
       'GPU marks match QuantLib to 10⁻¹⁴ on all eight curves',
