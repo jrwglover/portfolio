@@ -25,7 +25,7 @@
    "name": "Market-quote PV01 ladders",
    "workload": "4 trades, 228 market quotes bumped 1bp, curve family re-bootstrapped per bump",
    "baseline": "Processor only, start to finish",
-   "note": "One full hedging ladder over a handful of trades. Almost all of the time is rebuilding the curve, once for every quoted price moved, and the remainder is valuing the trades. At this size there is barely any valuing to do, so what the GPU bar measures is the cost of using a GPU at all rather than anything about the device. The chart below runs the same job over a desk-sized book, where that changes.",
+   "note": "One full hedging ladder over a handful of trades. Almost all of the time is spent rebuilding the curve, once for every quoted price moved, and the remainder is valuing the trades. At this size there is barely any valuing to do, so the GPU bar measures the cost of using a GPU at all rather than anything about the device; the chart below runs the same job over a desk-sized book, where that changes. The rebuilding is not the solver: timing it apart shows an overnight curve spends 2259 ms assembling its rate helpers and the rest solving, against 4.8 ms for a EURIBOR curve, because thirty-one overnight swaps each lay out a daily fixing schedule to fifty years and none of that structure changes when a quote does. Those bars are repeated work, not necessary work.",
    "lanes": [
     {
      "lane": "Processor only, start to finish",
@@ -926,10 +926,10 @@
  },
  "marketLanes": {
   "bumps": 228,
-  "bootstrapMs": 268196.0,
+  "bootstrapMs": 266889.0,
   "quantlibMs": 5.0,
-  "hostMs": 6.0,
-  "gpuMs": 220.0,
+  "hostMs": 0.0,
+  "gpuMs": 214.0,
   "threads": 16,
   "hostVsQlNotional": "3.346941e-17",
   "gpuVsQlNotional": "2.910383e-17",

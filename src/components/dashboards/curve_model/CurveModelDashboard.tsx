@@ -1223,11 +1223,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   than using it, and that is the one the link decides.
                 </p>
                 <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  There is a fourth job where none of this helps. A hedging ladder rebuilds
-                  the curve for every price it moves, and that rebuilding runs on the
-                  processor. Beside it, valuing the trades is a rounding error. It is shown
-                  further up without any acceleration, because that is the honest picture
-                  of it.
+                  There is a fourth job, and it needs a different lever. A hedging ladder
+                  rebuilds the curve for every price it moves, and that rebuilding runs on
+                  the processor, so no amount of hardware touches it. Timing it apart shows
+                  where it actually goes: an overnight curve spends 2259 ms assembling its
+                  rate helpers before the solver starts, against 4.8 ms for a EURIBOR curve.
+                  Thirty-one overnight swaps each lay out a daily fixing schedule to fifty
+                  years, and none of that structure changes when a quote does. The ladder is
+                  repeating construction rather than solving, which makes it a code problem
+                  with a large win in it, not a hardware one.
                 </p>
               </div>
             );
