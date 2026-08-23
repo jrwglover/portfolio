@@ -309,7 +309,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
-        subtitle="From raw quotes to bootstrapped curves: 8 curves, 10 instrument types, each solved in the domain its instruments pin"
+        subtitle="8 curves, 10 instrument types. Quotes in, solved curves out, each curve solved in the domain its own instruments pin"
         techBadges={['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap']}
       />
 
@@ -325,10 +325,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
         <div>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
             The prices each of the {inputs.curves.length} curves is built from. Every
-            one is both something the curve has to reprice correctly and a place risk
-            can sit, which is why the same list turns up again as the risk buckets on
-            the trade tab. IMM dates are the third Wednesday of the quarter, when
-            futures settle. MTG dates are when ECB decisions take effect.
+            quote does two jobs. The curve has to reprice it, and it is somewhere risk
+            can sit, which is why this same list comes back as the risk buckets on the
+            trade tab. IMM dates are the third Wednesday of the quarter, when futures
+            settle; MTG dates are when ECB decisions take effect.
           </p>
           <div className="flex gap-2 mb-5 flex-wrap">
             {inputs.curves.map(c => (
@@ -388,12 +388,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'curves' && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            The same curves shown four ways, because each answers a different
-            question. Forward rates are what a FRA or a future actually pays over its
-            period, so they line up with the quotes on the previous tab. Zero rates are
-            what you discount a cashflow at. Discount factors are what the solver
-            produces directly. The instantaneous forward is the most sensitive of the
-            four and shows up problems the other three hide.
+            The same curves, five ways. A forward rate is what a FRA or a future
+            actually pays over its period, so these line up with the quotes on the
+            previous tab. Discount a cashflow and you are using a zero rate. Discount
+            factors come straight out of the solver, untouched. The instantaneous
+            forward is the sensitive one: it shows up problems the others hide. The
+            last view is the EUR/USD forward, which is a ratio of two curves.
               </p>
 
           <div className="flex gap-2 mb-3 flex-wrap items-center"
@@ -450,34 +450,35 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           </ResponsiveContainer>
 
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Each curve is solved in the domain its instruments pin: the OIS strips on zero
-            rates, the meeting-dated and IMM curves as flat forwards between policy or IMM
-            dates joined to a min-curvature spline, and the EUR/USD curve as an implied zero
-            curve against USD collateral. Every curve uses the same interpolation: a
-            minimum-curvature cubic spline on LOG DISCOUNT FACTORS. Pick the instantaneous forward at 2.5Y with the ESTR
-            variants selected to see the step construction directly: flat between ECB
-            meetings out to 1.5Y, flat between IMM dates out to 2Y, then the spline. A
-            discrete forward averages over its own tenor, so a 3M rate smooths straight
-            across six-week meeting steps and hides them.
+            Each curve is solved in the domain its own instruments pin. The OIS strips go
+            on zero rates. The meeting-dated and IMM curves are built as flat forwards
+            between policy or IMM dates joined onto a min-curvature spline, and the EUR/USD
+            curve is an implied zero curve against USD collateral. The interpolation itself
+            never changes: a minimum-curvature cubic spline on LOG DISCOUNT FACTORS. To see
+            the step construction, pick the instantaneous forward at 2.5Y with the ESTR
+            variants selected. It is flat between ECB meetings out to 1.5Y, flat between IMM
+            dates out to 2Y, then the spline takes over. A discrete forward averages over its
+            own tenor, so a 3M rate smooths straight across six-week meeting steps and hides
+            them.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The domain matters more than the scheme. Interpolating zero rates makes the
-            ZERO curve smooth but leaves the forward free to ring: f = z + t z', so a
-            cubic's third derivative jumps at every knot and the jump is multiplied by t -
-            17 to 18 times amplification by the long end, worst where pillar spacing
-            changes. Interpolating log discount factors instead makes the forward the
-            spline's own first derivative, so it is a quadratic spline: continuous in
-            value and slope, with no maturity amplification. Same class, same pillars,
-            same quotes - only the interpolated quantity changes.
+            The domain matters more than the scheme. Interpolate zero rates and the ZERO
+            curve comes out smooth, but the forward is left free to ring: f = z + t z', so
+            a cubic's third derivative jumps at every knot and the jump is multiplied by t.
+            That is 17 to 18 times amplification by the long end, worst where pillar spacing
+            changes. Interpolate log discount factors and the forward becomes the spline's
+            own first derivative, a quadratic spline, continuous in value and slope with no
+            maturity amplification. Same pillars, same quotes. The only difference is which
+            quantity gets interpolated.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             EURIBOR is solved on discrete 6M forwards, one per instrument date. A FRA pins the
-            average of the instantaneous forward over its accrual window, never the forward at a
-            point, so the curve is built as the smoothest instantaneous forward satisfying every
-            one of those window averages: minimum curvature under interval-average constraints
-            rather than point constraints. That is the min-curvature objective under the
-            Hagan-West constraint, which is what makes the 6M forwards exact and the curve smooth
-            at the same time.
+            average of the instantaneous forward across its accrual window, never the forward at
+            a single point. So the curve is built as the smoothest instantaneous forward that
+            satisfies every one of those window averages: minimum curvature under
+            interval-average constraints. That is the min-curvature objective under the
+            Hagan-West constraint, and it is what makes the 6M forwards exact and the curve
+            smooth at the same time.
           </p>
         </div>
       )}
@@ -485,11 +486,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'sensis' && trades && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Where a trade&apos;s risk sits, and what you would trade to hedge it. Each
+            Where a trade&apos;s risk sits, and what you&apos;d trade to hedge it. Each
             bar is one quoted instrument moved by a basis point, the curve rebuilt, and
-            the trade valued again, so the height of the bar is what that instrument is
-            worth to this position. Risk concentrated at 5Y is hedged with the 5Y swap.
-            One example trade per curve; pick one to see how its risk is spread.
+            the trade valued again. The height of the bar is what that instrument is
+            worth to this position, so risk concentrated at 5Y is hedged with the 5Y
+            swap. One example trade per curve. Pick one.
               </p>
 
           <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
@@ -586,9 +587,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 );
               })()}
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Each bar is one quoted instrument moved by a basis point and the trade
-            valued again. This is the view a desk hedges from, because every bucket is
-            something that can actually be traded.
+            This is the view a desk hedges from. Every bucket is something you can go
+            out and trade.
               </p>
             </div>
           )}
@@ -623,9 +623,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </BarChart>
               </ResponsiveContainer>
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                The risk localizes: a 5Y forward&apos;s exposure sits at the 5Y basis
-                pillar and a 10Y forward&apos;s at 10Y, the sanity check that the
-                FX/xccy bootstrap keys each instrument to the right part of the curve.
+                The risk localizes. A 5Y forward&apos;s exposure sits at the 5Y basis
+                pillar, a 10Y forward&apos;s at 10Y. That is the check that the FX and
+                xccy bootstrap has keyed each instrument to the right part of the curve.
               </p>
             </div>
           )}
@@ -638,8 +638,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Every cashflow still to come, valued off the same curves as the risk
             above. The trade was struck at its fair rate, so the two legs very nearly
-            cancel and the small amount left over is rounding on the quoted rate rather
-            than a profit or a mispricing.
+            cancel. What is left over is rounding on the quoted rate, not a profit or a
+            mispricing.
               </p>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 font-mono text-xs">
@@ -710,9 +710,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               </div>
               {selTrade.id === 'aged-euribor' && (
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The first floating coupon accrues from before today: its rate is the
-                  historical EURIBOR 6M fixing, not a projected forward. That is the
-                  in-flight coupon that makes a seasoned trade different from a spot-start one.
+                  The first floating coupon accrues from before today. Its rate is the
+                  historical EURIBOR 6M fixing, not a projected forward. That in-flight
+                  coupon is what separates a seasoned trade from a spot-start one.
                 </p>
               )}
             </div>
@@ -726,16 +726,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
         <div>
           <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
             A desk wants its book valued and its risk refreshed while the market is
-            still moving, not overnight. This was an attempt to find where the time
-            actually goes, and whether the fix is better code or better hardware.
+            still moving. Overnight is no use. This was an attempt to find where the
+            time actually goes, and whether the fix is better code or better hardware.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Valuing a book means working out what every future cashflow is worth today,
             and each one needs a value read off a curve. Risk is the same book valued
-            again against every bucket of every curve, so it costs many times what one
-            valuation does. Everything below is from one machine, so treat it as a guide
-            rather than a general rule. The short version: nearly all of the gain came from
-            code, and the two quickest arrangements both store the curve up front.
+            again against every bucket of every curve, so it costs many times what a
+            single valuation does. All of this ran on one machine. Treat it as a guide.
+            Nearly all of the gain came from code, and the two quickest arrangements
+            both store the curve up front.
           </p>
 
           {perf.patterns.map(p => {
@@ -801,17 +801,17 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   Curve risk: how the cost grows with the size of the book
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  This shows how long a full risk run takes as the book gets bigger,
-                  measured four ways. The two processor lines differ only in how the trades
-                  are valued: one through QuantLib, the other over the same cashflows held
-                  as plain numbers. That gap is entirely code.
+                  How long a full risk run takes as the book gets bigger, measured five
+                  ways. The two processor lines differ only in how the trades are valued:
+                  one through QuantLib, the other over the same cashflows held as plain
+                  numbers. That gap is entirely code.
                 </p>
                 <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The GPU starts behind because it pays a fixed cost to receive each
-                  curve however small the book is, then overtakes once there are enough
-                  trades to spread that cost across. The line worth watching is the one
-                  for all {sc.threads ?? 16} cores, since the realistic alternative to
-                  buying a GPU is using the processors already in the machine.
+                  The GPU starts behind. It pays a fixed cost to receive each curve
+                  however small the book is, then overtakes once there are enough trades
+                  to spread that cost across. Watch the line for all {sc.threads ?? 16}{' '}
+                  cores. The realistic alternative to buying a GPU is using the
+                  processors already sitting in the machine.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
@@ -890,9 +890,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
                       over the same flattened pricer on all {sc.threads ?? 16} cores. The
-                      single-core figure is {sc.topGpuVsFlat ?? '?'}&times;. A desk choosing
+                      single-core figure is {sc.topGpuVsFlat ?? '?'}&times;. A desk deciding
                       whether to buy a GPU already owns the cores, so this is the comparison
-                      it faces.
+                      it actually faces.
                     </div>
                   </div>
                 </div>
@@ -914,15 +914,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   Valuing the whole book: how the cost grows with its size
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  This shows how long it takes to value the whole book once, as the book
-                  gets bigger. Most of the gain happens before the GPU is involved at all:
-                  holding the cashflows as plain numbers rather than library objects
-                  accounts for {ns.topFlatVsQuantLib ?? 0} times on a single core, measured
-                  at {(ns.flatVsQuantLibAtTrades ?? 0).toLocaleString()} trades, which is
-                  the largest size both lanes ran. QuantLib is capped above that. It also
-                  values one swap at a time here, which is how the library is normally used,
-                  so it starts from a different place than the QuantLib line in the chart
-                  above and the two are not interchangeable.
+                  How long it takes to value the whole book once, as the book gets bigger.
+                  Most of the gain happens before the GPU is involved at all. Holding the
+                  cashflows as plain numbers rather than library objects accounts for{' '}
+                  {ns.topFlatVsQuantLib ?? 0} times on a single core, measured at{' '}
+                  {(ns.flatVsQuantLibAtTrades ?? 0).toLocaleString()} trades, the largest
+                  size both lanes ran. QuantLib is capped above that. It also values one
+                  swap at a time here, which is how the library is normally used, so it
+                  starts from a different place than the QuantLib line in the chart above.
+                  The two are not interchangeable.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
@@ -1102,10 +1102,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </h3>
                 <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   Every lane reprices curves that were solved once, so a difference between them
-                  is the pricer and cannot be the curve. That matters: two lanes that each built
-                  their own bumped curve disagreed by 285 on a single bucket while their totals
-                  matched to 0.05%, and the trade it showed up on was the one whose cashflows
-                  fall between the curve&apos;s pillars.
+                  is the pricer and cannot be the curve. That matters. Two lanes that each
+                  built their own bumped curve disagreed by 285 on a single bucket while their
+                  totals matched to 0.05%. The trade it showed up on was the one whose
+                  cashflows fall between the curve&apos;s pillars.
                 </p>
                 <div className="grid md:grid-cols-2 gap-3">
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
@@ -1155,9 +1155,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                 Every method above is checked against QuantLib for each trade, at every
                 book size. A quicker method is only worth reporting if it gives the same
-                answer, and a wrong one usually returns numbers that look perfectly
-                reasonable. Differences are quoted against notional rather than NPV, because a
-                swap struck near par has an NPV close to zero and dividing by it makes a
+                answer. A wrong one usually returns numbers that look perfectly reasonable.
+                Differences are quoted against notional rather than NPV, because a swap
+                struck near par has an NPV close to zero and dividing by it makes a
                 negligible difference look large.
               </p>
               <div className="grid md:grid-cols-3 gap-3">
@@ -1197,10 +1197,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   What it adds up to
                 </h3>
                 <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  Three things were worth doing, in this order. The first two are
+                  What was worth doing, in the order it was done. The first two are
                   changes to the code and cost nothing but the work. The third is a
-                  purchase, and whether it repays depends on the job and on the
-                  machine it goes into.
+                  purchase, and whether it repays depends on the job and on the machine
+                  it goes into.
                 </p>
                 <div className="grid md:grid-cols-3 gap-3">
                   {cell('1. Leave the object model',
@@ -1221,10 +1221,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </div>
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   Whether the GPU earns its place comes down to how much work each transfer
-                  buys. A risk run sends the book across once and values it against{' '}
+                  buys. A risk run sends the book across once and then values it against{' '}
                   {risk.buckets} versions of the curve. Valuing the book once reads each
-                  cashflow a single time, so most of that job is spent moving data rather
-                  than using it, and that is the one the link decides.
+                  cashflow a single time. Most of that job is spent moving data rather than
+                  using it, which is why the link decides that one.
                 </p>
                 <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   There is a fourth job, and it wanted a different lever entirely. A

@@ -85,11 +85,11 @@ export default function ArchitecturePanel() {
   return (
     <div>
       <p className="text-sm mb-6 max-w-3xl" style={{ color: SEC }}>
-        The diagrams below show how the engine is put together: what goes in, what it
-        builds, and where each piece of the work is done. All eight curves are built the
-        same way, and anything priced off them is worked out twice, once through QuantLib
-        and once on the GPU. Every run subtracts one answer from the other. A difference
-        bigger than rounding fails the run, and it says which two numbers disagreed.
+        How the engine is put together, from the quotes going in to where each piece of
+        the work is done. All eight curves are built the same way. Anything priced off
+        them is worked out twice, once through QuantLib and once on the GPU, and every
+        run subtracts one answer from the other. A difference bigger than rounding fails
+        the run and names the two numbers that disagreed.
       </p>
 
       <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
@@ -97,7 +97,7 @@ export default function ArchitecturePanel() {
       </p>
       <Figure src="/diagrams/c4-context.svg" source={ctxSrc}
               alt="C4 system context: a quant reads marks and risk from the portfolio site; the rates engine takes instrument-typed quotes from market data, builds curves using QuantLib, and publishes frozen JSON to the site."
-              caption="Who uses it and what it touches. Following C4 notation: every element carries a name, its [type] and a description, and every relationship states intent and the technology it uses." />
+              caption="Who uses it and what it touches. C4 notation throughout, so every element carries a name, its [type] and a description, and every relationship states what it is for and what it runs on." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 Level 2 · Containers
@@ -111,36 +111,34 @@ export default function ArchitecturePanel() {
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
               alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 227 instruments."
-              caption="Sequence. The two-stage branch, the simultaneous pillar solve, and the fact that the coefficient upload is an identity rather than a fit are the three things that determine whether the numbers reconcile." />
+              caption="Sequence. Watch the two-stage branch and the simultaneous pillar solve. The coefficient upload is an identity rather than a fit, which is what lets the two paths reconcile at all." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         How one curve gets built
       </p>
       <Figure src="/diagrams/construction.svg" source={buildSrc}
               alt="Flowchart of curve construction: each quote maps to a rate helper by instrument type; curves flagged short_end_step take a two-stage flat-forward-then-spline path composited at tCut, all others go straight to a log-cubic global bootstrap."
-              caption="Construction. Every branch here exists because of a measured failure: the instrument-typed helper mapping, the two-stage build for policy-dated curves, and the log-discount-factor domain." />
+              caption="Construction. No branch here is decoration. Each one went in after a measured failure: the helper mapping keyed on instrument type, the two-stage build for policy-dated curves, the log-discount-factor domain." />
 
       <div className="flex flex-col items-center max-w-3xl">
         <Layer kicker="1" title="Prices come in">
           The prices each curve is built from: deposits, OIS, futures, FRAs, swaps,
           FX swap points and cross currency basis, one file per valuation date. Each
-          quote states what kind of instrument it is rather than leaving the builder
-          to work it out from the tenor, which is where this usually goes wrong.
-          The prices are synthetic, generated from a single arbitrage free forward
-          path so the set is consistent with itself, and the file says so rather
-          than leaving it to be assumed.
+          quote states what kind of instrument it is. The builder never has to work
+          that out from the tenor, which is where this usually goes wrong. The prices
+          are synthetic, generated from a single arbitrage free forward path so the
+          set is consistent with itself. The file says so on its face.
         </Layer>
         <Arrow />
 
         <Layer kicker="2" title="Curves are solved from them">
                     Each curve is solved from the instruments that pin it down, and a smooth
           shape is fitted between them. What that shape is fitted to matters more than
-          which shape is used. Fitting it to discount factors keeps the forward rates
-          smooth, because the forward is then the slope of the thing being fitted.
-          Fitting it to zero rates instead leaves the forward depending on how fast the
-          zero curve is bending, and that error grows with maturity: measured here it is
-          seventeen to eighteen times worse at the long end. It is the kind of choice
-          that is invisible until someone asks why the risk moved between buckets.
+          which shape is used. Fit it to discount factors and the forward rates come out
+          smooth, because the forward is then the slope of the thing being fitted. Fit it
+          to zero rates and the forward instead depends on how fast the zero curve is
+          bending, an error that grows with maturity. Measured here, seventeen to eighteen
+          times worse at the long end.
           <br /><br />
                     The curve is also solved as a whole rather than one point at a time. Because
           the fitted shape is smooth across the join, moving any one point changes the
@@ -153,18 +151,17 @@ export default function ArchitecturePanel() {
                   alt="Curve dependency graph: six curves build independently; EURIBOR 6M is discounted on ESTR; the EURUSD cross-currency curve takes SOFR as its USD leg; and the EUR/USD outright forwards are derived in the browser from that curve and SOFR." />
           <div className="mt-2">
                         Two of the curves are built in two parts. Out to the last policy or futures
-            date the rate holds flat from one date to the next, then a smooth curve takes
-            over beyond, joined so the two agree at the handover. A staircase is the right
-            answer at the short end, because an overnight rate really does hold still
-            between central bank meetings and then step. Smoothing through that would be
-            describing something that does not happen.
+            date the rate holds flat from one date to the next; beyond it a smooth curve
+            takes over, joined so the two agree at the handover. A staircase is the right
+            answer at the short end. An overnight rate really does hold still between
+            central bank meetings and then step.
             <br /><br />
             Two of the curves cannot be built until others exist. EURIBOR projects off
             its own prices but discounts on ESTR, so ESTR has to come first. The EUR
-            under USD collateral curve is not built from EUR prices at all: it is implied
-            from FX swap points and cross currency basis against the USD curve, so SOFR
-            has to come first. Build them in the wrong order and it either fails outright
-            or, worse, quietly builds on a curve that is out of date.
+            under USD collateral curve is not built from EUR prices at all. It is implied
+            from FX swap points and cross currency basis against the USD curve, which puts
+            SOFR ahead of it in the queue. Get the order wrong and the build either fails
+            outright or, worse, quietly runs on a curve that is out of date.
             <br /><br />
                         EURIBOR is built from the six month fixing and a run of overlapping forward
             rate agreements, which is how a desk quotes it: each one shares five of its

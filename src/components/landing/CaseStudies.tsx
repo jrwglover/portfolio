@@ -16,11 +16,11 @@ const CASES: Case[] = [
     n: '01',
     title: 'Multi-Curve Pricing & Risk Engine',
     target:
-      'Value and risk a rates book quickly enough to use during the day, without giving up any accuracy to get there. A number the desk cannot reconcile against the reference is of no use to them, however fast it arrives.',
+      'Value and risk a rates book fast enough to use during the day, at full accuracy. The desk has to be able to tie every GPU number back to the reference library.',
     how: [
-      'Build eight curves that depend on one another, in the order those dependencies require, from the ten kinds of instrument a rates desk actually quotes.',
-      'Build the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond, the same construction the reference library uses.',
-      'Value the book on the GPU from the same curve the processor built, rather than an approximation of it, then reprice every instrument both ways and compare.',
+      'Build eight interdependent curves in the order those dependencies require, from the ten kinds of instrument a rates desk actually quotes.',
+      'Hold the short end as step-forwards between central bank meeting dates, joined to a smooth cubic spline beyond. Same construction the reference library uses.',
+      'Value the book on the GPU from the curve the processor built, not an approximation of it. Then reprice every instrument both ways and compare.',
     ],
     results: [
       'GPU marks match QuantLib to 10⁻¹⁴ on all eight curves',
@@ -36,11 +36,11 @@ const CASES: Case[] = [
     n: '02',
     title: 'Front-to-Back Trade Feed',
     target:
-      'Cut the end-of-day trade feed from trade capture to the risk platform, where 25,000 rates and inflation trades shipped as a 700MB to 1GB extract taking 90 minutes, down to minutes, with zero trades lost or altered.',
+      'The end-of-day feed from trade capture to the risk platform shipped 25,000 rates and inflation trades as a 700MB to 1GB extract. It took 90 minutes. Get it down to minutes, with zero trades lost or altered.',
     how: [
-      'Diagnose the real cost: the extract serializes each trade once per cashflow period, so 25,000 structured trades become a million rows crawling over a 0.19 MB/s link.',
+      'Find where the time goes. The extract serializes each trade once per cashflow period, so 25,000 structured trades become a million rows crawling over a 0.19 MB/s link.',
       'Re-normalize in flight with Spark: schedules, exercise dates and inflation fixings nested back inside each trade, written as compressed Parquet, 15.3× smaller.',
-      'Gate every trade for pricing readiness (strikes, settlement method, base fixings, LPI collars), load the risk database over eight parallel connections, and reconcile counts, notionals and id-hashes at every hop.',
+      'Gate every trade for pricing readiness: strikes, settlement method, base fixings, LPI collars. Load the risk database over eight parallel connections and reconcile counts, notionals and id-hashes at every hop.',
     ],
     results: [
       'End-of-day feed: 89 minutes to 3.6 minutes, measured: 25× faster',
@@ -56,11 +56,11 @@ const CASES: Case[] = [
     n: '03',
     title: 'Real-time curve engine',
     target:
-      'Rebuild curves as prices arrive rather than on a schedule, without rebuilding more than the change actually requires, and without a trader ever seeing a screen where half the numbers are from one moment and half from another.',
+      'Rebuild curves when prices arrive, not on a timer, and rebuild no more than the change requires. No trader should ever see a screen where half the numbers are from one moment and half from another.',
     how: [
       'Derive the dependency graph from the curve registry the batch engine already uses, so the two cannot disagree about which curve is built on which.',
-      'On a price change, work out the curves that genuinely need rebuilding and do them in dependency order, each one at most once even when several of its inputs moved at once.',
-      'Publish each set of curves as one immutable version, so anything reading it, a valuation, a risk ladder, a hypothetical trade, sees one coherent moment.',
+      'On a price change, work out which curves genuinely need rebuilding and do them in dependency order. Each one at most once, even when several of its inputs moved together.',
+      'Publish each set of curves as one immutable version, so whatever reads it gets a single coherent moment.',
     ],
     results: [
       'A SONIA change rebuilds SONIA alone; an ESTR change carries into EURIBOR and the cross currency curve',
@@ -79,10 +79,10 @@ export default function CaseStudies() {
     <section id="projects" className="max-w-[1320px] mx-auto px-8 py-16">
       <div className="mb-10">
         <p className="font-mono text-xs tracking-widest uppercase mb-3" style={{ color: 'var(--accent-warm)' }}>
-          Case Studies
+          Projects
         </p>
         <h2 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Three institutional problems, solved and measured
+          The problems, and the numbers that came out
         </h2>
       </div>
 
