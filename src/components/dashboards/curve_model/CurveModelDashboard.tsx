@@ -734,9 +734,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             and each one needs a value read off a curve. Risk is the same book valued
             again against every bucket of every curve, so it costs many times what one
             valuation does. Everything below is from one machine, so treat it as a guide
-            rather than a general rule. The short version is that nearly all of the gain
-            was code rather than hardware, and the two quickest arrangements both store
-            the curve up front instead of recalculating it.
+            rather than a general rule. The short version: nearly all of the gain came from
+            code, and the two quickest arrangements both store the curve up front.
           </p>
 
           {perf.patterns.map(p => {
@@ -805,7 +804,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   This shows how long a full risk run takes as the book gets bigger,
                   measured four ways. The two processor lines differ only in how the trades
                   are valued: one through QuantLib, the other over the same cashflows held
-                  as plain numbers. That difference is code, not hardware.
+                  as plain numbers. That gap is entirely code.
                 </p>
                 <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   The GPU starts behind because it pays a fixed cost to receive each
@@ -1073,15 +1072,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>{b.gpuVsHost}&times;</div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
                       the book crosses once and all {b.bumps} curves read the same copy, so the
-                      transfer is {fmtMs(b.gpuH2dMs)} of {fmtMs(b.gpuMs)} instead of the whole story
+                      transfer is {fmtMs(b.gpuH2dMs)} of {fmtMs(b.gpuMs)}
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Spent rebuilding curves</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--text-primary)' }}>{b.bootstrapShareHost}%</div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      of the run, against 99.998% at four trades. Most of that rebuilding is
-                      work being repeated rather than work that has to happen
+                      of the run, against 99.998% at four trades. Most of that rebuilding
+                      turned out to be repetition
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
