@@ -815,7 +815,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 <li>Zero and forward risk reruns on every price update, so the ladder
                   on screen is current.</li>
                 <li>Market risk rebuilds the curve for each quoted instrument. It takes
-                  about half a minute, so you ask for it.</li>
+                  about half a minute, so it is computed on request.</li>
                 <li>While it runs, the book value and the zero and forward ladders carry
                   on updating.</li>
                 <li>Pausing saves a snapshot: the time, the market data as it stood, and
@@ -839,8 +839,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
 
         <p className="text-[11px] mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
           Zero and forward risk reruns on every price update. Market risk rebuilds the
-          curve for each quoted instrument, which takes about half a minute, so you ask
-          for it. Its buckets are instruments you can deal; curve nodes are not.
+          curve for each quoted instrument, which takes about half a minute, so it is
+          computed on request. Its buckets are instruments you can deal; curve nodes are
+          not.
         </p>
 
         {mktPending && pendingFrame ? (
