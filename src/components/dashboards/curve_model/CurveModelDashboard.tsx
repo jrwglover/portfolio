@@ -450,6 +450,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           </ResponsiveContainer>
 
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            * EURIBOR 6M turns up slightly in the instantaneous forward between 13 and 15
+            months. Its quotes are monthly out to 13M and bi-monthly after that, and the
+            forward is the derivative of a cubic fitted through log discount factors, so it
+            shows whatever the spline does where the pillar spacing changes. It comes to
+            about 1.3 basis points. A monotone convex scheme would smooth it away by
+            forcing the shape, which is a different kind of wrong, so it is left where you
+            can see it.
+          </p>
+          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             Each curve is solved in the domain its own instruments pin. The OIS strips go
             on zero rates. The meeting-dated and IMM curves are built as flat forwards
             between policy or IMM dates joined onto a min-curvature spline, and the EUR/USD

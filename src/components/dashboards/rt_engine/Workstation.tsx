@@ -593,6 +593,14 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           meeting-dated curve to see the policy steps: flat between ECB dates, then a
           spline. A discrete forward averages over its own window and smooths them away.
         </p>
+        <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          * EURIBOR 6M turns up slightly in the instantaneous forward between 13 and 15
+          months. Its quotes are monthly out to 13M and bi-monthly after that, and the
+          forward is the derivative of a cubic fitted through log discount factors, so it
+          shows whatever the spline does where the pillar spacing changes. It comes to
+          about 1.3 basis points. A monotone convex scheme would smooth it away by forcing
+          the shape, which is a different kind of wrong, so it is left where you can see it.
+        </p>
       </div>
 
       {/* ---- risk ---- */}
