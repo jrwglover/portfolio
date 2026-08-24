@@ -71,18 +71,24 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             The desk
           </h3>
           <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            This is a recording of the engine running, played back. The book is{' '}
-            {tl.trades.toLocaleString()} trades on eight curves. When a price comes in, the
-            curves that depend on it get rebuilt and the book gets repriced. Watch which
-            curves light up and which ones don&apos;t.
+            This is a recording of the engine running, played back. The book is loaded
+            from the trade store at the open and comes to{' '}
+            {tl.trades.toLocaleString()} trades across eight curves. When a price
+            arrives, the curves built on it are solved again and the book is repriced.
+          </p>
+          <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            Business is done during the session as well. A ticket sits pending until its
+            confirmation comes back, and only then does it join the book; the blotter
+            carries it throughout, and a toggle there puts the pending ones into the
+            totals and the ladders.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The timings above come from the engine itself. Rebuilding the curves a price
+            The timings on this page came off the engine. Solving the curves a price
             touched takes up to a third of a second, and repricing all{' '}
-            {tl.trades.toLocaleString()} trades takes about a tenth of one, so both of
-            those can run every time a new set is published. A full risk ladder takes
-            about three seconds. That is why you have to ask for it, and why it stays
-            labelled with the set it was run against.
+            {tl.trades.toLocaleString()} trades takes about a tenth of one, so both run
+            on every set that is published. A full risk ladder takes about three
+            seconds, which is why you have to ask for it and why it stays labelled with
+            the set it was run against.
           </p>
           <Workstation tl={tl} />
         </div>
