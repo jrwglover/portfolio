@@ -13,6 +13,9 @@ interface BookAgg {
 }
 // [maturity, zero-bucket pv01, forward-bucket pv01]
 type Bucket = [number, number, number];
+// [quote id, pv01]. A market bucket is a quoted instrument, so it carries the
+// instrument's name where a curve-node bucket carries a time.
+type QuoteRow = [string, number];
 
 interface Frame {
   label: string; note: string; ticks: string[];
@@ -27,6 +30,14 @@ interface Frame {
   // interval. The curve itself, not a sampling of it.
   curves: Record<string, number[]>;
   risk: Record<string, Bucket[]>;
+  // Book-level market-quote PV01 for this set, one row per quoted instrument.
+  // null where a curve on the set was being served stale, in which case
+  // mktStale names it: the published curve is then the last good solve rather
+  // than the solve of the quotes in the store, and bumping one of those quotes
+  // measures the gap between two market states instead of a basis point.
+  mkt: Record<string, QuoteRow[]> | null;
+  mktStale?: string;
+  mktUs: number; mktRebuilds: number; mktFailed: number;
 }
 
 // ---- position detail ------------------------------------------------------
@@ -34,7 +45,6 @@ interface Frame {
 // the market one. Market rows are per quoted instrument, so they carry the
 // instrument's name where the others carry a time.
 type Node = [number, number];
-type QuoteRow = [string, number];
 interface CurveLadder {
   zero: Node[]; fwd: Node[]; mkt: QuoteRow[];
   partial?: boolean;  // a node or a bump that did not build, dropped and flagged
@@ -90,6 +100,27 @@ const ms = (us: number) =>
   us >= 1e6 ? (us / 1e6).toFixed(2) + ' s'
     : us >= 1e3 ? Math.round(us / 1e3) + ' ms'
       : us + ' µs';
+
+/* Axis labels for ladders sitting three across. A thousands-separated number
+   needs about 64px of gutter, which is a sixth of a panel at desktop width, so
+   the ladders get read at 2.6k instead. Same treatment as the curve model. */
+const fmtAxis = (v: number) => {
+  const a = Math.abs(v);
+  if (a >= 1000) return `${(v / 1000).toFixed(a >= 10000 ? 0 : 1)}k`;
+  return String(+v.toFixed(a > 0 && a < 10 ? 1 : 0));
+};
+const chartGrid = '#1a1a28';
+const chartAxis = '#55546a';
+const tt = {
+  contentStyle: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 6, fontSize: 12 },
+  labelStyle: { color: '#8b8a97' },
+};
+// The market ladder's own colour, the same one the curve model's ladder panels
+// are headed in.
+const MKT = '#b07fc9';
+// A frame slower than this has its replayed wait shortened, and the panel says
+// so rather than letting the wait stand in for the measurement.
+const MKT_CAP_MS = 12000;
 
 // ---------------------------------------------------------------------------
 // Reading a curve
@@ -215,6 +246,15 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const nextId = useRef(1);
   const [riskCurve, setRiskCurve] = useState('EUR_ESTR');
   const [riskMode, setRiskMode] = useState<'zero' | 'fwd'>('zero');
+  // Market-quote risk is a second, slower job against the same set. The numbers
+  // were measured by the engine and are held in the file; the wait here is
+  // replayed from the duration the engine recorded, and the panel says when
+  // that wait has been shortened.
+  const [mktRun, setMktRun] = useState<{ id: number; frame: number; at: string } | null>(null);
+  const [mktPending, setMktPending] = useState<{ frame: number; wait: number } | null>(null);
+  const [mktElapsed, setMktElapsed] = useState(0);
+  const mktId = useRef(1);
+  const mktTimers = useRef<number[]>([]);
   // The position panel. Market risk was measured against one published set, so
   // all three domains are read off that same set and the panel says which.
   const detail = tl.detail;
@@ -240,6 +280,32 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       setRunning(false);
     }, 900);
   };
+
+  const runMarketRisk = () => {
+    if (mktPending) return;
+    const frame = i;
+    const fr = tl.frames[frame];
+    if (!fr.mkt) return;
+    setPlaying(false);
+    const wait = Math.min(fr.mktUs / 1000, MKT_CAP_MS);
+    setMktPending({ frame, wait });
+    setMktElapsed(0);
+    const t0 = Date.now();
+    const tick = window.setInterval(() => setMktElapsed(Date.now() - t0), 100);
+    const done = window.setTimeout(() => {
+      window.clearInterval(tick);
+      setMktPending(null);
+      setMktRun({
+        id: mktId.current++, frame,
+        at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      });
+    }, wait);
+    mktTimers.current = [tick, done];
+  };
+
+  useEffect(() => () => {
+    for (const t of mktTimers.current) { window.clearTimeout(t); window.clearInterval(t); }
+  }, []);
 
   const f = tl.frames[i];
   const prev = i > 0 ? tl.frames[i - 1] : null;
@@ -290,6 +356,38 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       pv01: riskMode === 'zero' ? z : w, t,
     }));
   }, [riskSource, riskCurve, riskMode]);
+
+  // ---- market-quote ladder ------------------------------------------------
+  // One panel per curve, each on its own axis. The bars differ by two orders of
+  // magnitude between the EURIBOR curve and the cross-currency one, and a
+  // shared axis would leave most of them at zero height.
+  const mktSource = mktRun ? tl.frames[mktRun.frame] : null;
+  const mktPanels = useMemo(() => {
+    const m = mktSource?.mkt;
+    if (!m) return [];
+    return tl.curveIds.filter(c => (m[c] ?? []).length).map(c => ({
+      key: c,
+      label: LABEL[c] ?? c,
+      rows: m[c].length,
+      total: m[c].reduce((s, [, v]) => s + v, 0),
+      data: m[c].map(([qid, pv01]) => ({ tenor: qid.split('/')[0], instrument: qid, pv01 })),
+    }));
+  }, [mktSource, tl.curveIds]);
+  const mktTotal = mktPanels.reduce((s, p) => s + p.total, 0);
+  const mktQuotes = mktPanels.reduce((s, p) => s + p.rows, 0);
+  // The forward-bucket ladder over the same set, summed. A basis point on every
+  // forward interval and a basis point on every quote are two routes to the
+  // same move, so the two totals are worth putting side by side.
+  const fwdTotal = useMemo(() => {
+    if (!mktSource) return 0;
+    return Object.values(mktSource.risk ?? {}).reduce(
+      (s, rows) => s + rows.reduce((a, b) => a + b[2], 0), 0);
+  }, [mktSource]);
+  const mktCapped = (mktSource?.mktUs ?? 0) / 1000 > MKT_CAP_MS;
+  const pendingFrame = mktPending ? tl.frames[mktPending.frame] : null;
+  // What a market run costs on this set, for the passage above. The set on
+  // screen where it has one, otherwise the nearest set that does.
+  const mktCost = f.mktUs || tl.frames.find(fr => fr.mktUs > 0)?.mktUs || 0;
 
   // ---- position detail ----------------------------------------------------
   const position = detail?.positions.find(p => p.id === posId) ?? null;
@@ -362,6 +460,13 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         <button onClick={takeSnapshot} disabled={running}
           className="px-3 py-1.5 rounded font-mono text-[11px]" style={chip(running, '#5eaab5')}>
           {running ? 'running risk…' : 'Run risk on this set'}
+        </button>
+        <button onClick={runMarketRisk} disabled={!!mktPending || !f.mkt}
+          title={f.mkt ? undefined
+            : (LABEL[f.mktStale ?? ''] ?? f.mktStale) + ' is stale on this set'}
+          className="px-3 py-1.5 rounded font-mono text-[11px]"
+          style={{ ...chip(!!mktPending, MKT), opacity: f.mkt ? 1 : 0.45 }}>
+          {mktPending ? 'running market risk…' : 'Run market risk'}
         </button>
         <div className="flex gap-1 ml-1">
           {tl.frames.map((_, k) => (
@@ -703,18 +808,186 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               rebuilding it, so a bump moves the bucket asked for and leaves the rest of
               the curve alone.
             </p>
-            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              A bucket only reprices the trades that read the curve it sits on, so a SONIA
-              bucket touches the GBP book and nothing else. Across all {riskSource.buckets}{' '}
-              buckets and both domains that comes to roughly 15 million trade valuations,
-              near 130 nanoseconds a cashflow. Charging every bucket for all{' '}
-              {tl.trades.toLocaleString()} trades would put the figure five times higher
-              than the work actually done.
-            </p>
-            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            <div className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              <div className="mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                What the run does
+              </div>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>
+                  A run recomputes the whole ladder against one published set. Nothing is
+                  carried over from the run before it.
+                </li>
+                <li>Curve rebuilds are incremental. The risk is not.</li>
+                <li>
+                  A bucket reprices only the trades that read its curve. A SONIA bucket
+                  touches the GBP book and leaves about 138,000 trades alone.
+                </li>
+                <li>
+                  That comes to about 14.7 million trade valuations across the ladder,
+                  near 130 nanoseconds a cashflow. The count is derived from the book&apos;s
+                  instrument mix, so it is approximate. Charging every bucket for all{' '}
+                  {tl.trades.toLocaleString()} trades would put it 4.8 times higher.
+                </li>
+                <li>
+                  The bump is a discount-factor overlay on the published curve, so no
+                  solver runs.
+                </li>
+                <li>
+                  Cashflows are flat arrays of doubles, dates are integer day offsets, and
+                  a curve read is a lookup in a daily table that hits 99.95% of the time.
+                  The work is split over {riskSource.threads} threads and added up once at
+                  the end.
+                </li>
+              </ul>
+            </div>
+            <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
               This page is a recording. The engine ran a ladder against every published
               set in the session, and the timings shown are its own. The page serves them
               back; it is not doing the arithmetic in your browser.
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* ---- market-quote risk ---- */}
+      <div className="mt-6">
+        <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
+          Market risk
+        </div>
+
+        <p className="text-[11px] mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          Zero and forward buckets are an overlay on a curve that has already been
+          solved. They take {ms(f.riskUs)} and are run against every published set.
+          Market risk solves the curve again for each quoted instrument and takes{' '}
+          {ms(mktCost)}, so it is asked for. Its buckets are instruments a desk can
+          deal, which curve nodes are not.
+        </p>
+
+        {mktPending && pendingFrame ? (
+          <div className="rounded px-3 py-2.5" style={{ border: `1px solid ${MKT}55`, background: `${MKT}0a` }}>
+            <div className="font-mono text-[11px]" style={{ color: MKT }}>
+              set {pendingFrame.epoch} &middot; bumping{' '}
+              {Object.values(pendingFrame.mkt ?? {}).reduce((s, r) => s + r.length, 0)}{' '}
+              quoted instruments &middot; {pendingFrame.mktRebuilds} curve solves
+            </div>
+            <div className="mt-2 rounded-sm overflow-hidden" style={{ height: 4, background: 'var(--border-subtle)' }}>
+              <div style={{
+                height: '100%', background: MKT,
+                width: Math.min(100, (mktElapsed / mktPending.wait) * 100) + '%',
+                transition: 'width 140ms linear',
+              }} />
+            </div>
+            <div className="font-mono text-[10.5px] mt-1.5" style={{ color: 'var(--text-dim)' }}>
+              {(mktElapsed / 1000).toFixed(1)} s
+            </div>
+          </div>
+        ) : mktSource === null || !mktSource.mkt ? (
+          <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
+            <p className="text-xs max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
+              Press <span style={{ color: MKT }}>Run market risk</span> to move every quoted
+              instrument on the set a basis point, solve the curves again and reprice the
+              book against each result.
+              {!f.mkt && (
+                <>
+                  {' '}The button is off on this set:{' '}
+                  {LABEL[f.mktStale ?? ''] ?? f.mktStale} is being served stale, so the
+                  published curve is not the solve of the quotes behind it and a bump
+                  would measure the difference between two market states.
+                </>
+              )}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="rounded px-3 py-2 mb-3 font-mono text-[11px]"
+              style={{ border: `1px solid ${MKT}55`, background: `${MKT}0a`, color: 'var(--text-secondary)' }}>
+              as of set {mktSource.epoch}
+              {mktSource.epoch !== f.epoch && (
+                <span style={{ color: '#d4a853' }}> &middot; the feed has since moved to set {f.epoch}</span>
+              )}
+              <span style={{ color: 'var(--text-dim)' }}>
+                {' '}&middot; run #{mktRun?.id} at {mktRun?.at} &middot; {mktQuotes} quoted
+                instruments, {mktSource.mktRebuilds} curve solves, in{' '}
+                {ms(mktSource.mktUs)} on {mktSource.threads} cores
+              </span>
+              {mktSource.mktFailed > 0 && (
+                <span style={{ color: '#c86e6e' }}>
+                  {' '}&middot; {mktSource.mktFailed} bumps did not build and are missing
+                  from the ladder
+                </span>
+              )}
+            </div>
+
+            {/* Three across at desktop width, stacked below it. Each panel is
+                scaled to its own numbers: the EURIBOR ladder and the
+                cross-currency one differ by two orders of magnitude, and a
+                shared axis would leave the smaller ones at no height at all. */}
+            <div className="grid gap-4 lg:grid-cols-3">
+              {mktPanels.map(p => (
+                <div key={p.key} className="rounded px-3 py-2 min-w-0"
+                  style={{ border: '1px solid var(--border-subtle)' }}>
+                  <div className="flex items-baseline justify-between gap-2 mb-1">
+                    <span className="font-mono text-[11px]" style={{ color: COLOUR[p.key] ?? MKT }}>
+                      {p.label}
+                    </span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={p.data} margin={{ left: 0, right: 6, top: 4, bottom: 0 }}>
+                      <CartesianGrid stroke={chartGrid} />
+                      <XAxis dataKey="tenor" stroke={chartAxis} tick={{ fontSize: 9 }}
+                        interval={Math.max(0, Math.ceil(p.data.length / 10) - 1)}
+                        angle={-45} textAnchor="end" height={44} />
+                      <YAxis stroke={chartAxis} tick={{ fontSize: 10 }} width={46}
+                        tickFormatter={v => fmtAxis(Number(v))} />
+                      <Tooltip {...tt}
+                        formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']}
+                        labelFormatter={(l: any) => {
+                          const row = p.data.find(r => r.tenor === l);
+                          return row ? row.instrument : String(l);
+                        }} />
+                      <ReferenceLine y={0} stroke={chartAxis} />
+                      <Bar dataKey="pv01" fill={COLOUR[p.key] ?? MKT} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="font-mono text-[10px] mt-1 flex gap-3 flex-wrap"
+                    style={{ color: 'var(--text-dim)' }}>
+                    <span>total {money(p.total)}</span>
+                    <span>{p.rows} instruments</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="font-mono text-[10.5px] mt-3 flex gap-6 flex-wrap"
+              style={{ color: 'var(--text-dim)' }}>
+              <span>
+                every curve together{' '}
+                <span style={{ color: 'var(--text-primary)' }}>{money(mktTotal)}</span>
+              </span>
+              <span>
+                forward buckets on the same set{' '}
+                <span style={{ color: 'var(--text-primary)' }}>{money(fwdTotal)}</span>
+              </span>
+              <span>
+                book DV01{' '}
+                <span style={{ color: 'var(--text-primary)' }}>{money(mktSource.deskDv01)}</span>
+              </span>
+            </div>
+
+            <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              Every bar is one quoted instrument moved a basis point. Bar heights compare
+              within a panel, and the total under each panel is what carries across them.
+              A basis point on every quote and a basis point on every forward interval are
+              two routes to the same move and land about a percent apart. The book DV01
+              shifts the solved zero curves, which is a third kind of bump, and comes out
+              about a quarter larger.
+            </p>
+            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              This page is a recording. The engine ran this ladder against the set on
+              screen and the timings shown are its own.{' '}
+              {mktCapped
+                ? `The wait here stops at ${MKT_CAP_MS / 1000} seconds, which is shorter than the ${ms(mktSource.mktUs)} the engine took.`
+                : `The wait here was the ${ms(mktSource.mktUs)} the engine recorded for this set.`}
             </p>
           </>
         )}
