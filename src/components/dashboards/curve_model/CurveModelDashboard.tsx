@@ -105,8 +105,30 @@ const INSTR_BADGE: Record<string, string> = {
   FXSWAP: '#4a9a68', XCCY: '#d4a853', SPOT: '#c9a227',
 };
 
+type Measure = 'market' | 'zero' | 'forward';
+const MEASURES: { key: Measure; label: string }[] = [
+  { key: 'market', label: 'market quote' },
+  { key: 'zero', label: 'zero bucket' },
+  { key: 'forward', label: 'forward bucket' },
+];
+
+/* The ladder a given domain holds for a trade, or null where the run produced
+   none. Module scope so the panel memos below do not have to carry it as a
+   dependency and rebuild on every render. */
+const ladderCurveSource = (t: Trade | null, m: Measure) =>
+  (m === 'market' ? t?.ladders : t?.curveLadders?.[m]) ?? null;
+
 const chartGrid = '#1a1a28';
 const chartAxis = '#55546a';
+
+/* Axis labels for three charts sitting side by side. A full thousands-separated
+   number needs about 64px of gutter, which is a sixth of the panel at desktop
+   width, so the ladders get read at 2.6k instead. */
+const fmtAxis = (v: number) => {
+  const a = Math.abs(v);
+  if (a >= 1000) return `${(v / 1000).toFixed(a >= 10000 ? 0 : 1)}k`;
+  return String(+v.toFixed(a > 0 && a < 10 ? 1 : 0));
+};
 const tt = {
   contentStyle: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 6, fontSize: 12 },
   labelStyle: { color: '#8b8a97' },
@@ -161,7 +183,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
   const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df' | 'fx'>('fwd');
-  const [measure, setMeasure] = useState<'market' | 'zero' | 'forward'>('market');
   const [fwdTenor, setFwdTenor] = useState(0.25);
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
@@ -255,39 +276,63 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
   // Three risk views of the same trade. Market bumps a QUOTE and re-runs the
   // bootstrap; zero and forward bump the CURVE directly. They answer different
-  // questions and are not rescalings of each other, so they get a toggle rather
-  // than being blended.
-  const curveLadders = selTrade?.curveLadders;
-  const measureAvailable = curveLadders ? Object.keys(curveLadders) : [];
-  const activeMeasure = measure !== 'market' && measureAvailable.includes(measure)
-    ? measure : 'market';
-
-  const ladderSource = activeMeasure === 'market'
-    ? (selTrade?.ladders ?? {})
-    : (curveLadders?.[activeMeasure] ?? {});
-  const tradeCurveKeys = Object.keys(ladderSource);
+  // questions and are not rescalings of each other, so they are drawn together
+  // rather than blended into one ladder.
+  //
+  // They used to sit behind a measure toggle, which meant the heading and the
+  // explanation above them were re-read on every switch and the section read as
+  // three near-identical sections. Side by side, the explanation is written once
+  // and the reader can see the shapes differ without having to remember the last
+  // one.
+  // The curve selector is shared by all three panels, so its list is the union
+  // over the domains in market order. On this dataset every domain carries the
+  // same curves, but a domain that reaches a curve the others do not would
+  // otherwise drop off the selector depending on which panel was consulted.
+  const tradeCurveKeys = useMemo(() => {
+    const keys: string[] = [];
+    for (const m of MEASURES)
+      for (const k of Object.keys(ladderCurveSource(selTrade, m.key) ?? {}))
+        if (!keys.includes(k)) keys.push(k);
+    return keys;
+  }, [selTrade]);
   const activeCurve = tradeCurve && tradeCurveKeys.includes(tradeCurve) ? tradeCurve : tradeCurveKeys[0];
 
-  const ladderChart = useMemo(() => {
-    if (!activeCurve) return [];
-    const rows = ladderSource[activeCurve] ?? [];
-    return (rows as (LadderRow | CurveLadderRow)[]).map(r => ({
+  const ladderPanels = useMemo(() => MEASURES.map(m => {
+    const byCurve = ladderCurveSource(selTrade, m.key);
+    const rows = activeCurve
+      ? (byCurve?.[activeCurve] as (LadderRow | CurveLadderRow)[] | undefined)
+      : undefined;
+    const data = (rows ?? []).map(r => ({
       tenor: r.tenor,
       instrument: 'instrument' in r ? r.instrument : (r as CurveLadderRow).role,
       cpu: +r.cpu.toFixed(2),
       gpu: r.gpu == null ? undefined : +r.gpu.toFixed(2),
     }));
-  }, [ladderSource, activeCurve]);
-
-  // Curve-node ladders always carry both lanes; the market ladder only does
-  // where the engine ran a GPU pillar pass.
-  // The market view's GPU column is hidden. Both lanes bump the same quote and
-  // re-bootstrap, so they should agree, and they do not: risk shifts between
-  // neighbouring pillars on the aged trade while the total is preserved. That
-  // is an unexplained difference between two ways of rebuilding the curve, not
-  // a modelling choice, so it should not be shown as though it were a result.
-  // The zero and forward views keep both lanes, where they agree to 1e-15.
-  const showGpu = activeMeasure !== 'market';
+    // Curve-node ladders always carry both lanes; the market ladder only does
+    // where the engine ran a GPU pillar pass.
+    // The market view's GPU column is hidden. Both lanes bump the same quote and
+    // re-bootstrap, so they should agree, and they do not: risk shifts between
+    // neighbouring pillars on the aged trade while the total is preserved. That
+    // is an unexplained difference between two ways of rebuilding the curve, not
+    // a modelling choice, so it should not be shown as though it were a result.
+    // The zero and forward views keep both lanes, where they agree to 1e-15.
+    const showGpu = m.key !== 'market' && data.some(d => d.gpu !== undefined);
+    // A panel with nothing in it says why. Dropping it silently would leave the
+    // reader to guess whether the risk is zero or the run never happened.
+    const curveName = activeCurve ? (CURVE_LABELS[activeCurve] ?? activeCurve) : 'this trade';
+    const absent = !byCurve || !activeCurve
+      ? `This trade has no ${m.label} ladder in the run.`
+      : !rows
+        ? `No ${m.label} ladder was produced for ${curveName}.`
+        : rows.length === 0
+          ? `The ${m.label} ladder for ${curveName} came back empty.`
+          : null;
+    return {
+      ...m, data, showGpu, absent,
+      cpuTotal: data.reduce((a, r) => a + (r.cpu ?? 0), 0),
+      gpuTotal: data.reduce((a, r) => a + (r.gpu ?? 0), 0),
+    };
+  }), [selTrade, activeCurve]);
 
   const fxInstruments = useMemo(
     () => (selTrade?.fx ? [...new Set(selTrade.fx.map(r => r.instrument))] : []), [selTrade]);
@@ -495,11 +540,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'sensis' && trades && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Where a trade&apos;s risk sits, and what you&apos;d trade to hedge it. Each
-            bar is one quoted instrument moved by a basis point, the curve rebuilt, and
-            the trade valued again. The height of the bar is what that instrument is
-            worth to this position, so risk concentrated at 5Y is hedged with the 5Y
-            swap. One example trade per curve. Pick one.
+            Where a trade&apos;s risk sits, and what you&apos;d trade to hedge it. The
+            height of a bar is what one bucket is worth to this position. On the market
+            panel those buckets are quoted instruments, so risk concentrated at 5Y is
+            hedged with the 5Y swap; the other two bucket by curve node and interval,
+            which is a read on shape and not a hedge you can deal. One example trade per
+            curve. Pick one.
               </p>
 
           <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
@@ -533,21 +579,23 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
           {selTrade && !selTrade.fx && (
             <div>
-              {measureAvailable.length > 0 && (
-                <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap items-center">
-                  <span className="text-[10px] uppercase mr-1" style={{ color: 'var(--text-dim)' }}>risk measure</span>
-                  {([['market', 'market quote'], ['zero', 'zero bucket'], ['forward', 'forward bucket']] as const)
-                    .filter(([k]) => k === 'market' || measureAvailable.includes(k))
-                    .map(([k, label]) => (
-                      <button key={k} onClick={() => { setMeasure(k); setTradeCurve(null); }}
-                        className="px-2.5 py-1 rounded"
-                        style={chip(activeMeasure === k, '#b07fc9')}>
-                        {label}
-                      </button>
-                    ))}
-                </div>
-              )}
-              <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
+              <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                Where the risk sits under each kind of bump
+              </h3>
+              <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                Every bar shows what the position is worth for a basis point, and the
+                panels differ in where that basis point is applied. The market ladder
+                moves one quoted instrument, rebuilds the curve and values the trade
+                again, so its buckets are instruments a desk can go out and deal.
+                Bumping the solved zero curve around a node skips the bootstrap and
+                buckets the risk by the curve&apos;s own nodes. A forward bump holds the
+                shift flat across one interval, which lands the exposure on the period
+                the cashflows accrue over. A hedge is written off the market ladder, and
+                the zero and forward ladders are the better read on how the exposure is
+                spread along the curve.
+              </p>
+              <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap items-center">
+                <span className="text-[10px] uppercase mr-1" style={{ color: 'var(--text-dim)' }}>curve</span>
                 {tradeCurveKeys.map(k => (
                   <button key={k} onClick={() => setTradeCurve(k)} className="px-2.5 py-1 rounded"
                     style={chip(activeCurve === k, CURVE_COLORS[k] ?? '#5b8fc9')}>
@@ -555,49 +603,94 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   </button>
                 ))}
               </div>
-              <ResponsiveContainer width="100%" height={340}>
-                <BarChart data={ladderChart}>
-                  <CartesianGrid stroke={chartGrid} />
-                  <XAxis dataKey="tenor" stroke={chartAxis} tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={50} />
-                  <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={64}
-                    tickFormatter={v => Number(v).toLocaleString()} />
-                  <Tooltip {...tt} formatter={(v: any, n: any) =>
-                    [Number(v).toLocaleString(),
-                      n === 'cpu' ? 'Processor' : 'GPU']}
-                    labelFormatter={(l: any) => {
-                      const row = ladderChart.find(r => r.tenor === l);
-                      return `${l}${row ? ` · ${row.instrument}` : ''}`;
-                    }} />
-                  {showGpu && <Legend formatter={(v: string) =>
-                    <span style={{ fontSize: 11 }}>
-                      {v === 'cpu' ? 'Processor' : 'GPU'}</span>} />}
-                  <ReferenceLine y={0} stroke={chartAxis} />
-                  <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
-                  {showGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
-                </BarChart>
-              </ResponsiveContainer>
-              {showGpu && ladderChart.length > 0 && (() => {
-                // Bucket differences on the market view can look alarming when
-                // the two lanes are really redistributing the same total between
-                // neighbouring pillars. Showing both sums makes that visible
-                // rather than leaving it to the caption.
-                const cs = ladderChart.reduce((a, r) => a + (r.cpu ?? 0), 0);
-                const gs = ladderChart.reduce((a, r) => a + (r.gpu ?? 0), 0);
-                const rel = Math.abs(cs) > 1e-9 ? Math.abs(cs - gs) / Math.abs(cs) : 0;
-                return (
-                  <div className="font-mono text-[11px] mt-2 flex gap-4 flex-wrap"
-                    style={{ color: 'var(--text-dim)' }}>
-                    <span>ladder total, CPU {cs.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                    <span>GPU {gs.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                    <span style={{ color: rel < 0.01 ? 'var(--accent-green)' : 'var(--text-dim)' }}>
-                      {rel < 1e-6 ? 'identical' : 'differ by ' + (rel * 100).toFixed(2) + '%'}
-                    </span>
+
+              {/* Three across at desktop width, stacked below it. Each panel gets
+                  about 340px, which is enough for the shape of a 30-bucket ladder
+                  and not enough for 30 rotated tick labels, so the ticks thin to
+                  roughly ten and the tooltip carries the rest. */}
+              <div className="grid gap-4 lg:grid-cols-3">
+                {ladderPanels.map(p => (
+                  <div key={p.key} className="rounded px-3 py-2 min-w-0"
+                    style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <span className="font-mono text-[11px]" style={{ color: '#b07fc9' }}>{p.label}</span>
+                      {p.showGpu && (
+                        <span className="font-mono text-[10px] flex gap-2" style={{ color: 'var(--text-dim)' }}>
+                          <span><span style={{ color: '#5b8fc9' }}>&#9632;</span> processor</span>
+                          <span><span style={{ color: '#d4a853' }}>&#9632;</span> GPU</span>
+                        </span>
+                      )}
+                    </div>
+                    {p.absent ? (
+                      <div className="flex items-center justify-center px-3" style={{ height: 260 }}>
+                        <p className="text-xs text-center" style={{ color: 'var(--text-dim)' }}>{p.absent}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <BarChart data={p.data} margin={{ left: 0, right: 6, top: 4, bottom: 0 }}>
+                            <CartesianGrid stroke={chartGrid} />
+                            <XAxis dataKey="tenor" stroke={chartAxis} tick={{ fontSize: 9 }}
+                              interval={Math.max(0, Math.ceil(p.data.length / 10) - 1)}
+                              angle={-45} textAnchor="end" height={44} />
+                            <YAxis stroke={chartAxis} tick={{ fontSize: 10 }} width={46}
+                              tickFormatter={v => fmtAxis(Number(v))} />
+                            <Tooltip {...tt} formatter={(v: any, n: any) =>
+                              [Number(v).toLocaleString(),
+                                n === 'cpu' ? 'Processor' : 'GPU']}
+                              labelFormatter={(l: any) => {
+                                const row = p.data.find(r => r.tenor === l);
+                                return `${l}${row ? ` · ${row.instrument}` : ''}`;
+                              }} />
+                            <ReferenceLine y={0} stroke={chartAxis} />
+                            <Bar dataKey="cpu" fill="#5b8fc9" isAnimationActive={false} />
+                            {p.showGpu && <Bar dataKey="gpu" fill="#d4a853" isAnimationActive={false} />}
+                          </BarChart>
+                        </ResponsiveContainer>
+                        {/* Bucket differences between the two lanes can look alarming
+                            when they are really redistributing the same total between
+                            neighbouring pillars. Showing both sums makes that visible
+                            rather than leaving it to the caption. The total also does
+                            the work the shared y-axis would have done: it is the one
+                            figure that carries across panels. */}
+                        {(() => {
+                          const rel = Math.abs(p.cpuTotal) > 1e-9
+                            ? Math.abs(p.cpuTotal - p.gpuTotal) / Math.abs(p.cpuTotal) : 0;
+                          return (
+                            <div className="font-mono text-[10px] mt-1 flex gap-3 flex-wrap"
+                              style={{ color: 'var(--text-dim)' }}>
+                              <span>total {p.cpuTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                              <span>{p.data.length} buckets</span>
+                              {p.showGpu && (
+                                <span style={{ color: rel < 0.01 ? 'var(--accent-green)' : 'var(--text-dim)' }}>
+                                  {rel < 1e-6 ? 'lanes identical' : 'lanes differ by ' + (rel * 100).toFixed(2) + '%'}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </>
+                    )}
                   </div>
-                );
-              })()}
+                ))}
+              </div>
+
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            This is the view a desk hedges from. Every bucket is something you can go
-            out and trade.
+                Each panel is scaled to its own numbers. A forward bump acts across an
+                interval and so spreads its effect more thinly along the curve, which
+                leaves those bars several times smaller than the market and zero ones,
+                and a shared axis would flatten them to nothing. Bar heights are
+                comparable within a panel; the total printed under each panel is the
+                figure that carries across them.
+              </p>
+              <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                The market panel shows the processor lane only. Both lanes bump the same
+                quote and rebuild the curve, so they should agree and they do not: risk
+                moves between neighbouring pillars while the total is preserved. That is
+                an unexplained difference between two ways of rebuilding a curve, so it
+                is not put on screen as though it were a result. The zero and forward
+                panels bump the solved curve, where the two lanes agree to the last
+                digit.
               </p>
             </div>
           )}
