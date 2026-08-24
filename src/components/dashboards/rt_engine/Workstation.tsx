@@ -387,7 +387,6 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const pendingFrame = mktPending ? tl.frames[mktPending.frame] : null;
   // What a market run costs on this set, for the passage above. The set on
   // screen where it has one, otherwise the nearest set that does.
-  const mktCost = f.mktUs || tl.frames.find(fr => fr.mktUs > 0)?.mktUs || 0;
 
   // ---- position detail ----------------------------------------------------
   const position = detail?.positions.find(p => p.id === posId) ?? null;
