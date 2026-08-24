@@ -380,7 +380,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       <div className="grid sm:grid-cols-3 gap-2 mb-4 font-mono text-[11px]">
         {[['Curves rebuilt', ms(f.cycleUs), f.rebuilt.length + ' of ' + tl.curveIds.length + ' curves'],
           ['Book revalued', ms(f.npvUs), 'every trade, ' + tl.threads + ' cores'],
-          ['Risk ladders', ms(f.riskUs), f.buckets + ' buckets, zero and forward, over every trade']].map(([k, v, note]) => (
+          ['Risk ladders', ms(f.riskUs), f.buckets + ' buckets, zero and forward']].map(([k, v, note]) => (
           <div key={k} className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
             <div className="text-[10px] uppercase" style={{ color: 'var(--text-dim)' }}>{k}</div>
             <div className="text-sm" style={{ color: 'var(--text-primary)' }}>{v}</div>
@@ -676,8 +676,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               )}
               <span style={{ color: 'var(--text-dim)' }}>
                 {' '}&middot; run #{chosen?.id} at {chosen?.at} &middot; {riskSource.buckets} buckets
-                in both the zero and forward domains across all{' '}
-                {tl.trades.toLocaleString()} trades, in {ms(riskSource.riskUs)} on{' '}
+                in both the zero and forward domains, in {ms(riskSource.riskUs)} on{' '}
                 {riskSource.threads} cores
               </span>
             </div>
@@ -703,6 +702,14 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               Both are applied as an overlay on the published curve rather than by
               rebuilding it, so a bump moves the bucket asked for and leaves the rest of
               the curve alone.
+            </p>
+            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              A bucket only reprices the trades that read the curve it sits on, so a SONIA
+              bucket touches the GBP book and nothing else. Across all {riskSource.buckets}{' '}
+              buckets and both domains that comes to roughly 15 million trade valuations,
+              near 130 nanoseconds a cashflow. Charging every bucket for all{' '}
+              {tl.trades.toLocaleString()} trades would put the figure five times higher
+              than the work actually done.
             </p>
             <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
               This page is a recording. The engine ran a ladder against every published
