@@ -463,7 +463,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             on zero rates. The meeting-dated and IMM curves are built as flat forwards
             between policy or IMM dates joined onto a min-curvature spline, and the EUR/USD
             curve is an implied zero curve against USD collateral. The interpolation itself
-            never changes: a minimum-curvature cubic spline on LOG DISCOUNT FACTORS. To see
+            never changes: a minimum-curvature cubic spline on log discount factors. To see
             the step construction, pick the instantaneous forward at 2.5Y with the ESTR
             variants selected. It is flat between ECB meetings out to 1.5Y, flat between IMM
             dates out to 2Y, then the spline takes over. A discrete forward averages over its
@@ -471,7 +471,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             them.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The domain matters more than the scheme. Interpolate zero rates and the ZERO
+            The domain matters more than the scheme. Interpolate zero rates and the zero
             curve comes out smooth, but the forward is left free to ring: f = z + t z', so
             a cubic's third derivative jumps at every knot and the jump is multiplied by t.
             That is 17 to 18 times amplification by the long end, worst where pillar spacing
