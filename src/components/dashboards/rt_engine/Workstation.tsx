@@ -813,13 +813,14 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 What the run does
               </div>
               <ul className="list-disc pl-4 space-y-1">
-                <li>Every run is from scratch against one set. Curve rebuilds are
-                  incremental; the risk is not.</li>
-                <li>A bucket reprices only the trades that read its curve. A SONIA
-                  bucket leaves about 138,000 trades alone.</li>
-                <li>The bump overlays the discount factors, so no solver runs.</li>
-                <li>Flat arrays, integer dates, a daily table that hits 99.95%,{' '}
-                  {riskSource.threads} threads. Near 130 ns a cashflow.</li>
+                <li>Zero and forward risk reruns on every price update, so the ladder
+                  on screen is current.</li>
+                <li>Market risk rebuilds the curve for each quoted instrument. It takes
+                  about half a minute, so you ask for it.</li>
+                <li>While it runs, the book value and the zero and forward ladders carry
+                  on updating.</li>
+                <li>Pausing saves a snapshot: the time, the market data as it stood, and
+                  the risk against it. A desk can hedge off one.</li>
               </ul>
             </div>
             <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -838,10 +839,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         </div>
 
         <p className="text-[11px] mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-          Zero and forward buckets overlay a curve that is already solved:{' '}
-          {ms(f.riskUs)}, run on every set. Market risk re-solves the curve for each
-          quoted instrument: {ms(mktCost)}, so you ask for it. Its buckets are
-          instruments you can deal.
+          Zero and forward risk reruns on every price update. Market risk rebuilds the
+          curve for each quoted instrument, which takes about half a minute, so you ask
+          for it. Its buckets are instruments you can deal; curve nodes are not.
         </p>
 
         {mktPending && pendingFrame ? (
