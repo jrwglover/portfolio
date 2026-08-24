@@ -36,7 +36,7 @@ const CASES: Case[] = [
     n: '02',
     title: 'Front-to-Back Trade Feed',
     target:
-      'The end-of-day feed from trade capture to the risk platform shipped 25,000 rates and inflation trades as a 700MB to 1GB extract. It took 90 minutes. Get it down to minutes, with zero trades lost or altered.',
+      'The end-of-day feed from trade capture to the risk platform shipped 25,000 rates and inflation trades as a 244 MB extract. It took 90 minutes. Get it down to minutes, with zero trades lost or altered.',
     how: [
       'Find where the time goes. The extract serializes each trade once per cashflow period, so 25,000 structured trades become a million rows crawling over a 0.19 MB/s link.',
       'Re-normalize in flight with Spark: schedules, exercise dates and inflation fixings nested back inside each trade, written as compressed Parquet, 15.3× smaller.',

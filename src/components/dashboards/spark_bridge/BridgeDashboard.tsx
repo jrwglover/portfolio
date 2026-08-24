@@ -77,7 +77,7 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
       {tab === 'problem' && (
         <div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-            <Stat v="700MB–1GB" l="daily trade export (swaps, caps, floors, swaptions, inflation)" />
+            <Stat v="244 MB" l="daily trade export (swaps, caps, floors, swaptions, inflation)" />
             <Stat v="~1.5 hours" l="observed write to cloud virtual disk" accent="#c86e6e" />
             <Stat v="0.19 MB/s" l="effective throughput: a format problem, not bandwidth" accent="#c86e6e" />
             <Stat v="25,000" l="trades in the book, shipped as 1,010,762 rows" />
@@ -137,7 +137,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
         <div className="space-y-10">
           <div>
             <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-              End-of-day feed at production transfer rates (1 GB scale)
+              End-of-day feed at production transfer rates
             </h3>
             <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
               Transfer leg physically measured through a 0.19 MB/s token-bucket throttle
