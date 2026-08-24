@@ -813,31 +813,13 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 What the run does
               </div>
               <ul className="list-disc pl-4 space-y-1">
-                <li>
-                  A run recomputes the whole ladder against one published set. Nothing is
-                  carried over from the run before it.
-                </li>
-                <li>Curve rebuilds are incremental. The risk is not.</li>
-                <li>
-                  A bucket reprices only the trades that read its curve. A SONIA bucket
-                  touches the GBP book and leaves about 138,000 trades alone.
-                </li>
-                <li>
-                  That comes to about 14.7 million trade valuations across the ladder,
-                  near 130 nanoseconds a cashflow. The count is derived from the book&apos;s
-                  instrument mix, so it is approximate. Charging every bucket for all{' '}
-                  {tl.trades.toLocaleString()} trades would put it 4.8 times higher.
-                </li>
-                <li>
-                  The bump is a discount-factor overlay on the published curve, so no
-                  solver runs.
-                </li>
-                <li>
-                  Cashflows are flat arrays of doubles, dates are integer day offsets, and
-                  a curve read is a lookup in a daily table that hits 99.95% of the time.
-                  The work is split over {riskSource.threads} threads and added up once at
-                  the end.
-                </li>
+                <li>Every run is from scratch against one set. Curve rebuilds are
+                  incremental; the risk is not.</li>
+                <li>A bucket reprices only the trades that read its curve. A SONIA
+                  bucket leaves about 138,000 trades alone.</li>
+                <li>The bump overlays the discount factors, so no solver runs.</li>
+                <li>Flat arrays, integer dates, a daily table that hits 99.95%,{' '}
+                  {riskSource.threads} threads. Near 130 ns a cashflow.</li>
               </ul>
             </div>
             <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -856,11 +838,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         </div>
 
         <p className="text-[11px] mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-          Zero and forward buckets are an overlay on a curve that has already been
-          solved. They take {ms(f.riskUs)} and are run against every published set.
-          Market risk solves the curve again for each quoted instrument and takes{' '}
-          {ms(mktCost)}, so it is asked for. Its buckets are instruments a desk can
-          deal, which curve nodes are not.
+          Zero and forward buckets overlay a curve that is already solved:{' '}
+          {ms(f.riskUs)}, run on every set. Market risk re-solves the curve for each
+          quoted instrument: {ms(mktCost)}, so you ask for it. Its buckets are
+          instruments you can deal.
         </p>
 
         {mktPending && pendingFrame ? (
