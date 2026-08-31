@@ -7,27 +7,30 @@ import {
 interface Row {
   id: string; book: string; npv: number; dv01: number; fair: number; degraded: boolean;
 }
+// One book of the trades the session opened with. Tickets dealt during the
+// session carry their own book name and are added to the matching line as they
+// arrive.
 interface BookAgg {
   book: string; trades: number; npv: number; dv01: number;
   failed: number; degraded: number;
-  // The same book with the tickets still pending added to it. Both
-  // memberships are priced by the engine on the same set.
-  pTrades: number; pNpv: number; pDv01: number;
 }
-// [maturity, zero-bucket pv01, forward-bucket pv01]
-type Bucket = [number, number, number];
-// [quote id, pv01]. A market bucket is a quoted instrument, so it carries the
-// instrument's name where a curve-node bucket carries a time.
-type QuoteRow = [string, number];
+// [zero-bucket pv01, forward-bucket pv01] per bucket, flat, read against the
+// bucket maturities the file carries under riskT.
+type Ladder = number[];
+// One trade's ladder on one curve, as the stretch that is not zero:
+// [[first index, values...], [first index, values...]] for zero and forward.
+// An empty list is a curve the trade has nothing on.
+type Window = [number[], number[]];
 
 // ---- the trade feed -------------------------------------------------------
-// Tickets that arrived during the session, on top of the book loaded at the
-// open. Everything about a ticket that does not move with the market is held
-// once, at the top of the file; each frame carries only its state and its mark.
+// Tickets dealt during the session, on top of the book the desk opened with.
+// Everything about a ticket that does not move with the market is held once, at
+// the top of the file; each frame carries only its state and its mark.
 const NOT_YET = 0, PENDING = 1, EXECUTED = 2, CANCELLED = 3;
 interface FeedTrade {
   id: string; venue: string; desc: string; book: string; type: string;
   notional: number; maturity: number;
+  rows: number;     // the ticket and its schedule, as a trade system hands it over
   arrive: number;   // frame the ticket appeared, pending
   resolve: number;  // frame it executed or was pulled
   outcome: number;  // what it resolved to
@@ -44,34 +47,53 @@ interface Frame {
   rows: Row[]; books: BookAgg[];
   feed: FeedRow[];
   deskNpv: number; deskDv01: number; deskTrades: number;
-  pDeskNpv: number; pDeskDv01: number; pDeskTrades: number;
   npvUs: number; riskUs: number; threads: number; buckets: number;
-  // Each curve as its own coefficients, flat: [c0,c1,c2,c3,xL,xR,form] per
-  // interval. The curve itself, not a sampling of it.
+  // The times each curve is published at. A curve appears here on the frame
+  // its times change and not otherwise. A time can appear twice: where the
+  // forward jumps, the value on each side is published and the chart draws
+  // the edge vertically, exactly where it falls.
+  curveT: Record<string, number[]>;
+  // Three values per published time, flat: zero rate, instantaneous forward,
+  // half-year forward, all in decimals. Present only on the frames the curve
+  // rebuilt on; otherwise the last published values still stand.
   curves: Record<string, number[]>;
-  risk: Record<string, Bucket[]>;
-  // The same ladder over the book with the pending tickets in it. Run by the
-  // engine on the same set rather than derived from the one above.
-  riskPending: Record<string, Bucket[]>;
-  // Book-level market-quote PV01 for this set, one row per quoted instrument.
-  // null where a curve on the set was being served stale, in which case
-  // mktStale names it: the published curve is then the last good solve rather
-  // than the solve of the quotes in the store, and bumping one of those quotes
-  // measures the gap between two market states instead of a basis point.
-  mkt: Record<string, QuoteRow[]> | null;
-  mktPending: Record<string, QuoteRow[]> | null;
+  // Bucket maturities per curve, carried the same way.
+  riskT: Record<string, number[]>;
+  // The opening book's ladder on this set.
+  risk: Record<string, Ladder>;
+  // Each live ticket's own ladder on this set. PV01 adds across trades, so a
+  // ticket's ladder is its contribution to the book's.
+  tradeLad: Record<string, Record<string, Window>>;
+  // The names of the quoted instruments a market ladder is read against,
+  // carried the same way as the axes above.
+  mktQ: Record<string, string[]>;
+  // Book-level market-quote PV01 for this set, one value per quoted
+  // instrument, in three memberships. mktBase is the book the desk opened
+  // with on its own, mkt adds the tickets executed by this set, and
+  // mktPending adds the ones still pending as well. The engine measured all
+  // three in one pass. Tickets arrive with the set they were dealt on, so the
+  // page reads mkt, or mktPending when the blotter toggle is on; each covers
+  // the same trades as the desk totals. mktBase stays in the file, but no
+  // membership on screen matches it any more.
+  //
+  // All three are null where a curve on the set was being served stale, in
+  // which case mktStale names it: the published curve is then the last good
+  // solve rather than the solve of the quotes in the store, and bumping one of
+  // those quotes measures the gap between two market states instead of a basis
+  // point.
+  mktBase: Record<string, (number | null)[]> | null;
+  mkt: Record<string, (number | null)[]> | null;
+  mktPending: Record<string, (number | null)[]> | null;
   mktStale?: string;
   mktUs: number; mktRebuilds: number; mktFailed: number;
 }
 
 // ---- position detail ------------------------------------------------------
-// [node maturity, pv01] for the two curve-node domains, [quote id, pv01] for
-// the market one. Market rows are per quoted instrument, so they carry the
-// instrument's name where the others carry a time.
-type Node = [number, number];
+// One position's three ladders on one curve, each flat against the axes above.
+// A null is a node or a bump that did not build.
 interface CurveLadder {
-  zero: Node[]; fwd: Node[]; mkt: QuoteRow[];
-  partial?: boolean;  // a node or a bump that did not build, dropped and flagged
+  z: (number | null)[]; f: (number | null)[]; m: (number | null)[];
+  p?: number;  // something in this ladder did not build, and is flagged
 }
 interface Position {
   id: string; book: string; kind: 'book' | 'fed'; type: string;
@@ -82,6 +104,8 @@ interface Position {
 interface Detail {
   frame: number; epoch: number;
   ladderUs: number; mktUs: number; mktRebuilds: number;
+  riskT: Record<string, number[]>;
+  mktQ: Record<string, string[]>;
   positions: Position[];
   tradeRisk: Record<string, Record<string, CurveLadder>>;
 }
@@ -97,6 +121,8 @@ const LABEL: Record<string, string> = {
   EUR_ESTR: 'ESTR', EUR_ESTR_ECB: 'ESTR meeting', EUR_ESTR_IMM: 'ESTR IMM',
   EUR_ESTR_IMMFUT: 'ESTR IMM fut', EUR_EURIBOR6M: 'EURIBOR 6M',
   USD_SOFR: 'SOFR', GBP_SONIA: 'SONIA', EUR_USD_XCCY: 'EUR/USD xccy',
+  AUD_AONIA: 'AONIA', AUD_AONIA_RBA: 'AONIA meeting', AUD_BBSW3M: 'BBSW 3M',
+  AUD_BBSW6M: 'BBSW 6M', AUD_USD_XCCY: 'AUD/USD xccy',
 };
 
 // The curve model's own colours, so a curve is the same colour on both projects.
@@ -104,6 +130,8 @@ const COLOUR: Record<string, string> = {
   EUR_ESTR: '#d4a853', EUR_ESTR_ECB: '#e07850', EUR_ESTR_IMM: '#5cb87a',
   EUR_ESTR_IMMFUT: '#b8b04a', EUR_EURIBOR6M: '#8b7ec8', EUR_USD_XCCY: '#4a9a68',
   USD_SOFR: '#9a8bd8', GBP_SONIA: '#c86e6e',
+  AUD_AONIA: '#63c4f0', AUD_AONIA_RBA: '#3b87d4', AUD_BBSW3M: '#e896cc',
+  AUD_BBSW6M: '#b34a85', AUD_USD_XCCY: '#3fc4a5',
 };
 
 const chip = (on: boolean, colour: string) => ({
@@ -119,139 +147,85 @@ const millions = (v: number) =>
   (v < 0 ? '-' : '') + (Math.abs(v) / 1e6).toFixed(1) + 'm';
 
 // Microseconds in, a unit a person reads out. The engine reports everything in
-// microseconds and these span five orders of magnitude, from a cycle that did
-// nothing to a four second ladder.
+// microseconds and these span six orders of magnitude, from a cycle that did
+// nothing to a three second market PV01 run.
 const ms = (us: number) =>
   us >= 1e6 ? (us / 1e6).toFixed(2) + ' s'
     : us >= 1e3 ? Math.round(us / 1e3) + ' ms'
       : us + ' µs';
 
-/* Axis labels for ladders sitting three across. A thousands-separated number
-   needs about 64px of gutter, which is a sixth of a panel at desktop width, so
-   the ladders get read at 2.6k instead. Same treatment as the curve model. */
-const fmtAxis = (v: number) => {
-  const a = Math.abs(v);
-  if (a >= 1000) return `${(v / 1000).toFixed(a >= 10000 ? 0 : 1)}k`;
-  return String(+v.toFixed(a > 0 && a < 10 ? 1 : 0));
-};
-const chartGrid = '#1a1a28';
-const chartAxis = '#55546a';
-const tt = {
-  contentStyle: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 6, fontSize: 12 },
-  labelStyle: { color: '#8b8a97' },
-};
-// The market ladder's own colour, the same one the curve model's ladder panels
-// are headed in.
-const MKT = '#b07fc9';
-// A frame slower than this has its replayed wait shortened, and the panel says
-// so rather than letting the wait stand in for the measurement.
-const MKT_CAP_MS = 12000;
-
 // The trade bridge's measured write rate: 1,035,762 rows into SQL Server over
-// eight parallel connections in 10k batches, 9.9 seconds. Nothing about this
-// project's load was measured, so that rate is what the load panel quotes and
-// the panel says where it comes from.
+// eight parallel connections in 10k batches, 9.9 seconds. Its delta lane staged
+// and merged a 20,000-trade day in 0.8 seconds. Nothing about this project's
+// trade transfer was measured, so those are the numbers the blotter copy
+// quotes and it says where they come from.
 const BRIDGE_RPS = 105000;
 const BRIDGE_CONNECTIONS = 8;
-const LOAD_WAIT_MS = 3600;
+const DELTA_TRADES = 20000;
+const DELTA_SECS = 0.8;
 
 // ---------------------------------------------------------------------------
 // Reading a curve
 // ---------------------------------------------------------------------------
+// The engine evaluates each published curve itself and writes the values the
+// page needs: for each published time, the zero rate, the instantaneous
+// forward and the half-year forward, all in decimals. The page draws and
+// prices off those numbers and re-derives nothing.
 
-interface Seg { c0: number; c1: number; c2: number; c3: number; xL: number; xR: number; form: number }
+interface CurveVals { t: number[]; v: number[] }
 
-const segments = (flat: number[]): Seg[] => {
-  const out: Seg[] = [];
-  for (let i = 0; i + 6 < flat.length; i += 7)
-    out.push({ c0: flat[i], c1: flat[i + 1], c2: flat[i + 2], c3: flat[i + 3],
-               xL: flat[i + 4], xR: flat[i + 5], form: flat[i + 6] });
-  return out;
+// Discount factors at the published times, for the swap pricer. The published
+// times include every half-year point the pricer asks for, so each lookup is
+// a value the engine wrote and nothing sits between two of them.
+const dfMap = (c: CurveVals): Map<number, number> => {
+  const m = new Map<number, number>();
+  for (let i = 0; i < c.t.length; i++)
+    if (!m.has(c.t[i])) m.set(c.t[i], Math.exp(-c.v[i * 3] * c.t[i]));
+  return m;
 };
 
-// Which interval owns t. Outside the ends the outermost polynomial is extended,
-// which is the engine's own extrapolation.
-function owning(segs: Seg[], t: number): Seg {
-  let lo = 0, hi = segs.length - 1;
-  if (t <= segs[0].xR) return segs[0];
-  if (t >= segs[hi].xL) return segs[hi];
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (t < segs[mid].xR) hi = mid; else lo = mid + 1;
-  }
-  return segs[lo];
-}
-
-/* The engine publishes coefficients, not samples, so this reads them the same
-   way its own csEvalZeroHost does. form 1 carries -log DF as the polynomial, so
-   the zero rate is that over t and the instantaneous forward is its derivative.
-   form 0 carries the zero rate directly. Both forwards are analytic rather than
-   a difference between two nearby points. */
-const zeroOn = (g: Seg, t: number) =>
-  g.form > 0.5 ? (t > 0 ? g.c0 / t + g.c1 + (g.c2 + g.c3 * t) * t : g.c1)
-    : ((g.c3 * t + g.c2) * t + g.c1) * t + g.c0;
-
-const instOn = (g: Seg, t: number) => {
-  const dP = g.c1 + 2 * g.c2 * t + 3 * g.c3 * t * t;
-  if (g.form > 0.5) return dP;                    // P is -log DF, so f = dP/dt
-  const z = ((g.c3 * t + g.c2) * t + g.c1) * t + g.c0;
-  return z + t * dP;                              // f = d(z t)/dt
-};
-
-// Coefficients carry decimals, the way the engine holds them: a 1.9% zero rate
-// is 0.019 here. Everything below works in that unit and converts once, at the
-// point of display. Treating them as percent divided every discount factor's
-// exponent by a hundred, which made the curve chart read 0.02% and the swap
-// pricer quote a fair rate of 0.019%.
-const zeroAt = (segs: Seg[], t: number) => zeroOn(owning(segs, t), t);
-const dfAt = (segs: Seg[], t: number) =>
-  t <= 0 ? 1 : Math.exp(-zeroAt(segs, t) * t);
-
-function priceSwap(proj: Seg[], disc: Seg[], years: number,
-                   fixedRate: number, notional: number) {
-  if (!proj?.length || !disc?.length) return null;
+function priceSwap(proj: Map<number, number> | null,
+                   disc: Map<number, number> | null,
+                   years: number, fixedRate: number, notional: number) {
+  if (!proj?.size || !disc?.size) return null;
+  const df = (m: Map<number, number>, t: number) => (t <= 0 ? 1 : m.get(t));
   let annuity = 0;               // fixed leg, per unit of rate
-  for (let k = 1; k <= Math.round(years); k++) annuity += 1.0 * dfAt(disc, k);
+  for (let k = 1; k <= Math.round(years); k++) {
+    const d = df(disc, k);
+    if (d === undefined) return null;
+    annuity += d;
+  }
   let floatLeg = 0;              // projected coupons, discounted
   const step = 0.5;
   for (let t = step; t <= years + 1e-9; t += step) {
-    const f = (dfAt(proj, t - step) / dfAt(proj, t) - 1) / step;
-    floatLeg += f * step * dfAt(disc, t);
+    const p0 = df(proj, t - step), p1 = df(proj, t), d = df(disc, t);
+    if (p0 === undefined || p1 === undefined || d === undefined) return null;
+    floatLeg += (p0 / p1 - 1) / step * step * d;
   }
   const fair = annuity > 0 ? floatLeg / annuity : 0;
   const npv = notional * (floatLeg - fixedRate * annuity);
   return { npv, fair: fair * 100, annuity, dv01: notional * annuity * 1e-4 };
 }
 
-// Points to draw one curve with. Each interval contributes its own endpoints, so
-// a step edge is a vertical rather than a diagonal across whatever the sampling
-// resolution happened to be, and a flat interval needs exactly two points. The
-// curved ones get a handful more, which is all a cubic needs to look like itself.
-function drawPoints(segs: Seg[], view: string, tMax: number) {
+// Points to draw one curve with: the published times against the view's own
+// published value at each. A time that appears twice is an edge, and the two
+// values draw it vertically, exactly where it falls.
+function drawPoints(c: CurveVals, view: string, tMax: number) {
   const pts: { t: number; y: number }[] = [];
-  const value = (t: number, g: Seg) => {
-    if (view === 'zero') return zeroOn(g, t) * 100;
-    if (view === 'inst') return instOn(g, t) * 100;
-    if (view === 'df') return Math.exp(-zeroOn(g, t) * t);
-    const d0 = dfAt(segs, t), d1 = dfAt(segs, t + 0.5);
-    return d1 > 0 ? (d0 / d1 - 1) / 0.5 * 100 : 0;
-  };
-  for (const g of segs) {
-    if (g.xL > tMax) break;
-    const flat = g.form > 0.5 && Math.abs(g.c2) < 1e-14 && Math.abs(g.c3) < 1e-14;
-    const n = flat && view === 'inst' ? 1 : 8;
-    for (let k = 0; k <= n; k++) {
-      const t = g.xL + (g.xR - g.xL) * k / n;
-      if (t < 1e-9 || t > tMax) continue;
-      pts.push({ t, y: value(t, g) });
-    }
+  for (let i = 0; i < c.t.length; i++) {
+    const t = c.t[i];
+    if (t > tMax) continue;
+    const z = c.v[i * 3];
+    const y = view === 'zero' ? z * 100
+      : view === 'inst' ? c.v[i * 3 + 1] * 100
+        : view === 'df' ? Math.exp(-z * t)
+          : c.v[i * 3 + 2] * 100;
+    pts.push({ t, y });
   }
   return pts;
 }
 
 // ---------------------------------------------------------------------------
-
-interface Snapshot { id: number; frame: number; epoch: number; at: string; label: string }
 
 export default function Workstation({ tl }: { tl: Timeline }) {
   const [i, setI] = useState(0);
@@ -263,39 +237,31 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const [tenor, setTenor] = useState(5);
   const [rate, setRate] = useState(2.10);
   const [notional, setNotional] = useState(10);
-  // The instantaneous forward is where the construction shows: flat between ECB
-  // meetings on the meeting-dated curve, then a spline. The other three views
-  // smooth that away.
+  // The instantaneous forward is the most sensitive of the four views, so it is
+  // the one that opens. The other three average detail away.
   const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df'>('inst');
   const [tMax, setTMax] = useState(30);
   const [shown, setShown] = useState<string[]>(
     ['EUR_ESTR', 'EUR_ESTR_ECB', 'EUR_EURIBOR6M', 'EUR_USD_XCCY']);
-  // A risk run is taken against ONE published set and keeps saying which one,
-  // however far the feed has moved on since. Runs are kept, so a desk can hold
-  // this morning's risk beside the one it just asked for.
-  const [snaps, setSnaps] = useState<Snapshot[]>([]);
-  const [viewing, setViewing] = useState<number | null>(null);
-  const [running, setRunning] = useState(false);
-  const nextId = useRef(1);
-  const [riskCurve, setRiskCurve] = useState('EUR_ESTR');
-  const [riskMode, setRiskMode] = useState<'zero' | 'fwd'>('zero');
-  // Market-quote risk is a second, slower job against the same set. The numbers
-  // were measured by the engine and are held in the file; the wait here is
-  // replayed from the duration the engine recorded, and the panel says when
-  // that wait has been shortened.
-  const [mktRun, setMktRun] = useState<{ id: number; frame: number; at: string } | null>(null);
-  const [mktPending, setMktPending] = useState<{ frame: number; wait: number } | null>(null);
-  const [mktElapsed, setMktElapsed] = useState(0);
-  // Which sets have had a market run. A per-position market ladder was measured
-  // against one set, so the panel showing it stays covered until that set is
-  // the one that was run.
-  const [mktDone, setMktDone] = useState<Set<number>>(new Set());
-  const mktId = useRef(1);
-  const mktTimers = useRef<number[]>([]);
-  // The position panel. Market risk was measured against one published set, so
-  // all three domains are read off that same set and the panel says which.
+  const [riskCurve, setRiskCurve] = useState('EUR_ESTR_ECB');
+  // Three domains over the same book: market quotes, zero buckets, forward
+  // buckets. What differs is what a bucket means, not how the ladder is shown.
+  const [riskMode, setRiskMode] = useState<'mkt' | 'zero' | 'fwd'>('zero');
+  // The position panel. Its ladders were measured against one published set,
+  // so all three domains are read off that same set and the panel says which.
   const detail = tl.detail;
-  const feedDefs = tl.feed ?? [];
+  const feedDefs = useMemo(() => tl.feed ?? [], [tl.feed]);
+
+  // One cycle in this session published nothing: every quote in it was a
+  // replay the engine had already applied, so no set came out of it and the
+  // epoch did not advance. Anything dated to that frame belongs to the set
+  // still standing, which is the last one published before it, and the frame
+  // is labelled for what it is rather than numbered as a set.
+  const epochAt = useMemo(() => (k: number) => {
+    for (let j = Math.min(k, tl.frames.length - 1); j >= 0; j--)
+      if (tl.frames[j].published) return tl.frames[j].epoch;
+    return tl.frames[0].epoch;
+  }, [tl.frames]);
   const [posId, setPosId] = useState<string | null>(
     detail?.positions.find(p => p.kind === 'fed')?.id
     ?? detail?.positions[0]?.id ?? null);
@@ -305,83 +271,16 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   // the ladders anyway, which is the question a desk asks before it commits.
   const [withPending, setWithPending] = useState(false);
 
-  // The book is loaded from the trade store before any of it can be marked.
-  const [loadState, setLoadState] = useState<'idle' | 'running' | 'done'>('idle');
-  const [loadPct, setLoadPct] = useState(0);
-  const loadTimers = useRef<number[]>([]);
-  const loaded = loadState === 'done';
-
-  const takeSnapshot = () => {
-    if (running) return;
-    setPlaying(false);
-    setRunning(true);
-    const frame = i;
-    window.setTimeout(() => {
-      const id = nextId.current++;
-      const now = new Date();
-      setSnaps(list => [{
-        id, frame, epoch: tl.frames[frame].epoch,
-        at: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        label: tl.frames[frame].label,
-      }, ...list].slice(0, 8));
-      setViewing(id);
-      setRunning(false);
-    }, 900);
-  };
-
-  const runMarketRisk = (onFrame?: number) => {
-    if (mktPending || !loaded) return;
-    const frame = onFrame ?? i;
-    const fr = tl.frames[frame];
-    if (!fr?.mkt) return;
-    setPlaying(false);
-    if (frame !== i) setI(frame);
-    const wait = Math.min(fr.mktUs / 1000, MKT_CAP_MS);
-    setMktPending({ frame, wait });
-    setMktElapsed(0);
-    const t0 = Date.now();
-    const tick = window.setInterval(() => setMktElapsed(Date.now() - t0), 100);
-    const done = window.setTimeout(() => {
-      window.clearInterval(tick);
-      setMktPending(null);
-      setMktDone(s => new Set(s).add(frame));
-      setMktRun({
-        id: mktId.current++, frame,
-        at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      });
-    }, wait);
-    mktTimers.current = [tick, done];
-  };
-
-  // The trade store hands the book over as nested Parquet across parallel
-  // connections, the way the trade bridge does. Nothing was measured for this
-  // load, so the panel quotes the bridge's rate against this book's row count
-  // and says the wait on screen is shorter than that.
-  const loadBook = () => {
-    if (loadState !== 'idle') return;
-    setLoadState('running');
-    setLoadPct(0);
-    const t0 = Date.now();
-    const tick = window.setInterval(() => {
-      const p = Math.min(100, ((Date.now() - t0) / LOAD_WAIT_MS) * 100);
-      setLoadPct(p);
-    }, 80);
-    const done = window.setTimeout(() => {
-      window.clearInterval(tick);
-      setLoadPct(100);
-      setLoadState('done');
-    }, LOAD_WAIT_MS);
-    loadTimers.current = [tick, done];
-  };
-
-  useEffect(() => () => {
-    for (const t of mktTimers.current) { window.clearTimeout(t); window.clearInterval(t); }
-    for (const t of loadTimers.current) { window.clearTimeout(t); window.clearInterval(t); }
-  }, []);
+  // The tickets dealt on each set, by their place in the feed list. They come
+  // across with the set itself, so nothing here waits on a load.
+  const arrivals = useMemo(() => {
+    const m: number[][] = tl.frames.map(() => []);
+    feedDefs.forEach((d, k) => { if (m[d.arrive]) m[d.arrive].push(k); });
+    return m;
+  }, [feedDefs, tl.frames]);
 
   const f = tl.frames[i];
   const prev = i > 0 ? tl.frames[i - 1] : null;
-  const open = tl.frames[0];
 
   useEffect(() => {
     setFlash(new Set(f.rebuilt));
@@ -405,34 +304,48 @@ export default function Workstation({ tl }: { tl: Timeline }) {
     return out;
   }, [i, tl.frames]);
 
-  const segsOf = useMemo(() => {
-    const m: Record<string, Seg[]> = {};
-    for (const [id, flat] of Object.entries(f.curves ?? {})) m[id] = segments(flat);
+  // ---- what stands on each set -------------------------------------------
+  // The file writes a curve's values on the sets it rebuilt on, and the
+  // published times and the two ladder axes on the sets they changed on.
+  // Everything else still stands from the last set that carried it, which is
+  // what a published curve means. This walks the session once and hands each
+  // set the version that was live on it.
+  const standing = useMemo(() => {
+    const out: {
+      times: Record<string, number[]>; vals: Record<string, number[]>;
+      riskT: Record<string, number[]>; mktQ: Record<string, string[]>;
+    }[] = [];
+    let times = {}, vals = {}, riskT = {}, mktQ = {};
+    for (const fr of tl.frames) {
+      times = { ...times, ...(fr.curveT ?? {}) };
+      vals = { ...vals, ...(fr.curves ?? {}) };
+      riskT = { ...riskT, ...(fr.riskT ?? {}) };
+      mktQ = { ...mktQ, ...(fr.mktQ ?? {}) };
+      out.push({ times, vals, riskT, mktQ });
+    }
+    return out;
+  }, [tl.frames]);
+  const here = standing[i] ?? standing[standing.length - 1];
+
+  const curvesOf = useMemo(() => {
+    const m: Record<string, CurveVals> = {};
+    for (const [id, v] of Object.entries(here.vals))
+      if (here.times[id]) m[id] = { t: here.times[id], v };
     return m;
-  }, [f.curves]);
+  }, [here]);
 
-  // One point list per curve, off that curve's own intervals. Recharts takes a
-  // data array per series, so no shared grid has to be invented to hold them.
+  // One point list per curve, off that curve's own published times. Recharts
+  // takes a data array per series, so no shared grid has to be invented to
+  // hold them.
   const curveLines = useMemo(() => shown
-    .filter(c => segsOf[c]?.length)
-    .map(c => ({ id: c, pts: drawPoints(segsOf[c], domain, tMax) })),
-    [segsOf, shown, domain, tMax]);
-
-  const chosen = snaps.find(x => x.id === viewing) ?? null;
-  const riskSource = chosen ? tl.frames[chosen.frame] : null;
-  const riskChart = useMemo(() => {
-    if (!riskSource) return [];
-    const src = withPending ? riskSource.riskPending : riskSource.risk;
-    const lad = src?.[riskCurve] ?? riskSource.risk?.[riskCurve] ?? [];
-    return lad.filter(([t]) => t > 0).map(([t, z, w]) => ({
-      label: t < 1 ? Math.round(t * 12) + 'M' : Math.round(t) + 'Y',
-      pv01: riskMode === 'zero' ? z : w, t,
-    }));
-  }, [riskSource, riskCurve, riskMode, withPending]);
+    .filter(c => curvesOf[c]?.t.length)
+    .map(c => ({ id: c, pts: drawPoints(curvesOf[c], domain, tMax) })),
+    [curvesOf, shown, domain, tMax]);
 
   // ---- the blotter --------------------------------------------------------
-  // One row per ticket that has reached the desk by the set on screen. Held in
-  // arrival order, newest at the top, which is the order a blotter fills.
+  // The tickets on screen are the ones that have arrived. A ticket arrives
+  // with the set it was dealt on and stays from then on, and its status
+  // carries on moving as later sets arrive.
   const blotter = useMemo(() => {
     const rows = f.feed ?? [];
     return feedDefs
@@ -451,42 +364,123 @@ export default function Workstation({ tl }: { tl: Timeline }) {
     return { pending, executed, cancelled };
   }, [blotter]);
 
-  // What the pending tickets add, taken as the difference between the two
-  // memberships the engine priced.
-  const pendingNpv = f.pDeskNpv - f.deskNpv;
-  const pendingDv01 = f.pDeskDv01 - f.deskDv01;
+  // ---- totals over the membership on screen -------------------------------
+  // The opening book's value and basis point come off the engine per set. A
+  // ticket that has arrived carries its own mark on that same set. Both are
+  // sums over trades, so the desk line is the book plus the executed tickets,
+  // with the pending ones added when the blotter toggle is on, and every term
+  // in it is a number the engine produced.
+  const included = useMemo(() => {
+    const want = (st: number) =>
+      st === EXECUTED || (withPending && st === PENDING);
+    const all = feedDefs.map((_, k) => k);
+    return { all, on: (fr: Frame) => all.filter(k => want(fr.feed?.[k]?.[0] ?? NOT_YET)) };
+  }, [feedDefs, withPending]);
+
+  const totalsOn = useMemo(() => (frame: number) => {
+    const fr = tl.frames[frame];
+    const byBook: Record<string, { npv: number; dv01: number; trades: number }> = {};
+    let npv = fr.deskNpv, dv01 = fr.deskDv01, trades = fr.deskTrades;
+    for (const k of included.on(fr)) {
+      const r = fr.feed[k];
+      npv += r[1]; dv01 += r[2]; trades += 1;
+      const b = byBook[feedDefs[k].book] ??
+        (byBook[feedDefs[k].book] = { npv: 0, dv01: 0, trades: 0 });
+      b.npv += r[1]; b.dv01 += r[2]; b.trades += 1;
+    }
+    return { npv, dv01, trades, byBook };
+  }, [tl.frames, feedDefs, included]);
+
+  const totals = totalsOn(i);
+  const prevTotals = prev ? totalsOn(i - 1) : null;
+  const openTotals = totalsOn(0);
+
+  // What the tickets still pending would add, summed off their own marks.
+  const pendingAdds = useMemo(() => {
+    let npv = 0, dv01 = 0;
+    for (const k of included.all) {
+      const r = f.feed?.[k];
+      if (r && r[0] === PENDING) { npv += r[1]; dv01 += r[2]; }
+    }
+    return { npv, dv01 };
+  }, [f.feed, included]);
+
+  // ---- the zero and forward ladder ----------------------------------------
+  // The opening book's ladder plus the ladder of every ticket in the
+  // membership. PV01 adds across trades, and the engine's own tests check that
+  // a trade's ladder is its marginal contribution to a book's.
+  const ladderOn = useMemo(() => (curve: string) => {
+    const times = here.riskT[curve] ?? [];
+    const base = f.risk?.[curve] ?? [];
+    const z = times.map((_, n) => base[n * 2] ?? 0);
+    const w = times.map((_, n) => base[n * 2 + 1] ?? 0);
+    for (const k of included.on(f)) {
+      const lad = f.tradeLad?.[feedDefs[k].id]?.[curve];
+      if (!lad) continue;
+      const [zw, fw] = lad;
+      for (let n = 1; n < zw.length; n++) z[zw[0] + n - 1] += zw[n];
+      for (let n = 1; n < fw.length; n++) w[fw[0] + n - 1] += fw[n];
+    }
+    return { times, z, w };
+  }, [f, here, included, feedDefs]);
+
+  // Curves with something to show in the domain on screen. The market domain
+  // is read against the quoted instruments; the other two against the bucket
+  // axes.
+  const riskCurves = useMemo(() => tl.curveIds.filter(c =>
+    riskMode === 'mkt' ? (here.mktQ[c] ?? []).length : (f.risk?.[c] ?? []).length),
+    [tl.curveIds, riskMode, here, f]);
+  const curveOn = riskCurves.includes(riskCurve) ? riskCurve : (riskCurves[0] ?? riskCurve);
+
+  const riskChart = useMemo(() => {
+    const { times, z, w } = ladderOn(curveOn);
+    const rows: { label: string; pv01: number; t: number }[] = [];
+    times.forEach((t, n) => {
+      if (t <= 0) return;
+      rows.push({
+        label: t < 1 ? Math.round(t * 12) + 'M' : Math.round(t) + 'Y',
+        pv01: riskMode === 'zero' ? z[n] : w[n], t,
+      });
+    });
+    return rows;
+  }, [ladderOn, curveOn, riskMode]);
 
   // ---- market-quote ladder ------------------------------------------------
-  // One panel per curve, each on its own axis. The bars differ by two orders of
-  // magnitude between the EURIBOR curve and the cross-currency one, and a
-  // shared axis would leave most of them at zero height.
-  const mktSource = mktRun ? tl.frames[mktRun.frame] : null;
-  const mktPanels = useMemo(() => {
-    const m = (withPending ? mktSource?.mktPending : mktSource?.mkt) ?? mktSource?.mkt;
-    if (!m) return [];
-    return tl.curveIds.filter(c => (m[c] ?? []).length).map(c => ({
-      key: c,
-      label: LABEL[c] ?? c,
-      rows: m[c].length,
-      total: m[c].reduce((s, [, v]) => s + v, 0),
-      data: m[c].map(([qid, pv01]) => ({ tenor: qid.split('/')[0], instrument: qid, pv01 })),
-    }));
-  }, [mktSource, tl.curveIds, withPending]);
-  const mktTotal = mktPanels.reduce((s, p) => s + p.total, 0);
-  const mktQuotes = mktPanels.reduce((s, p) => s + p.rows, 0);
-  // The forward-bucket ladder over the same set, summed. A basis point on every
-  // forward interval and a basis point on every quote are two routes to the
-  // same move, so the two totals are worth putting side by side.
+  // The engine computes this ladder on every published set, like the zero and
+  // forward ones, and measures three memberships in one pass. Tickets arrive
+  // with the set they were dealt on, so the membership on screen is the book
+  // with the executed tickets, or with the pending ones as well when the
+  // blotter toggle is on; the page reads mkt or mktPending to match. mktBase,
+  // the opening book on its own, is a membership the desk no longer sees.
+  const mktLadder = f.mkt ? (withPending ? f.mktPending : f.mkt) : null;
+  const mktTotals = useMemo(() => {
+    let total = 0, quotes = 0;
+    for (const rows of Object.values(mktLadder ?? {}))
+      for (const v of rows) if (v !== null) { total += v; quotes += 1; }
+    return { total, quotes };
+  }, [mktLadder]);
+  const mktChart = useMemo(() => {
+    const rows = mktLadder?.[curveOn] ?? [];
+    const ids = here.mktQ[curveOn] ?? [];
+    return rows.map((pv01, n) => ({
+      label: (ids[n] ?? '').split('/')[0], full: ids[n] ?? '', pv01,
+    })).filter(r => r.pv01 !== null) as
+      { label: string; full: string; pv01: number }[];
+  }, [mktLadder, curveOn, here]);
+  const mktCurveTotal = mktChart.reduce((s, r) => s + r.pv01, 0);
+  // The forward-bucket ladder over the same set and membership, summed. A
+  // basis point on every forward interval and a basis point on every quote
+  // are two routes to the same move, so the two totals are worth putting side
+  // by side.
   const fwdTotal = useMemo(() => {
-    if (!mktSource) return 0;
-    const src = (withPending ? mktSource.riskPending : mktSource.risk) ?? mktSource.risk;
-    return Object.values(src ?? {}).reduce(
-      (s, rows) => s + rows.reduce((a, b) => a + b[2], 0), 0);
-  }, [mktSource, withPending]);
-  const mktCapped = (mktSource?.mktUs ?? 0) / 1000 > MKT_CAP_MS;
-  const pendingFrame = mktPending ? tl.frames[mktPending.frame] : null;
-  // What a market run costs on this set, for the passage above. The set on
-  // screen where it has one, otherwise the nearest set that does.
+    let s = 0;
+    for (const rows of Object.values(f.risk ?? {}))
+      for (let n = 1; n < rows.length; n += 2) s += rows[n];
+    for (const k of included.on(f))
+      for (const lad of Object.values(f.tradeLad?.[feedDefs[k].id] ?? {}))
+        for (let n = 1; n < lad[1].length; n++) s += lad[1][n];
+    return s;
+  }, [f, included, feedDefs]);
 
   // ---- position detail ----------------------------------------------------
   const position = detail?.positions.find(p => p.id === posId) ?? null;
@@ -494,33 +488,50 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const ladders = (position && detail?.tradeRisk[position.id]) || null;
   const hasDetail = useMemo(
     () => new Set((detail?.positions ?? []).map(p => p.id)), [detail]);
-  // A per-position market ladder was measured against one set, and it stays
-  // covered until that set is the one a market run was asked for.
-  const mktReady = detail ? mktDone.has(detail.frame) : false;
+  // The axes the detail ladders are read against: the ones standing on the set
+  // it was measured on, with anything the detail run turned up on top.
+  const detailAxis = useMemo(() => {
+    const at = detail ? standing[detail.frame] : null;
+    return {
+      riskT: { ...(at?.riskT ?? {}), ...(detail?.riskT ?? {}) },
+      mktQ: { ...(at?.mktQ ?? {}), ...(detail?.mktQ ?? {}) },
+    };
+  }, [detail, standing]);
 
   // Curves this position has something to show on, for the domain on screen.
-  // The market domain reaches further than the other two: a swap discounted on
-  // the meeting-dated curve has no ESTR node ladder and still has an ESTR
-  // market ladder, because bumping an ESTR quote re-solves EURIBOR, which it
-  // does project on. So the curve list is rebuilt per domain, off what the
-  // exported ladder actually holds.
+  // The market domain reaches further than the other two: an FX forward has no
+  // node ladder on the meeting-dated ESTR curve and still has a market ladder
+  // on it, because bumping one of its quotes re-solves the cross-currency
+  // curve the forward prices off. So the curve list is rebuilt per domain,
+  // off what the exported ladder actually holds.
   const posCurves = useMemo(() => {
     if (!ladders) return [];
     return Object.keys(ladders).filter(c =>
-      posDomain === 'mkt' ? ladders[c].mkt.length : ladders[c][posDomain].length);
+      posDomain === 'mkt' ? ladders[c].m.length
+        : (posDomain === 'zero' ? ladders[c].z : ladders[c].f).length);
   }, [ladders, posDomain]);
   const curveShown = posCurve && posCurves.includes(posCurve) ? posCurve : posCurves[0];
 
   const posChart = useMemo(() => {
     if (!ladders || !curveShown) return [];
     const l = ladders[curveShown];
-    if (posDomain === 'mkt')
-      return l.mkt.map(([qid, pv01]) => ({ label: qid.split('/')[0], full: qid, pv01 }));
-    return l[posDomain].filter(([t]) => t > 0).map(([t, pv01]) => ({
-      label: t < 1 ? Math.round(t * 12) + 'M' : Math.round(t) + 'Y',
-      full: t.toFixed(2) + 'Y', pv01,
-    }));
-  }, [ladders, curveShown, posDomain]);
+    if (posDomain === 'mkt') {
+      const ids = detailAxis.mktQ[curveShown] ?? [];
+      return l.m.map((pv01, n) => ({
+        label: (ids[n] ?? '').split('/')[0], full: ids[n] ?? '', pv01,
+      })).filter(r => r.pv01 !== null) as
+        { label: string; full: string; pv01: number }[];
+    }
+    const times = detailAxis.riskT[curveShown] ?? [];
+    const vals = posDomain === 'zero' ? l.z : l.f;
+    return vals.map((pv01, n) => ({
+      t: times[n] ?? 0,
+      label: (times[n] ?? 0) < 1
+        ? Math.round((times[n] ?? 0) * 12) + 'M' : Math.round(times[n] ?? 0) + 'Y',
+      full: (times[n] ?? 0).toFixed(2) + 'Y', pv01,
+    })).filter(r => r.t > 0 && r.pv01 !== null) as
+      { label: string; full: string; pv01: number }[];
+  }, [ladders, curveShown, posDomain, detailAxis]);
 
   // The ladder total on the curve shown, against the position's parallel DV01.
   // A curve-node ladder over every node of every dependency curve sums to the
@@ -529,35 +540,42 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const posTotal = posChart.reduce((s, r) => s + r.pv01, 0);
   const posAllTotal = useMemo(() => {
     if (!ladders) return 0;
-    return Object.values(ladders).reduce((s, l) => s + (
-      posDomain === 'mkt'
-        ? l.mkt.reduce((a, [, v]) => a + v, 0)
-        : l[posDomain].reduce((a, [, v]) => a + v, 0)), 0);
+    const sum = (v: (number | null)[]) =>
+      v.reduce((a: number, x) => a + (x ?? 0), 0);
+    return Object.values(ladders).reduce((s, l) => s + sum(
+      posDomain === 'mkt' ? l.m : posDomain === 'zero' ? l.z : l.f), 0);
   }, [ladders, posDomain]);
 
-  const priced = useMemo(() => priceSwap(
-    segsOf['EUR_EURIBOR6M'] ?? [], segsOf['EUR_ESTR'] ?? [],
-    tenor, rate / 100, notional * 1e6), [segsOf, tenor, rate, notional]);
+  const priced = useMemo(() => {
+    const p = curvesOf['EUR_EURIBOR6M'], d = curvesOf['EUR_ESTR_ECB'];
+    return priceSwap(p ? dfMap(p) : null, d ? dfMap(d) : null,
+                     tenor, rate / 100, notional * 1e6);
+  }, [curvesOf, tenor, rate, notional]);
 
-  // Both memberships read through one accessor, so a row and the move under it
-  // can never come from different ones.
-  const bNpv = (b?: BookAgg) => !b ? 0 : withPending ? b.pNpv : b.npv;
-  const bDv01 = (b?: BookAgg) => !b ? 0 : withPending ? b.pDv01 : b.dv01;
-  const bTrades = (b?: BookAgg) => !b ? 0 : withPending ? b.pTrades : b.trades;
-  const bookMove = (b: BookAgg) => {
-    const p = prev?.books.find(x => x.book === b.book);
-    const o = open.books.find(x => x.book === b.book);
+  // A book line is the trades it opened with plus the tickets on it that have
+  // arrived, on whichever set is being read.
+  const bookOn = (name: string, frame: number,
+                  t: ReturnType<typeof totalsOn>) => {
+    const base = tl.frames[frame].books.find(x => x.book === name);
+    const add = t.byBook[name];
     return {
-      since: p ? bNpv(b) - bNpv(p) : 0,
-      fromOpen: o ? bNpv(b) - bNpv(o) : 0,
+      npv: (base?.npv ?? 0) + (add?.npv ?? 0),
+      dv01: (base?.dv01 ?? 0) + (add?.dv01 ?? 0),
+      trades: (base?.trades ?? 0) + (add?.trades ?? 0),
     };
   };
-  const deskNpv = withPending ? f.pDeskNpv : f.deskNpv;
-  const deskDv01 = withPending ? f.pDeskDv01 : f.deskDv01;
-  const deskTrades = withPending ? f.pDeskTrades : f.deskTrades;
-  const deskSince = prev
-    ? deskNpv - (withPending ? prev.pDeskNpv : prev.deskNpv) : 0;
-  const deskFromOpen = deskNpv - (withPending ? open.pDeskNpv : open.deskNpv);
+  const bookMove = (b: BookAgg) => {
+    const now = bookOn(b.book, i, totals);
+    return {
+      since: prevTotals ? now.npv - bookOn(b.book, i - 1, prevTotals).npv : 0,
+      fromOpen: now.npv - bookOn(b.book, 0, openTotals).npv,
+    };
+  };
+  const deskNpv = totals.npv;
+  const deskDv01 = totals.dv01;
+  const deskTrades = totals.trades;
+  const deskSince = prevTotals ? deskNpv - prevTotals.npv : 0;
+  const deskFromOpen = deskNpv - openTotals.npv;
 
   const moveColour = (v: number, floor = 1) =>
     Math.abs(v) < floor ? 'var(--text-dim)' : v > 0 ? 'var(--accent-green)' : '#c86e6e';
@@ -572,39 +590,35 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           style={chip(!playing, '#d4a853')}>
           {playing ? 'Pause feed' : 'Resume feed'}
         </button>
-        <button onClick={takeSnapshot} disabled={running || !loaded}
-          className="px-3 py-1.5 rounded font-mono text-[11px]"
-          style={{ ...chip(running, '#5eaab5'), opacity: loaded ? 1 : 0.45 }}>
-          {running ? 'running risk…' : 'Run risk on this set'}
-        </button>
-        <button onClick={() => runMarketRisk()} disabled={!!mktPending || !f.mkt || !loaded}
-          title={f.mkt ? undefined
-            : (LABEL[f.mktStale ?? ''] ?? f.mktStale) + ' is stale on this set'}
-          className="px-3 py-1.5 rounded font-mono text-[11px]"
-          style={{ ...chip(!!mktPending, MKT), opacity: f.mkt && loaded ? 1 : 0.45 }}>
-          {mktPending ? 'running market risk…' : 'Run market risk'}
-        </button>
         <div className="flex gap-1 ml-1">
-          {tl.frames.map((_, k) => (
+          {/* A hollow mark for the cycle that published nothing, so a reader
+              counting sets is not counting one that does not exist. */}
+          {tl.frames.map((fr, k) => (
             <button key={k} onClick={() => { setI(k); setPlaying(false); }}
-              className="w-6 h-1.5 rounded-sm"
-              style={{ background: k === i ? '#d4a853' : 'var(--border-subtle)' }} />
+              title={fr.published ? `set ${fr.epoch}` : 'nothing published on this cycle'}
+              className="w-6 rounded-sm"
+              style={fr.published
+                ? { height: 6, background: k === i ? '#d4a853' : 'var(--border-subtle)' }
+                : { height: 6, background: 'transparent',
+                    border: `1px dashed ${k === i ? '#d4a853' : 'var(--text-dim)'}` }} />
           ))}
         </div>
         <span className="font-mono text-[11px] ml-1" style={{ color: 'var(--text-dim)' }}>
-          set {f.epoch}
-          {loaded && <> &middot; {deskTrades.toLocaleString()} trades &middot;{' '}
-            {(tl.cashflows / 1e6).toFixed(1)}m cashflows</>}
+          {f.published ? `set ${f.epoch}`
+            : `no set published, set ${epochAt(i)} stands`} &middot;{' '}
+          {deskTrades.toLocaleString()} trades &middot;{' '}
+          {(tl.cashflows / 1e6).toFixed(1)}m cashflows
         </span>
       </div>
 
       {/* ---- what each clock cost on this cycle ---- */}
-      <div className="grid sm:grid-cols-3 gap-2 mb-4 font-mono text-[11px]">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4 font-mono text-[11px]">
         {([['Curves rebuilt', ms(f.cycleUs), f.rebuilt.length + ' of ' + tl.curveIds.length + ' curves'],
-          ['Book revalued', loaded ? ms(f.npvUs) : '—',
-            loaded ? 'every trade, ' + tl.threads + ' cores' : 'no book loaded'],
-          ['Risk ladders', loaded ? ms(f.riskUs) : '—',
-            loaded ? f.buckets + ' buckets, zero and forward' : 'no book loaded']]
+          ['Book revalued', ms(f.npvUs), 'every trade, ' + tl.threads + ' cores'],
+          ['Risk ladders', ms(f.riskUs), f.buckets + ' buckets, zero and forward'],
+          ['Market PV01', f.mkt ? ms(f.mktUs) : '-',
+            f.mkt ? mktTotals.quotes + ' quotes bumped, ' + f.mktRebuilds + ' curve solves'
+              : 'not run, a curve is stale']]
         ).map(([k, v, note]) => (
           <div key={k} className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
             <div className="text-[10px] uppercase" style={{ color: 'var(--text-dim)' }}>{k}</div>
@@ -667,58 +681,6 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         <div>
           <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Books</div>
 
-          {!loaded ? (
-            <div className="rounded px-4 py-5" style={{ border: '1px dashed var(--border-subtle)' }}>
-              <p className="text-xs mb-3 max-w-2xl" style={{ color: 'var(--text-dim)' }}>
-                The curves are published and nothing is marked against them yet. Load the
-                trade set to bring the book across from the trade store.
-              </p>
-              <button onClick={loadBook} disabled={loadState === 'running'}
-                className="px-3 py-1.5 rounded font-mono text-[11px]"
-                style={chip(loadState === 'running', '#5cb87a')}>
-                {loadState === 'running' ? 'loading…' : 'Load trade set'}
-              </button>
-              {loadState === 'running' && (
-                <>
-                  <div className="mt-3 rounded-sm overflow-hidden"
-                    style={{ height: 4, background: 'var(--border-subtle)' }}>
-                    <div style={{
-                      height: '100%', background: '#5cb87a', width: loadPct + '%',
-                      transition: 'width 120ms linear',
-                    }} />
-                  </div>
-                  <div className="font-mono text-[10.5px] mt-1.5" style={{ color: 'var(--text-dim)' }}>
-                    {Math.round((loadPct / 100) * (tl.trades + tl.cashflows)).toLocaleString()}{' '}
-                    of {(tl.trades + tl.cashflows).toLocaleString()} rows &middot;{' '}
-                    {BRIDGE_CONNECTIONS} connections
-                  </div>
-                </>
-              )}
-              <div className="text-[11px] mt-3 max-w-2xl space-y-2" style={{ color: 'var(--text-dim)' }}>
-                <p>
-                  The book arrives as nested Parquet over {BRIDGE_CONNECTIONS} parallel
-                  connections, one record a trade with its schedule held as an array
-                  underneath it. That is the shape the trade bridge on this site ships,
-                  and the rate quoted below is the one it measured.
-                </p>
-                <p>
-                  The book is {tl.trades.toLocaleString()} trades and{' '}
-                  {tl.cashflows.toLocaleString()} cashflow rows. At the{' '}
-                  {BRIDGE_RPS.toLocaleString()} rows a second the bridge measured, that
-                  load takes about{' '}
-                  {Math.round((tl.trades + tl.cashflows) / BRIDGE_RPS)} seconds. The wait
-                  here is {(LOAD_WAIT_MS / 1000).toFixed(1)} seconds, which is shorter.
-                </p>
-                <p>
-                  These are linear products: swaps, overnight index swaps and FX forwards.
-                  The bridge&apos;s book is caps, floors, swaptions and inflation, which
-                  carry far more structure per trade and are what made its export a
-                  quarter of a gigabyte.
-                </p>
-              </div>
-            </div>
-          ) : (
-          <>
           <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
             <table className="w-full font-mono text-[11px]">
               <thead>
@@ -734,22 +696,23 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               <tbody>
                 {f.books.map(b => {
                   const d = bookMove(b);
+                  const now = bookOn(b.book, i, totals);
                   return (
                     <tr key={b.book} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td className="px-3 py-1.5" style={{ color: b.degraded ? '#c86e6e' : 'var(--text-secondary)' }}>
                         {b.book}{b.degraded ? ' *' : ''}
                       </td>
                       <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>
-                        {bTrades(b).toLocaleString()}
+                        {now.trades.toLocaleString()}
                       </td>
-                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{millions(bNpv(b))}</td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{millions(now.npv)}</td>
                       <td className="px-3 py-1.5 text-right" style={{ color: moveColour(d.since, 1e4) }}>
                         {signed(d.since, 1e4)}
                       </td>
                       <td className="px-3 py-1.5 text-right" style={{ color: moveColour(d.fromOpen, 1e4) }}>
                         {signed(d.fromOpen, 1e4)}
                       </td>
-                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>{money(bDv01(b))}</td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-dim)' }}>{money(now.dv01)}</td>
                     </tr>
                   );
                 })}
@@ -778,7 +741,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </p>
 
           <div className="text-[10px] uppercase mt-4 mb-2" style={{ color: 'var(--text-dim)' }}>
-            A few of the trades behind those totals
+            Trades from the opening book
           </div>
           <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
             <table className="w-full font-mono text-[10.5px]">
@@ -813,11 +776,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </div>
           {detail && (
             <p className="text-[11px] mt-2" style={{ color: 'var(--text-dim)' }}>
-              These eight came out of the book that was loaded. Pick one to put its own
-              ladder on screen, below.
+              These eight are from the book the desk opened with. The trades dealt
+              during the session arrive on the blotter further down. Pick a row in
+              either to put its own ladder on screen, below.
             </p>
-          )}
-          </>
           )}
         </div>
       </div>
@@ -870,323 +832,186 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </ResponsiveContainer>
         </div>
         <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-          The engine publishes each curve as its own cubics over log discount factors,
-          and this page evaluates them. Pick the instantaneous forward and the
-          meeting-dated curve to see the policy steps: flat between ECB dates, then a
-          spline. A discrete forward averages over its own window and smooths them away.
-        </p>
-        <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-          * EURIBOR 6M turns up slightly in the instantaneous forward between 13 and 15
-          months. Its quotes are monthly out to 13M and bi-monthly after that, and the
-          forward is the derivative of a cubic fitted through log discount factors, so it
-          shows whatever the spline does where the pillar spacing changes. It comes to
-          about 1.3 basis points. A monotone convex scheme would smooth it away by forcing
-          the shape, which is a different kind of wrong, so it is left where you can see it.
+          The engine evaluates each published curve itself; nothing on screen is
+          derived in the browser. Two shapes are real, not artifacts: the EURIBOR 6M
+          bump between 13 and 16 months sits where its quote spacing changes, and the
+          ~25bp drop in the EUR/USD instantaneous forward across year end is the
+          year-end turn.
         </p>
       </div>
 
       {/* ---- risk ---- */}
       <div className="mt-6">
         <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Risk</div>
-        {snaps.length > 0 && (
-          <div className="rounded overflow-x-auto mb-3" style={{ border: '1px solid var(--border-subtle)' }}>
-            <table className="w-full font-mono text-[10.5px]">
-              <thead>
-                <tr style={{ color: 'var(--text-dim)' }}>
-                  <th className="text-left px-3 py-1.5 font-normal">Run</th>
-                  <th className="text-left px-3 py-1.5 font-normal">Taken</th>
-                  <th className="text-left px-3 py-1.5 font-normal">Set</th>
-                  <th className="text-left px-3 py-1.5 font-normal">Market at the time</th>
-                  <th className="text-right px-3 py-1.5 font-normal">Buckets</th>
-                  <th className="text-right px-3 py-1.5 font-normal">Took</th>
-                </tr>
-              </thead>
-              <tbody>
-                {snaps.map(sn => {
-                  const fr = tl.frames[sn.frame];
-                  const on = sn.id === viewing;
-                  return (
-                    <tr key={sn.id} onClick={() => setViewing(sn.id)}
-                      style={{
-                        borderTop: '1px solid var(--border-subtle)', cursor: 'pointer',
-                        background: on ? '#5eaab512' : 'transparent',
-                        color: on ? 'var(--text-primary)' : 'var(--text-dim)',
-                      }}>
-                      <td className="px-3 py-1" style={{ color: on ? '#5eaab5' : 'var(--text-dim)' }}>
-                        #{sn.id}
-                      </td>
-                      <td className="px-3 py-1">{sn.at}</td>
-                      <td className="px-3 py-1">{sn.epoch}</td>
-                      <td className="px-3 py-1 truncate" style={{ maxWidth: 260 }}>{sn.label}</td>
-                      <td className="px-3 py-1 text-right">{fr.buckets}</td>
-                      <td className="px-3 py-1 text-right">{ms(fr.riskUs)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {riskSource === null ? (
+        <p className="text-[11px] mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          Three ladders, all run on every published set. Market PV01 buckets by quoted
+          instrument, the ones a desk deals. Zero and forward PV01 bucket by curve
+          node and interval.
+        </p>
+        <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
+          {([['mkt', 'Market PV01'], ['zero', 'Zero PV01'],
+             ['fwd', 'Forward PV01']] as const).map(([m, l]) => (
+            <button key={m} onClick={() => setRiskMode(m)} className="px-2 py-0.5 rounded"
+              style={chip(riskMode === m, '#5eaab5')}>{l}</button>
+          ))}
+          <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
+          {riskCurves.map(c => (
+            <button key={c} onClick={() => setRiskCurve(c)} className="px-2 py-0.5 rounded"
+              style={chip(curveOn === c, COLOUR[c] ?? '#8b8a97')}>{LABEL[c] ?? c}</button>
+          ))}
+        </div>
+        {riskMode === 'mkt' && !f.mkt ? (
           <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
             <p className="text-xs max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
-              {!loaded ? (
-                <>The curves are published and there is no book to run a ladder over.
-                  Load the trade set above first.</>
-              ) : (
-                <>A risk run is asked for. Press{' '}
-                  <span style={{ color: '#5eaab5' }}>Run risk on this set</span> to take
-                  the published set on screen and put a ladder against it. Every run is
-                  kept and stays stamped with the set it describes, however far the feed
-                  moves on.</>
-              )}
+              Market PV01 was not run on set {epochAt(i)}.{' '}
+              {LABEL[f.mktStale ?? ''] ?? f.mktStale} is being served stale, so the
+              published curve is not the solve of the quotes behind it, and a bump
+              would measure the gap between two market states. The other{' '}
+              {tl.frames.filter(x => x.mkt).length} sets carry this ladder.
             </p>
           </div>
         ) : (
           <>
-            <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
-              {tl.curveIds.filter(c => (riskSource.risk?.[c] ?? []).length).map(c => (
-                <button key={c} onClick={() => setRiskCurve(c)} className="px-2 py-0.5 rounded"
-                  style={chip(riskCurve === c, COLOUR[c] ?? '#8b8a97')}>{LABEL[c] ?? c}</button>
-              ))}
-              <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
-              {([['zero', 'zero buckets'], ['fwd', 'forward buckets']] as const).map(([m, l]) => (
-                <button key={m} onClick={() => setRiskMode(m)} className="px-2 py-0.5 rounded"
-                  style={chip(riskMode === m, '#5eaab5')}>{l}</button>
-              ))}
-            </div>
             <div className="rounded px-3 py-2 mb-2 font-mono text-[11px]"
               style={{ border: '1px solid #5eaab555', background: '#5eaab50a', color: 'var(--text-secondary)' }}>
-              as of set {riskSource.epoch}
-              {riskSource.epoch !== f.epoch && (
-                <span style={{ color: '#d4a853' }}> &middot; the feed has since moved to set {f.epoch}</span>
-              )}
+              {f.published ? `set ${f.epoch}` : `set ${epochAt(i)}, still standing`}
               <span style={{ color: 'var(--text-dim)' }}>
-                {' '}&middot; run #{chosen?.id} at {chosen?.at} &middot; {riskSource.buckets} buckets
-                in both the zero and forward domains, in {ms(riskSource.riskUs)} on{' '}
-                {riskSource.threads} cores
+                {riskMode === 'mkt' ? <>
+                  {' '}&middot; {mktTotals.quotes} quoted instruments,{' '}
+                  {f.mktRebuilds} curve solves, in {ms(f.mktUs)} on {f.threads} cores
+                </> : <>
+                  {' '}&middot; {f.buckets} buckets in both the zero and forward domains, in{' '}
+                  {ms(f.riskUs)} on {f.threads} cores
+                </>}
+                {feedCount.executed > 0 && <>
+                  {' '}&middot; {feedCount.executed} executed{' '}
+                  {feedCount.executed === 1 ? 'ticket is' : 'tickets are'} in it
+                </>}
               </span>
-              {withPending && (
+              {withPending && feedCount.pending > 0 && (
                 <span style={{ color: '#d4a853' }}>
                   {' '}&middot; pending tickets are in this ladder
+                </span>
+              )}
+              {riskMode === 'mkt' && f.mktFailed > 0 && (
+                <span style={{ color: '#c86e6e' }}>
+                  {' '}&middot; {f.mktFailed} bumps did not build and are missing from
+                  the ladder
                 </span>
               )}
             </div>
             <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={riskChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="label" stroke="#55546a" tick={{ fontSize: 9 }} interval={0} />
-                  <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={62}
-                    tickFormatter={(v: number) => Math.round(v).toLocaleString()} />
-                  <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
-                    formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']} />
-                  <ReferenceLine y={0} stroke="#55546a" />
-                  <Bar dataKey="pv01" fill={COLOUR[riskCurve] ?? '#5b8fc9'} isAnimationActive={false} />
-                </BarChart>
+                {riskMode === 'mkt' ? (
+                  <BarChart data={mktChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" stroke="#55546a" tick={{ fontSize: 9 }}
+                      interval={Math.max(0, Math.ceil(mktChart.length / 16) - 1)}
+                      angle={-45} textAnchor="end" height={40} />
+                    <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={62}
+                      tickFormatter={(v: number) => Math.round(v).toLocaleString()} />
+                    <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
+                      labelFormatter={(_: any, p: any) => p?.[0]?.payload?.full ?? ''}
+                      formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']} />
+                    <ReferenceLine y={0} stroke="#55546a" />
+                    <Bar dataKey="pv01" fill={COLOUR[curveOn] ?? '#5b8fc9'} isAnimationActive={false} />
+                  </BarChart>
+                ) : (
+                  <BarChart data={riskChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" stroke="#55546a" tick={{ fontSize: 9 }} interval={0} />
+                    <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={62}
+                      tickFormatter={(v: number) => Math.round(v).toLocaleString()} />
+                    <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
+                      formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']} />
+                    <ReferenceLine y={0} stroke="#55546a" />
+                    <Bar dataKey="pv01" fill={COLOUR[curveOn] ?? '#5b8fc9'} isAnimationActive={false} />
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             </div>
-            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              What the book gains or loses for one basis point at each node of{' '}
-              {LABEL[riskCurve] ?? riskCurve}. {riskMode === 'zero'
-                ? 'A zero bucket lifts the curve around one node and tapers away to its neighbours.'
-                : 'A forward bucket lifts the forward rate flat across one interval.'}{' '}
-              Both are applied as an overlay on the published curve rather than by
-              rebuilding it, so a bump moves the bucket asked for and leaves the rest of
-              the curve alone.
-            </p>
-            <div className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              <div className="mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                What the run does
+            {riskMode === 'mkt' && (
+              <div className="font-mono text-[10.5px] mt-2 flex gap-6 flex-wrap"
+                style={{ color: 'var(--text-dim)' }}>
+                <span>
+                  {LABEL[curveOn] ?? curveOn} sums to{' '}
+                  <span style={{ color: 'var(--text-primary)' }}>{money(mktCurveTotal)}</span>
+                </span>
+                <span>
+                  every curve together{' '}
+                  <span style={{ color: 'var(--text-primary)' }}>{money(mktTotals.total)}</span>
+                </span>
+                <span>
+                  forward buckets on the same set{' '}
+                  <span style={{ color: 'var(--text-primary)' }}>{money(fwdTotal)}</span>
+                </span>
+                <span>
+                  book DV01{' '}
+                  <span style={{ color: 'var(--text-primary)' }}>{money(totals.dv01)}</span>
+                </span>
               </div>
-              <ul className="list-disc pl-4 space-y-1">
-                <li>Zero and forward risk reruns on every price update, so the ladder
-                  on screen is current.</li>
-                <li>Market risk solves the curve again for each quoted instrument. It
-                  takes about half a minute, so it is computed on request.</li>
-                <li>While it runs, the book value and the zero and forward ladders carry
-                  on updating.</li>
-                <li>Pausing saves a snapshot: the time, the market data as it stood, and
-                  the risk against it. A desk can hedge off one.</li>
-                <li>The blotter toggle below chooses the membership. With it on, this
-                  ladder covers the pending tickets as well as the book.</li>
-              </ul>
-            </div>
-            <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              This page is a recording. The engine ran a ladder against every published
-              set in the session, on both memberships, and the timings shown are its own.
-              The page serves those numbers back and does no arithmetic of its own.
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* ---- market-quote risk ---- */}
-      <div className="mt-6">
-        <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
-          Market risk
-        </div>
-
-        <p className="text-[11px] mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-          Zero and forward risk reruns on every price update. Market risk rebuilds the
-          curve for each quoted instrument, which takes about half a minute, so it is
-          computed on request. Its buckets are instruments you can deal; curve nodes are
-          not.
-        </p>
-
-        {mktPending && pendingFrame ? (
-          <div className="rounded px-3 py-2.5" style={{ border: `1px solid ${MKT}55`, background: `${MKT}0a` }}>
-            <div className="font-mono text-[11px]" style={{ color: MKT }}>
-              set {pendingFrame.epoch} &middot; bumping{' '}
-              {Object.values(pendingFrame.mkt ?? {}).reduce((s, r) => s + r.length, 0)}{' '}
-              quoted instruments &middot; {pendingFrame.mktRebuilds} curve solves
-            </div>
-            <div className="mt-2 rounded-sm overflow-hidden" style={{ height: 4, background: 'var(--border-subtle)' }}>
-              <div style={{
-                height: '100%', background: MKT,
-                width: Math.min(100, (mktElapsed / mktPending.wait) * 100) + '%',
-                transition: 'width 140ms linear',
-              }} />
-            </div>
-            <div className="font-mono text-[10.5px] mt-1.5" style={{ color: 'var(--text-dim)' }}>
-              {(mktElapsed / 1000).toFixed(1)} s
-            </div>
-          </div>
-        ) : mktSource === null || !mktSource.mkt ? (
-          <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
-            <p className="text-xs max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
-              {!loaded ? 'Load the trade set above before running this.'
-                : <>Press <span style={{ color: MKT }}>Run market risk</span> to move every
-                  quoted instrument on the set a basis point, solve the curves again and
-                  reprice the book against each result.</>}
-              {loaded && !f.mkt && (
-                <>
-                  {' '}The button is off on this set:{' '}
-                  {LABEL[f.mktStale ?? ''] ?? f.mktStale} is being served stale, so the
-                  published curve is not the solve of the quotes behind it and a bump
-                  would measure the difference between two market states.
-                </>
-              )}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="rounded px-3 py-2 mb-3 font-mono text-[11px]"
-              style={{ border: `1px solid ${MKT}55`, background: `${MKT}0a`, color: 'var(--text-secondary)' }}>
-              as of set {mktSource.epoch}
-              {mktSource.epoch !== f.epoch && (
-                <span style={{ color: '#d4a853' }}> &middot; the feed has since moved to set {f.epoch}</span>
-              )}
-              <span style={{ color: 'var(--text-dim)' }}>
-                {' '}&middot; run #{mktRun?.id} at {mktRun?.at} &middot; {mktQuotes} quoted
-                instruments, {mktSource.mktRebuilds} curve solves, in{' '}
-                {ms(mktSource.mktUs)} on {mktSource.threads} cores
-              </span>
-              {withPending && (
-                <span style={{ color: '#d4a853' }}>
-                  {' '}&middot; pending tickets are in this ladder
-                </span>
-              )}
-              {mktSource.mktFailed > 0 && (
-                <span style={{ color: '#c86e6e' }}>
-                  {' '}&middot; {mktSource.mktFailed} bumps did not build and are missing
-                  from the ladder
-                </span>
-              )}
-            </div>
-
-            {/* Three across at desktop width, stacked below it. Each panel is
-                scaled to its own numbers: the EURIBOR ladder and the
-                cross-currency one differ by two orders of magnitude, and a
-                shared axis would leave the smaller ones at no height at all. */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              {mktPanels.map(p => (
-                <div key={p.key} className="rounded px-3 py-2 min-w-0"
-                  style={{ border: '1px solid var(--border-subtle)' }}>
-                  <div className="flex items-baseline justify-between gap-2 mb-1">
-                    <span className="font-mono text-[11px]" style={{ color: COLOUR[p.key] ?? MKT }}>
-                      {p.label}
-                    </span>
-                  </div>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={p.data} margin={{ left: 0, right: 6, top: 4, bottom: 0 }}>
-                      <CartesianGrid stroke={chartGrid} />
-                      <XAxis dataKey="tenor" stroke={chartAxis} tick={{ fontSize: 9 }}
-                        interval={Math.max(0, Math.ceil(p.data.length / 10) - 1)}
-                        angle={-45} textAnchor="end" height={44} />
-                      <YAxis stroke={chartAxis} tick={{ fontSize: 10 }} width={46}
-                        tickFormatter={v => fmtAxis(Number(v))} />
-                      <Tooltip {...tt}
-                        formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']}
-                        labelFormatter={(l: any) => {
-                          const row = p.data.find(r => r.tenor === l);
-                          return row ? row.instrument : String(l);
-                        }} />
-                      <ReferenceLine y={0} stroke={chartAxis} />
-                      <Bar dataKey="pv01" fill={COLOUR[p.key] ?? MKT} isAnimationActive={false} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="font-mono text-[10px] mt-1 flex gap-3 flex-wrap"
-                    style={{ color: 'var(--text-dim)' }}>
-                    <span>total {money(p.total)}</span>
-                    <span>{p.rows} instruments</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="font-mono text-[10.5px] mt-3 flex gap-6 flex-wrap"
-              style={{ color: 'var(--text-dim)' }}>
-              <span>
-                every curve together{' '}
-                <span style={{ color: 'var(--text-primary)' }}>{money(mktTotal)}</span>
-              </span>
-              <span>
-                forward buckets on the same set{' '}
-                <span style={{ color: 'var(--text-primary)' }}>{money(fwdTotal)}</span>
-              </span>
-              <span>
-                book DV01{' '}
-                <span style={{ color: 'var(--text-primary)' }}>
-                  {money(withPending ? mktSource.pDeskDv01 : mktSource.deskDv01)}
-                </span>
-              </span>
-            </div>
-
-            <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              Every bar is one quoted instrument moved a basis point. Bar heights compare
-              within a panel, and the total under each panel is what carries across them.
-              A basis point on every quote and a basis point on every forward interval are
-              two routes to the same move and land about a percent apart. The book DV01
-              shifts the solved zero curves, which is a third kind of bump, and comes out
-              about a quarter larger.
-            </p>
+            )}
             <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-              This page is a recording. The engine ran this ladder against the set on
-              screen and the timings shown are its own.{' '}
-              {mktCapped
-                ? `The wait here stops at ${MKT_CAP_MS / 1000} seconds, which is shorter than the ${ms(mktSource.mktUs)} the engine took.`
-                : `The wait here was the ${ms(mktSource.mktUs)} the engine recorded for this set.`}
+              {riskMode === 'mkt' ? <>
+                Each bar is one quoted instrument of {LABEL[curveOn] ?? curveOn}: the
+                quote moves a basis point, the curves re-solve in dependency order, the
+                book reprices. The totals above sit side by side because a basis point
+                on every quote and on every forward interval are two routes to the same
+                move.
+              </> : <>
+                What the book gains or loses for one basis point at each{' '}
+                {riskMode === 'zero' ? 'node' : 'interval'} of{' '}
+                {LABEL[curveOn] ?? curveOn}, applied as an overlay on the published
+                curve: the bump moves one bucket and leaves the rest alone.
+              </>}
+            </p>
+            <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              The blotter toggle below adds pending tickets to the desk totals and
+              every ladder together.
             </p>
           </>
         )}
       </div>
 
       {/* ---- position detail ---- */}
-      {detail && loaded && (
+      {detail && (
         <div className="mt-6">
           <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
-            Position detail
+            Incoming trades
           </div>
 
           {/* ---- blotter ---- */}
-          <p className="text-[11px] mb-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            These are the trades done during the session, on top of the book loaded at
-            the open. A ticket arrives pending and stays out of the marks until its
-            confirmation comes back. An executed ticket is in every total above, and a
-            cancelled one never was.
-          </p>
+          <div className="text-[11px] mb-3 max-w-3xl space-y-2" style={{ color: 'var(--text-dim)' }}>
+            <p>
+              The desk opened with {tl.trades.toLocaleString()} trades and{' '}
+              {tl.cashflows.toLocaleString()} cashflow rows, and that book is already
+              here. It came over as nested Parquet on {BRIDGE_CONNECTIONS} parallel
+              connections, one record a trade with its schedule held as an array
+              underneath it. The trade bridge on this site measured{' '}
+              {BRIDGE_RPS.toLocaleString()} rows a second writing that shape, which puts
+              this book at about {Math.round((tl.trades + tl.cashflows) / BRIDGE_RPS)}{' '}
+              seconds.
+            </p>
+            <p>
+              Trades arrive during the session the way prices do. The tickets dealt on
+              a set come across with it and land here.{' '}
+              {arrivals[i].length > 0 && <>
+                {f.published ? `Set ${f.epoch}` : `The cycle after set ${epochAt(i)}`}{' '}
+                carries {arrivals[i].length}, which is{' '}
+                {arrivals[i].reduce((s, k) => s + (feedDefs[k].rows ?? 0), 0)
+                  .toLocaleString()} rows.{' '}
+              </>}
+              The same bridge staged and merged a{' '}
+              {DELTA_TRADES.toLocaleString()}-trade delta in {DELTA_SECS} seconds, so
+              an arrival this size costs a round trip.
+            </p>
+            <p>
+              A ticket stays on the blotter once it has arrived, and its status moves
+              as later sets come in: pending until the confirmation comes back, then
+              executed or pulled. An executed ticket is in the totals and the ladders
+              above; a cancelled one never enters them.
+            </p>
+          </div>
 
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <button onClick={() => setWithPending(v => !v)}
@@ -1201,9 +1026,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             {feedCount.pending > 0 && (
               <span className="font-mono text-[10px]" style={{ color: 'var(--text-dim)' }}>
                 pending adds{' '}
-                <span style={{ color: moveColour(pendingNpv, 1) }}>{money(pendingNpv)}</span>
+                <span style={{ color: moveColour(pendingAdds.npv, 1) }}>
+                  {money(pendingAdds.npv)}</span>
                 {' '}of value and{' '}
-                <span style={{ color: 'var(--text-primary)' }}>{money(pendingDv01)}</span>
+                <span style={{ color: 'var(--text-primary)' }}>{money(pendingAdds.dv01)}</span>
                 {' '}to the desk basis point
               </span>
             )}
@@ -1226,7 +1052,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 {blotter.length === 0 && (
                   <tr style={{ borderTop: '1px solid var(--border-subtle)' }}>
                     <td className="px-3 py-2" colSpan={7} style={{ color: 'var(--text-dim)' }}>
-                      Nothing has come in yet on this set.
+                      No trades have arrived by this set.
                     </td>
                   </tr>
                 )}
@@ -1260,10 +1086,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                       <td className="px-3 py-1" style={{ color: sc }}>{sl}</td>
                       <td className="px-3 py-1 text-right"
                         style={{ color: dead ? 'var(--text-dim)' : 'var(--text-primary)' }}>
-                        {dead ? '—' : money(row[1])}
+                        {dead ? '-' : money(row[1])}
                       </td>
                       <td className="px-3 py-1 text-right" style={{ color: 'var(--text-dim)' }}>
-                        {dead ? '—' : money(row[2])}
+                        {dead ? '-' : money(row[2])}
                       </td>
                     </tr>
                   );
@@ -1272,6 +1098,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             </table>
           </div>
         {position && (<>
+          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
+            Position detail
+          </div>
           <div className="rounded px-3 py-2 mb-2"
             style={{ border: '1px solid #5eaab555', background: '#5eaab50a' }}>
             <div className="flex gap-6 flex-wrap font-mono text-[11px]">
@@ -1305,10 +1134,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               {position.kind === 'fed' && posDef
                 ? <>
                     The ticket came in on {posDef.venue} against set{' '}
-                    {tl.frames[posDef.arrive]?.epoch}
+                    {epochAt(posDef.arrive)}
                     {posDef.outcome === EXECUTED
                       ? <>, and the confirmation came back on set{' '}
-                          {tl.frames[posDef.resolve]?.epoch}. It has been in the book
+                          {epochAt(posDef.resolve)}. It has been in the book
                           since then.</>
                       : <>. It is still open, so it stays out of the totals above until
                           the blotter toggle is on.</>}
@@ -1317,9 +1146,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             </div>
             <div className="font-mono text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
               as of set {detail.epoch}
-              {detail.epoch !== f.epoch && (
+              {detail.epoch !== epochAt(i) && (
                 <span style={{ color: '#d4a853' }}>
-                  {' '}&middot; the feed has since moved to set {f.epoch}
+                  {' '}&middot; the feed has since moved to set {epochAt(i)}
                 </span>
               )}
             </div>
@@ -1329,30 +1158,16 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             {([['mkt', 'market quotes'], ['zero', 'zero buckets'],
                ['fwd', 'forward buckets']] as const).map(([m, l]) => (
               <button key={m} onClick={() => setPosDomain(m)} className="px-2 py-0.5 rounded"
-                style={{ ...chip(posDomain === m, '#5eaab5'),
-                         opacity: m === 'mkt' && !mktReady ? 0.5 : 1 }}>{l}</button>
+                style={chip(posDomain === m, '#5eaab5')}>{l}</button>
             ))}
             <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
-            {posDomain !== 'mkt' || mktReady ? posCurves.map(c => (
+            {posCurves.map(c => (
               <button key={c} onClick={() => setPosCurve(c)} className="px-2 py-0.5 rounded"
                 style={chip(curveShown === c, COLOUR[c] ?? '#8b8a97')}>{LABEL[c] ?? c}</button>
-            )) : null}
+            ))}
           </div>
 
-          {posDomain === 'mkt' && !mktReady ? (
-            <div className="rounded px-4 py-8 text-center"
-              style={{ border: '1px dashed var(--border-subtle)', background: 'var(--bg-surface)' }}>
-              <p className="text-xs max-w-xl mx-auto mb-3" style={{ color: 'var(--text-dim)' }}>
-                Market risk has not been run for set {detail.epoch}, so there is nothing
-                to show here per position. Zero and forward stay live.
-              </p>
-              <button onClick={() => runMarketRisk(detail.frame)} disabled={!!mktPending}
-                className="px-3 py-1.5 rounded font-mono text-[11px]"
-                style={chip(!!mktPending, MKT)}>
-                {mktPending ? 'running market risk…' : `Run market risk on set ${detail.epoch}`}
-              </button>
-            </div>
-          ) : posChart.length === 0 ? (
+          {posChart.length === 0 ? (
             <div className="rounded px-4 py-6 text-center"
               style={{ border: '1px dashed var(--border-subtle)' }}>
               <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
@@ -1377,27 +1192,25 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             </div>
           )}
 
-          {(posDomain !== 'mkt' || mktReady) && (
-            <div className="font-mono text-[10.5px] mt-2 flex gap-6 flex-wrap"
-              style={{ color: 'var(--text-dim)' }}>
-              <span>
-                {LABEL[curveShown] ?? curveShown} sums to{' '}
-                <span style={{ color: 'var(--text-primary)' }}>{money(posTotal)}</span>
+          <div className="font-mono text-[10.5px] mt-2 flex gap-6 flex-wrap"
+            style={{ color: 'var(--text-dim)' }}>
+            <span>
+              {LABEL[curveShown] ?? curveShown} sums to{' '}
+              <span style={{ color: 'var(--text-primary)' }}>{money(posTotal)}</span>
+            </span>
+            <span>
+              every curve together{' '}
+              <span style={{ color: 'var(--text-primary)' }}>{money(posAllTotal)}</span>
+            </span>
+            <span>
+              parallel DV01 <span style={{ color: 'var(--text-primary)' }}>{money(position.dv01)}</span>
+            </span>
+            {ladders?.[curveShown]?.p && (
+              <span style={{ color: '#c86e6e' }}>
+                part of this ladder did not build and is missing from it
               </span>
-              <span>
-                every curve together{' '}
-                <span style={{ color: 'var(--text-primary)' }}>{money(posAllTotal)}</span>
-              </span>
-              <span>
-                parallel DV01 <span style={{ color: 'var(--text-primary)' }}>{money(position.dv01)}</span>
-              </span>
-              {ladders?.[curveShown]?.partial && (
-                <span style={{ color: '#c86e6e' }}>
-                  part of this ladder did not build and is missing from it
-                </span>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             {posDomain === 'mkt' ? (
@@ -1419,31 +1232,19 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               <>
                 One bar per interval of {LABEL[curveShown] ?? curveShown}. The forward
                 rate is lifted a basis point flat across the interval and this position
-                is repriced. Same overlay, a different shape of bump: it localises the
-                move to the period the cashflows accrue over.
+                is repriced. The bump is the same overlay in a different shape, and it
+                localises the move to the period the cashflows accrue over.
               </>
             )}
           </p>
 
           <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Zero and forward buckets are an overlay on a curve that already exists, so
-            the {detail.positions.length} positions here took {ms(detail.ladderUs)}{' '}
-            between them. Market risk solves the curve again for every quoted
-            instrument. Each quote was bumped once with all {detail.positions.length}{' '}
-            positions watched, so the run cost{' '}
-            {detail.mktRebuilds.toLocaleString()} solves and {ms(detail.mktUs)} however
-            many positions are on the list. It was measured against set {detail.epoch},
-            which is why the market panel stays covered on any other set.
-          </p>
-
-          <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The curve list changes with the domain. A zero or forward
-            bump only ever reaches the curves a position prices off. A market bump
-            reaches through the bootstrap, so the list is wider: a swap projected on
-            EURIBOR carries an ESTR market ladder whether or not it discounts on ESTR,
-            because EURIBOR is solved with ESTR discounting. Where that comes out at
-            zero it is a measured zero across every quote on the curve, and it cost a
-            solve each to establish.
+            Zero and forward overlays cost {ms(detail.ladderUs)} for the{' '}
+            {detail.positions.length} positions here. The market run re-solves the
+            curve per quote ({detail.mktRebuilds.toLocaleString()} solves,{' '}
+            {ms(detail.mktUs)}), however many positions are watched. The curve list is
+            wider in the market domain because a bump reaches through the bootstrap: an
+            FX forward carries a ladder on the ESTR curve it never reads directly.
           </p>
 
           {position.type === 'FX forward' && (
@@ -1513,7 +1314,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             A payer swap against the same published curves the books above are using, so
             the numbers move with the session as it plays. Annual fixed against six month
-            floating, projected on EURIBOR and discounted on ESTR.
+            floating, projected on EURIBOR and discounted on the meeting-dated ESTR curve.
           </p>
         </div>
       </div>

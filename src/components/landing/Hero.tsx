@@ -2,17 +2,17 @@ const TARGETS = [
   {
     n: '01',
     goal: 'Make GPU pricing trustworthy',
-    how: 'a multi-curve rates engine whose CUDA marks match QuantLib to 10⁻¹⁴, verified on 227 instruments',
+    how: 'a multi-curve rates engine whose CUDA marks match QuantLib to 10⁻¹⁴, verified on 341 instruments',
   },
   {
     n: '02',
-    goal: 'Fix a 90-minute trade feed',
-    how: 'the end-of-day feed from trade capture to risk, rebuilt in Spark and measured at 3.6 minutes, 25× faster',
+    goal: 'Speed up a slow trade feed',
+    how: 'the end-of-day feed from trade capture to risk, rebuilt in Spark, with the file-to-database load measured 21.5× faster',
   },
   {
     n: '03',
     goal: 'Keep curves current as prices move',
-    how: 'an event driven engine that rebuilds only the curves a price change actually affects, and never shows a half updated set',
+    how: 'an event driven engine that rebuilds only the curves a price change affects, and never shows a half updated set',
   },
 ];
 
@@ -47,10 +47,9 @@ export default function Hero() {
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            The projects below are problems I wanted to understand properly, so I built them.
-            Each one runs. The curves bootstrap with real market conventions, and every
-            benchmark below was timed on this machine. Where something is still wrong, or
-            only half solved, I&apos;ve said so.
+            Below are three systems I built. They run, the curves use real market
+            conventions, and every benchmark was timed on this machine. Where something
+            is wrong or half finished, the page says so.
           </p>
 
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-  Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
 import ArchitecturePanel from './ArchitecturePanel';
@@ -16,10 +16,10 @@ interface Quote { tenor: string; rate?: number; price?: number; instrument: stri
 interface MarketCurve {
   curve: string; currency: string; index: string; type: string;
   day_counter: string; settlement_days: number;
-  fx_spot?: number; short_end_step?: boolean; futures_convexity_sigma?: number;
+  fx_spot?: number; futures_convexity_sigma?: number;
   meeting_dates?: string[]; quotes: Quote[];
 }
-interface Inputs { date: string; fixings?: unknown[]; curves: MarketCurve[] }
+interface Inputs { curves: MarketCurve[] }
 
 type Tab = 'inputs' | 'curves' | 'sensis' | 'perf' | 'arch';
 const TABS: { key: Tab; label: string }[] = [
@@ -46,7 +46,7 @@ interface Trade {
   fixedLegNpv?: number | null; floatLegNpv?: number | null;
   cashflows: Cashflow[];
 }
-interface TradesFile { date: string; bump_bps: number; trades: Trade[] }
+interface TradesFile { bump_bps: number; trades: Trade[] }
 
 /* Renders "3.6e-14" as 3.6x10 with a real superscript exponent. Composing the
    exponent from unicode superscript characters instead mixes two Unicode
@@ -72,9 +72,18 @@ interface BookScale { trades: number; cashflows: number; bumps: number; repricin
 interface MarketLanes { bumps: number; bootstrapMs: number; quantlibMs: number; hostMs: number;
   gpuMs: number; threads: number; hostVsQlNotional: string; gpuVsQlNotional: string;
   hostVsQlLadder: string; gpuVsQlLadder: string }
-interface PerfFile { date: string; patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Record<string, Scaling>; npvScaling?: NpvScaling; agreement?: Agree[]; bookScale?: BookScale; marketLanes?: MarketLanes }
+interface AggLadderLanes { tradeMt: number; gpuTrade: number; agg: number }
+interface AggBench {
+  cashflows: number; terms: number; buildMs: number; evalMs: number | null;
+  gpuAggKernelMs: number | null; threads: number | null;
+  bookNpv: { cpuMt: number; gpuTrade: number; agg: number; recon: string };
+  ladder: { buckets: number; zero: AggLadderLanes | null; forward: AggLadderLanes | null };
+  marketPv01: { bumps: number; bootstrapMs: number; cpuMt: number; gpuTrade: number; agg: number };
+  worstPv01Rel: string | null;
+}
+interface PerfFile { patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Record<string, Scaling>; npvScaling?: NpvScaling; agreement?: Agree[]; bookScale?: BookScale; marketLanes?: MarketLanes; aggBench?: AggBench }
 
-const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
+const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£', AUD: 'A$' };
 const fmtMs = (v: number) =>
   v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}s`
     : v >= 1 ? `${v.toFixed(v >= 100 ? 0 : 1)}ms`
@@ -92,12 +101,17 @@ const FX_BUMP_LABELS: Record<string, string> = {
 const CURVE_COLORS: Record<string, string> = {
   ESTR: '#d4a853', ESTR_ECB: '#e07850', ESTR_IMM: '#5cb87a', ESTR_IMMFUT: '#b8b04a',
   EURIBOR6M: '#8b7ec8', EURUSD: '#4a9a68', SOFR: '#9a8bd8', SONIA: '#c86e6e',
+  AONIA: '#63c4f0', AONIA_RBA: '#3b87d4', BBSW3M: '#e896cc', BBSW6M: '#b34a85',
+  AUDUSD: '#3fc4a5',
 };
 const CURVE_LABELS: Record<string, string> = {
-  ESTR: 'ESTR (tenor OIS)', ESTR_ECB: 'ESTR ECB meeting-dated',
-  ESTR_IMM: 'ESTR IMM-only', ESTR_IMMFUT: 'ESTR IMM + futures',
+  ESTR: 'ESTR (tenor OIS, comparison)', ESTR_ECB: 'ESTR ECB meeting-dated',
+  ESTR_IMM: 'ESTR IMM-only (comparison)', ESTR_IMMFUT: 'ESTR IMM + futures (comparison)',
   EURIBOR6M: 'EURIBOR 6M (dual-curve)', EURUSD: 'EUR under USD collateral (xccy)',
-  SOFR: 'SOFR', SONIA: 'SONIA',
+  SOFR: 'SOFR FOMC meeting-dated', SONIA: 'SONIA MPC meeting-dated',
+  AONIA: 'AONIA (tenor OIS, comparison)', AONIA_RBA: 'AONIA RBA meeting-dated',
+  BBSW3M: 'BBSW 3M (dual-curve, to 3Y)', BBSW6M: 'BBSW 6M (dual-curve, from 4Y)',
+  AUDUSD: 'AUD under USD collateral (xccy)',
 };
 const INSTR_BADGE: Record<string, string> = {
   OIS: '#5eaab5', IMM_OIS: '#5cb87a', MTG_OIS: '#e07850', FUTURE: '#b8b04a',
@@ -106,10 +120,19 @@ const INSTR_BADGE: Record<string, string> = {
 };
 
 type Measure = 'market' | 'zero' | 'forward';
-const MEASURES: { key: Measure; label: string }[] = [
-  { key: 'market', label: 'market quote' },
-  { key: 'zero', label: 'zero bucket' },
-  { key: 'forward', label: 'forward bucket' },
+const MEASURES: { key: Measure; label: string; desc: string }[] = [
+  {
+    key: 'market', label: 'Market PV01',
+    desc: 'One quoted instrument is bumped a basis point, the curve re-solved, the trade revalued. Each bucket is an instrument a desk can deal, so this is the ladder a hedge is written off.',
+  },
+  {
+    key: 'zero', label: 'Zero PV01',
+    desc: 'The solved zero curve is bumped at each node, no re-bootstrap. Shows where the exposure sits along the curve.',
+  },
+  {
+    key: 'forward', label: 'Forward PV01',
+    desc: 'The forward rate is bumped flat across one interval at a time. Lands the exposure on the periods the cashflows accrue over.',
+  },
 ];
 
 /* The ladder a given domain holds for a trade, or null where the run produced
@@ -139,7 +162,7 @@ const tt = {
    For a single-curve (OIS) trade the same curve projects and discounts:
        S(T) = (1 - DF(T)) / Σ DF(t_i)                      annual fixed leg
    EURIBOR 6M is dual-curve, so its float leg is projected off EURIBOR and
-   every cashflow discounted on ESTR:
+   every cashflow discounted on the meeting-dated ESTR curve:
        S(T) = Σ DF_d(t_j)·(DF_p(t_{j-1})/DF_p(t_j) - 1) / Σ DF_d(t_i)         */
 function zeroAt(pts: Pt[], t: number): number {
   if (!pts.length) return 0;
@@ -152,18 +175,14 @@ function zeroAt(pts: Pt[], t: number): number {
 }
 const dfAt = (pts: Pt[], t: number) => Math.exp(-(zeroAt(pts, t) / 100) * t);
 
-/* Instantaneous forward, read straight off the exported column. A period
-   forward averages over its tenor, which smooths clean across the meeting-dated
-   and IMM plateaus - a 3M average over ~6-week ECB steps erases them entirely -
-   so the step construction is only visible here.
+/* Instantaneous forward, read straight off the exported column.
 
-   Interpolated, rather than held piecewise constant. Holding it constant keeps genuine
-   risers sharp but snaps every sample to the left data point, and past 3Y the
-   export thins from daily to 15-day spacing - sparser than the chart grid - so
-   a smooth spline quantises into ledges that look exactly like step
-   interpolation where there is none. The step region is daily, so a riser spans
-   well under a pixel even interpolated; the artifact is the only thing that
-   changes. */
+   Sampled linearly between exported points. Snapping each sample to the point
+   on its left is the other option, and it reads worse: past 3Y the export thins
+   from daily to 15-day spacing, sparser than the chart grid, so the line
+   quantises into ledges that are an artifact of the export and nothing to do
+   with the curve. Below 3Y the export is daily, so the two treatments differ by
+   well under a pixel. */
 function instAt(pts: Pt[], t: number): number {
   if (!pts.length) return 0;
   if (t <= pts[0][0]) return pts[0][1];
@@ -190,6 +209,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [tradeCurve, setTradeCurve] = useState<string | null>(null);
   const [fxInstr, setFxInstr] = useState('5Y_FX_FWD');
   const [perf, setPerf] = useState<PerfFile | null>(null);
+  // Which of the fixed-size job comparisons is on screen. They are the same
+  // chart drawn over different jobs, so they sit behind a selector rather than
+  // stacked, the way the scaling sweeps below do.
+  const [selPattern, setSelPattern] = useState<string | null>(null);
+  // Which book-size sweep is on screen. Zero and forward are the same chart
+  // over different bucket definitions, so they share one frame and a selector.
+  const [selScale, setSelScale] = useState<string | null>(null);
+  // Which risk domain the trade ladder shows. One chart with a selector, so
+  // the three domains stop reading as three near-identical panels.
+  const [selMeasure, setSelMeasure] = useState<Measure | null>(null);
   const [cfLeg, setCfLeg] = useState<'all' | 'fixed' | 'float'>('all');
 
   useEffect(() => {
@@ -213,25 +242,29 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
   // One chart, four domains. Discrete forwards are period rates off the same
   // discount curve, so they show what a FRA or future pays; the instantaneous
-  // forward is the curve's own local rate, which is where the meeting-dated and
-  // IMM step construction is actually visible.
-  const fxSpot = inputs?.curves.find(c => c.index === 'EURUSD')?.fx_spot;
+  // forward is the curve's own local rate, and is the most sensitive of the
+  // four views.
+  const eurusdSpot = inputs?.curves.find(c => c.index === 'EURUSD')?.fx_spot;
+  const audusdSpot = inputs?.curves.find(c => c.index === 'AUDUSD')?.fx_spot;
 
   const curveChart = useMemo(() => {
-    const keys = domain === 'fx' ? ['EURUSD'] : shown.filter(k => curves[k]?.length);
+    const keys = (domain === 'fx' ? ['EURUSD', 'AUDUSD'] : shown).filter(k => curves[k]?.length);
     if (!keys.length) return [];
-    // A period forward at t needs data out to t + tenor. Past the last
-    // exported point the zero clamps flat, which fabricates a rising forward
-    // at the right edge, so stop the series before that happens.
-    const lastT = Math.min(...keys.map(k => curves[k][curves[k].length - 1][0]));
-    const end = Math.min(tMax, domain === 'fwd' ? lastT - fwdTenor : lastT);
+    // Past its last exported point a curve clamps flat, which fabricates a
+    // rising forward at the right edge, so each SERIES stops at its own last
+    // pillar (a period forward at t needs data out to t + tenor). The grid
+    // itself runs to the longest shown curve: BBSW 3M ends at 3Y by design,
+    // and clamping the whole chart to the shortest curve cut every line off.
+    const pad = domain === 'fwd' ? fwdTenor : 0;
+    const lastOf: Record<string, number> = {};
+    for (const k of keys) lastOf[k] = curves[k][curves[k].length - 1][0] - pad;
+    const end = Math.min(tMax, Math.max(...keys.map(k => lastOf[k])));
     const step = tMax <= 2.5 ? 1 / 52 : tMax <= 10 ? 1 / 12 : 1 / 4;
     const grid: number[] = [];
-    // The step region ends by ~2Y and its plateaus are as short as six weeks,
-    // so on the 30Y grid (quarterly) a 14-step ECB curve gets 8 samples and
-    // aliases into a jagged line rather than a staircase. Sample that window
-    // weekly at EVERY zoom and use the normal spacing beyond it, so the
-    // construction reads correctly whichever range is selected.
+    // Detail in the instantaneous forward runs at about six weeks inside the
+    // first two years, so a quarterly grid aliases it into a jagged line.
+    // Sample that window weekly at every zoom and use the normal spacing
+    // beyond it, so the chart reads the same whichever range is selected.
     if (domain === 'inst') {
       const fineEnd = Math.min(end, 2.5), fineStep = 1 / 104;
       for (let t = fineStep; t <= fineEnd + 1e-9; t += fineStep) grid.push(+t.toFixed(6));
@@ -239,6 +272,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     } else {
       for (let t = step; t <= end + 1e-9; t += step) grid.push(+t.toFixed(6));
     }
+    // Every line starts at t=0. The exported samples begin at one day, and the
+    // value drawn at zero is that first sample carried back a day: the discount
+    // factor there is exactly 1 and the overnight rate covers the gap, so
+    // nothing is invented. Without this the line begins a step in and the gap
+    // is visible at the widest zoom. The FX branch below anchors itself.
+    if (domain !== 'fx') grid.unshift(0);
     // EUR/USD outright forward. Covered interest parity on the two curves the
     // engine already solved: F(T) = S * DF_EUR(T) / DF_USD(T), where DF_EUR is
     // the EUR curve under USD collateral and DF_USD is SOFR. This is the object
@@ -246,19 +285,32 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     // shown in the other domains is derived FROM it - so it is worth showing
     // directly. Rebuilt this way it reprices the quoted points to under a pip.
     if (domain === 'fx') {
-      const eur = curves['EURUSD'], usd = curves['SOFR'];
-      if (!eur?.length || !usd?.length || !fxSpot) return [];
-      // Anchor the series at spot. Every point on this curve is spot times a
+      const usd = curves['SOFR'];
+      const spots: Record<string, number | undefined> =
+        { EURUSD: eurusdSpot, AUDUSD: audusdSpot };
+      const pairs = ['EURUSD', 'AUDUSD']
+        .filter(p => curves[p]?.length && spots[p]);
+      if (!usd?.length || !pairs.length) return [];
+      // Anchor each series at spot. Every point on this curve is spot times a
       // ratio of discount factors, so spot is where it comes from, not just
       // where it happens to start: at t = 0 both discount factors are 1 and the
       // forward IS spot. Beginning the line at the first grid point instead
       // hides that, and hides how much of the curve is carry rather than level.
-      return [{ t: 0, EURUSD: fxSpot }].concat(
-        grid.map(t => ({ t, EURUSD: fxSpot * (dfAt(eur, t) / dfAt(usd, t)) })));
+      const usdLast = usd[usd.length - 1][0];
+      const row0: Record<string, number> = { t: 0 };
+      for (const pr of pairs) row0[pr] = spots[pr]!;
+      return [row0].concat(grid.map(t => {
+        const row: Record<string, number> = { t };
+        for (const pr of pairs)
+          if (t <= Math.min(lastOf[pr], usdLast) + 1e-9)
+            row[pr] = spots[pr]! * (dfAt(curves[pr], t) / dfAt(usd, t));
+        return row;
+      }));
     }
     return grid.map(t => {
       const row: Record<string, number> = { t };
       for (const k of keys) {
+        if (t > lastOf[k] + 1e-9) continue;
         const pts = curves[k];
         if (domain === 'zero') row[k] = zeroAt(pts, t);
         else if (domain === 'df') row[k] = dfAt(pts, t);
@@ -270,7 +322,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       }
       return row;
     });
-  }, [curves, shown, domain, tMax, fwdTenor, fxSpot]);
+  }, [curves, shown, domain, tMax, fwdTenor, eurusdSpot, audusdSpot]);
 
   const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
 
@@ -354,9 +406,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
-        subtitle="8 curves, 10 instrument types. Quotes in, solved curves out, each curve solved in the domain its own instruments pin"
+        subtitle="The quotes each curve is built from, and each one repriced afterwards by the curve it went into"
         techBadges={['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap']}
       />
+
+      <p className="text-xs mb-8 -mt-6 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+        C++17 on QuantLib, with CUDA for the GPU comparison. One curve per currency
+        prices and risks the book, dated to its central bank&apos;s meetings: ESTR (ECB),
+        SOFR (FOMC), SONIA (MPC), AONIA (RBA). The tenor and IMM builds are shown for
+        comparison and nothing is valued on them.
+      </p>
 
       <div className="flex gap-2 mb-8 flex-wrap">
         {TABS.map(t => (
@@ -369,11 +428,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'inputs' && inputs && (
         <div>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-            The prices each of the {inputs.curves.length} curves is built from. Every
-            quote does two jobs. The curve has to reprice it, and it is somewhere risk
-            can sit, which is why this same list comes back as the risk buckets on the
-            trade tab. IMM dates are the third Wednesday of the quarter, when futures
-            settle; MTG dates are when ECB decisions take effect.
+            The prices each of the {inputs.curves.length} curves is built from. Each
+            quote must be repriced by its finished curve, and each is a risk bucket on
+            the trade tab. IMM = third Wednesday of the quarter. MTG = the day a policy
+            decision takes effect.
           </p>
           <div className="flex gap-2 mb-5 flex-wrap">
             {inputs.curves.map(c => (
@@ -391,9 +449,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 <span>{selMkt.day_counter}</span>
                 <span>T+{selMkt.settlement_days}</span>
                 {selMkt.fx_spot && <span>spot {selMkt.fx_spot}</span>}
-                {selMkt.short_end_step && <span style={{ color: '#e07850' }}>step-forward short end</span>}
                 {selMkt.futures_convexity_sigma && <span>futures σ {(selMkt.futures_convexity_sigma * 100).toFixed(1)}%</span>}
-                {selMkt.meeting_dates && <span>{selMkt.meeting_dates.length} ECB effective dates</span>}
+                {selMkt.meeting_dates && <span>{selMkt.meeting_dates.length} policy effective dates</span>}
               </div>
               <div className="overflow-x-auto rounded" style={{ border: '1px solid var(--border-subtle)' }}>
                 <table className="w-full font-mono text-xs">
@@ -433,13 +490,10 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'curves' && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            The same curves, five ways. A forward rate is what a FRA or a future
-            actually pays over its period, so these line up with the quotes on the
-            previous tab. Discount a cashflow and you are using a zero rate. Discount
-            factors come straight out of the solver, untouched. The instantaneous
-            forward is the sensitive one: it shows up problems the others hide. The
-            last view is the EUR/USD forward, which is a ratio of two curves.
-              </p>
+            The same curves, five views. Forwards line up with the quoted instruments;
+            the instantaneous forward is the sensitive view that shows up problems the
+            others hide; FX forwards are the ratio of two curves.
+          </p>
 
           <div className="flex gap-2 mb-3 flex-wrap items-center"
                style={{ opacity: domain === 'fx' ? 0.35 : 1 }}>
@@ -452,7 +506,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           </div>
 
           <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap items-center">
-            {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'], ['zero', 'zero rates'], ['df', 'discount factors'], ['fx', 'EUR/USD forwards']] as const)
+            {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'], ['zero', 'zero rates'], ['df', 'discount factors'], ['fx', 'FX forwards']] as const)
               .map(([d, label]) => (
                 <button key={d} onClick={() => setDomain(d)} className="px-2.5 py-1 rounded"
                   style={chip(domain === d, '#5eaab5')}>{label}</button>
@@ -485,54 +539,26 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   domain === 'df' ? Number(v).toFixed(6)
                     : domain === 'fx' ? Number(v).toFixed(5)
                       : `${Number(v).toFixed(4)}%`,
-                  domain === 'fx' ? 'EUR/USD outright' : CURVE_LABELS[n] ?? n]}
+                  domain === 'fx' ? `${String(n).slice(0, 3)}/USD outright` : CURVE_LABELS[n] ?? n]}
                 labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
               <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{CURVE_LABELS[v] ?? v}</span>} />
-              {(domain === 'fx' ? ['EURUSD'] : shown).map(k => (
+              {(domain === 'fx' ? ['EURUSD', 'AUDUSD'] : shown).map(k => (
                 <Line key={k} dataKey={k} stroke={CURVE_COLORS[k]} dot={false} strokeWidth={1.8} isAnimationActive={false} />
               ))}
             </LineChart>
           </ResponsiveContainer>
 
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            * EURIBOR 6M turns up slightly in the instantaneous forward between 13 and 15
-            months. Its quotes are monthly out to 13M and bi-monthly after that, and the
-            forward is the derivative of a cubic fitted through log discount factors, so it
-            shows whatever the spline does where the pillar spacing changes. It comes to
-            about 1.3 basis points. A monotone convex scheme would smooth it away by
-            forcing the shape, which is a different kind of wrong, so it is left where you
-            can see it.
-          </p>
-          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Each curve is solved in the domain its own instruments pin. The OIS strips go
-            on zero rates. The meeting-dated and IMM curves are built as flat forwards
-            between policy or IMM dates joined onto a min-curvature spline, and the EUR/USD
-            curve is an implied zero curve against USD collateral. The interpolation itself
-            never changes: a minimum-curvature cubic spline on log discount factors. To see
-            the step construction, pick the instantaneous forward at 2.5Y with the ESTR
-            variants selected. It is flat between ECB meetings out to 1.5Y, flat between IMM
-            dates out to 2Y, then the spline takes over. A discrete forward averages over its
-            own tenor, so a 3M rate smooths straight across six-week meeting steps and hides
-            them.
+            Two shapes are real, not artifacts: the EURIBOR 6M bump between 13 and 16
+            months sits where its quote spacing changes from monthly to bi-monthly, and
+            the ~25bp drop in the EUR/USD instantaneous forward across year end is the
+            year-end turn held by the FX points.
           </p>
           <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The domain matters more than the scheme. Interpolate zero rates and the zero
-            curve comes out smooth, but the forward is left free to ring: f = z + t z', so
-            a cubic's third derivative jumps at every knot and the jump is multiplied by t.
-            That is 17 to 18 times amplification by the long end, worst where pillar spacing
-            changes. Interpolate log discount factors and the forward becomes the spline's
-            own first derivative, a quadratic spline, continuous in value and slope with no
-            maturity amplification. Same pillars, same quotes. The only difference is which
-            quantity gets interpolated.
-          </p>
-          <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            EURIBOR is solved on discrete 6M forwards, one per instrument date. A FRA pins the
-            average of the instantaneous forward across its accrual window, never the forward at
-            a single point. So the curve is built as the smoothest instantaneous forward that
-            satisfies every one of those window averages: minimum curvature under
-            interval-average constraints. That is the min-curvature objective under the
-            Hagan-West constraint, and it is what makes the 6M forwards exact and the curve
-            smooth at the same time.
+            The cross currency curves are not built from local quotes at all; they are
+            implied from FX swap points and basis against SOFR, which is why they sit
+            apart. The two BBSW curves split where the AUD market does: quarterly 3M
+            swaps to 3Y, semi-annual 6M swaps from 4Y.
           </p>
         </div>
       )}
@@ -540,13 +566,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
       {tab === 'sensis' && trades && (
         <div>
           <p className="text-sm mb-4 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            Where a trade&apos;s risk sits, and what you&apos;d trade to hedge it. The
-            height of a bar is what one bucket is worth to this position. On the market
-            panel those buckets are quoted instruments, so risk concentrated at 5Y is
-            hedged with the 5Y swap; the other two bucket by curve node and interval,
-            which is a read on shape and not a hedge you can deal. One example trade per
-            curve. Pick one.
-              </p>
+            Pick a trade. Each bar is what one basis point in that bucket is worth to
+            the position.
+          </p>
 
           <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
             {trades.trades.map(t => (
@@ -580,19 +602,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           {selTrade && !selTrade.fx && (
             <div>
               <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                Where the risk sits under each kind of bump
+                Risk ladders: Market PV01 &middot; Zero PV01 &middot; Forward PV01
               </h3>
               <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                Every bar shows what the position is worth for a basis point, and the
-                panels differ in where that basis point is applied. The market ladder
-                moves one quoted instrument, rebuilds the curve and values the trade
-                again, so its buckets are instruments a desk can go out and deal.
-                Bumping the solved zero curve around a node skips the bootstrap and
-                buckets the risk by the curve&apos;s own nodes. A forward bump holds the
-                shift flat across one interval, which lands the exposure on the period
-                the cashflows accrue over. A hedge is written off the market ladder, and
-                the zero and forward ladders are the better read on how the exposure is
-                spread along the curve.
+                Three ladders of the same risk, differing in where the basis point is
+                applied.
               </p>
               <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap items-center">
                 <span className="text-[10px] uppercase mr-1" style={{ color: 'var(--text-dim)' }}>curve</span>
@@ -608,8 +622,20 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   about 340px, which is enough for the shape of a 30-bucket ladder
                   and not enough for 30 rotated tick labels, so the ticks thin to
                   roughly ten and the tooltip carries the rest. */}
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap">
                 {ladderPanels.map(p => (
+                  <button key={p.key} onClick={() => setSelMeasure(p.key)}
+                    className="px-2.5 py-1 rounded"
+                    style={chip((selMeasure ?? ladderPanels[0].key) === p.key, '#b07fc9')}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                {ladderPanels.find(p => p.key === (selMeasure ?? ladderPanels[0].key))?.desc}
+              </p>
+              <div className="grid gap-4">
+                {ladderPanels.filter(p => p.key === (selMeasure ?? ladderPanels[0].key)).map(p => (
                   <div key={p.key} className="rounded px-3 py-2 min-w-0"
                     style={{ border: '1px solid var(--border-subtle)' }}>
                     <div className="flex items-baseline justify-between gap-2 mb-1">
@@ -676,21 +702,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               </div>
 
               <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                Each panel is scaled to its own numbers. A forward bump acts across an
-                interval and so spreads its effect more thinly along the curve, which
-                leaves those bars several times smaller than the market and zero ones,
-                and a shared axis would flatten them to nothing. Bar heights are
-                comparable within a panel; the total printed under each panel is the
-                figure that carries across them.
-              </p>
-              <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                The market panel shows the processor lane only. Both lanes bump the same
-                quote and rebuild the curve, so they should agree and they do not: risk
-                moves between neighbouring pillars while the total is preserved. That is
-                an unexplained difference between two ways of rebuilding a curve, so it
-                is not put on screen as though it were a result. The zero and forward
-                panels bump the solved curve, where the two lanes agree to the last
-                digit.
+                Each ladder has its own scale; compare across them with the total
+                printed underneath. Market PV01 shows the processor lane only: the GPU
+                lane moves risk between neighbouring pillars while the total holds, and
+                until that is explained it is not shown as a result. On the zero and
+                forward ladders the two lanes agree to the last digit.
               </p>
             </div>
           )}
@@ -738,10 +754,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 Cashflow schedule
               </h3>
               <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Every cashflow still to come, valued off the same curves as the risk
-            above. The trade was struck at its fair rate, so the two legs very nearly
-            cancel. What is left over is rounding on the quoted rate, not a profit or a
-            mispricing.
+                Every remaining cashflow, valued off the same curves as the risk above.
+                Struck at fair rate, so the legs nearly cancel; the residue is rounding
+                on the quoted rate.
               </p>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 font-mono text-xs">
@@ -826,21 +841,28 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
       {tab === 'perf' && perf && (
         <div>
-          <p className="text-sm mb-6 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
-            A desk wants its book valued and its risk refreshed while the market is
-            still moving. Overnight is no use. This was an attempt to find where the
-            time actually goes, and whether the fix is better code or better hardware.
+          <p className="text-sm mb-2 max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
+            Finding the fastest way to value a book and refresh its risk during the
+            trading day. All timings are from this machine; nearly all of the gain came
+            from code rather than hardware.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Valuing a book means working out what every future cashflow is worth today,
-            and each one needs a value read off a curve. Risk is the same book valued
-            again against every bucket of every curve, so it costs many times what a
-            single valuation does. All of this ran on one machine. Treat it as a guide.
-            Nearly all of the gain came from code, and the two quickest arrangements
-            both store the curve up front.
+            Most of this tab measures trade-by-trade valuation, processor against GPU.
+            Collapsing the book to curve level is measured at the end, and for
+            book-level work it changes the conclusion.
           </p>
 
-          {perf.patterns.map(p => {
+          <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
+            {perf.patterns.map(p => (
+              <button key={p.id} onClick={() => setSelPattern(p.id)}
+                className="px-2.5 py-1 rounded"
+                style={chip((selPattern ?? perf.patterns[0].id) === p.id, '#5b8fc9')}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+
+          {perf.patterns.filter(p => p.id === (selPattern ?? perf.patterns[0].id)).map(p => {
             const base = p.lanes.find(l => l.lane === p.baseline)?.ms ?? 1;
             // A bar is drawn from the axis baseline, which on a log scale is
             // log(0) and so has no position: recharts 3.8 renders nothing at
@@ -887,7 +909,22 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             );
           })}
 
-          {perf.scaling && Object.entries(perf.scaling).map(([mode, sc]) => {
+          {perf.scaling && Object.keys(perf.scaling).length > 1 && (
+            <div className="flex gap-2 mb-3 font-mono text-[11px] flex-wrap">
+              {[...Object.keys(perf.scaling), ...(perf.npvScaling ? ['npv'] : [])].map(m => (
+                <button key={m} onClick={() => setSelScale(m)}
+                  className="px-2.5 py-1 rounded"
+                  style={chip((selScale ?? Object.keys(perf.scaling!)[0]) === m, '#5b8fc9')}>
+                  {m === 'zero' ? 'zero buckets' : m === 'forward' ? 'forward buckets'
+                    : m === 'npv' ? 'book value' : m}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {perf.scaling && Object.entries(perf.scaling)
+            .filter(([mode]) => mode === (selScale ?? Object.keys(perf.scaling!)[0]))
+            .map(([mode, sc]) => {
             // A log axis cannot resolve 'dataMin' once any series carries nulls,
             // and QuantLib is capped part way up this sweep, so the bounds are
             // computed here over real values only. Left to recharts the whole
@@ -896,24 +933,16 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               .filter((x): x is number => typeof x === 'number' && x > 0));
             const rLo = Math.pow(10, Math.floor(Math.log10(Math.min(...rv))));
             const rHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...rv))));
-            const lo = sc.crossoverBelow, hi = sc.crossoverAbove;
             return (
               <div key={mode} className="mb-10">
                 <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  Curve risk: how the cost grows with the size of the book
+                  Risk run: cost against book size
                 </h3>
-                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  How long a full risk run takes as the book gets bigger, measured five
-                  ways. The two processor lines differ only in how the trades are valued:
-                  one through QuantLib, the other over the same cashflows held as plain
-                  numbers. That gap is entirely code.
-                </p>
                 <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The GPU starts behind. It pays a fixed cost to receive each curve
-                  however small the book is, then overtakes once there are enough trades
-                  to spread that cost across. Watch the line for all {sc.threads ?? 16}{' '}
-                  cores. The realistic alternative to buying a GPU is using the
-                  processors already sitting in the machine.
+                  A full risk run as the book grows, five ways. The GPU pays a fixed
+                  transfer cost per curve, so it starts behind and closes as the book
+                  grows. The line to watch is all {sc.threads ?? 16} cores, the
+                  realistic alternative to buying a GPU.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
@@ -947,11 +976,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total'
                         : 'GPU on NVLink-C2C (projected)'}</span>} />
-                    {lo && hi && (
-                      <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
-                        label={{ value: 'crossover', position: 'insideTop',
-                                 style: { fill: 'var(--text-dim)', fontSize: 10 } }} />
-                    )}
                     <Line type="monotone" dataKey="cpu" stroke="#5b8fc9" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="flat" stroke="#b07fc9" strokeWidth={2}
@@ -964,27 +988,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       dot={{ r: 2 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
-                <div className="grid md:grid-cols-3 gap-3 mt-3">
-                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover vs 1 core</div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
-                      {lo && hi ? lo.trades + ' to ' + hi.trades + ' trades' : 'not reached'}
-                    </div>
-                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      {lo && hi ? 'between ' + lo.repricings.toLocaleString() + ' and ' +
-                        hi.repricings.toLocaleString() + ' repricings, bracketed by measured sizes rather than interpolated'
-                        : 'the GPU did not overtake at any size measured'}
-                    </div>
-                  </div>
-                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
-                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Crossover vs {sc.threads ?? 16} cores</div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
-                      {sc.mtCrossoverAbove ? sc.mtCrossoverAbove.trades.toLocaleString() + ' trades' : 'not reached'}
-                    </div>
-                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      below this, the cores already available are quicker
-                    </div>
-                  </div>
+                <div className="grid md:grid-cols-2 gap-3 mt-3">
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>At the largest book, over {sc.threads ?? 16} cores</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
@@ -994,7 +998,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       over the same flattened pricer on all {sc.threads ?? 16} cores. The
                       single-core figure is {sc.topGpuVsFlat ?? '?'}&times;. A desk deciding
                       whether to buy a GPU already owns the cores, so this is the comparison
-                      it actually faces.
+                      it faces.
                     </div>
                   </div>
                 </div>
@@ -1002,9 +1006,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             );
           })}
 
-          {perf.npvScaling && (() => {
+          {perf.npvScaling && selScale === 'npv' && (() => {
             const ns = perf.npvScaling;
-            const lo = ns.crossoverBelow, hi = ns.crossoverAbove;
             const nv = ns.points.flatMap(q => [q.quantlib, q.flat, q.mt, q.gpu, q.nvlink]
               .filter((x): x is number => typeof x === 'number' && x > 0));
             const nLo = Math.pow(10, Math.floor(Math.log10(Math.min(...nv))));
@@ -1013,18 +1016,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             return (
               <div className="mb-10">
                 <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  Valuing the whole book: how the cost grows with its size
+                  Book value: cost against book size
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  How long it takes to value the whole book once, as the book gets bigger.
-                  Most of the gain happens before the GPU is involved at all. Holding the
-                  cashflows as plain numbers rather than library objects accounts for{' '}
-                  {ns.topFlatVsQuantLib ?? 0} times on a single core, measured at{' '}
-                  {(ns.flatVsQuantLibAtTrades ?? 0).toLocaleString()} trades, the largest
-                  size both lanes ran. QuantLib is capped above that. It also values one
-                  swap at a time here, which is how the library is normally used, so it
-                  starts from a different place than the QuantLib line in the chart above.
-                  The two are not interchangeable.
+                  Valuing the book once, as it grows. Most of the gain happens before
+                  the GPU is involved: holding cashflows as plain numbers rather than
+                  library objects is worth {ns.topFlatVsQuantLib ?? 0}&times; on a
+                  single core.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   1 to {top.trades.toLocaleString()} swaps, up to {top.cashflows.toLocaleString()} cashflows
@@ -1055,11 +1053,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         : v === 'mt' ? 'Flattened CPU, all cores'
                         : v === 'gpu' ? 'GPU total'
                         : 'GPU on NVLink-C2C (projected)'}</span>} />
-                    {lo && hi && (
-                      <ReferenceArea x1={lo.trades} x2={hi.trades} fill="#d4a853" fillOpacity={0.10}
-                        label={{ value: 'crossover', position: 'insideTop',
-                                 style: { fill: 'var(--text-dim)', fontSize: 10 } }} />
-                    )}
                     <Line type="monotone" dataKey="quantlib" stroke="#5b8fc9" strokeWidth={2}
                       dot={{ r: 2 }} isAnimationActive={false} />
                     <Line type="monotone" dataKey="flat" stroke="#b07fc9" strokeWidth={2}
@@ -1112,16 +1105,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 {ns.singleThreaded && (
                   <>
                   <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  One line is a projection rather than a measurement. Every GPU figure
-                  includes copying the book across, and on this machine that copy runs at
-                  about 7.5 GB/s and takes longer than the calculation itself. Banks do not
-                  run this work over a desktop slot, so that line recalculates the copy at
-                  the speed of a link where the processor and GPU share memory and leaves
-                  the calculation time exactly as measured, which puts it{' '}
-                  {ns.topNvlinkVsMt} times ahead of all {ns.threads ?? 16} cores rather
-                  than behind them. It is a rescaling, not a run on such a machine:
-                  cautious in that the hardware would also calculate faster, optimistic in
-                  that a real link will not reach its headline speed.
+                  The NVLink line is a projection, not a measurement. On this
+                  machine&apos;s desktop slot the copy takes longer than the calculation;
+                  the projection re-costs the copy at shared-memory link speed and keeps
+                  the calculation as measured. On that link the GPU comes out{' '}
+                  {ns.topNvlinkVsMt}&times; ahead of all {ns.threads ?? 16} cores; over
+                  the desktop slot it is behind them.
                 </p>
                   </>
                 )}
@@ -1149,18 +1138,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             return (
               <div className="mb-10">
                 <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  The same hedging ladder over a desk-sized book
+                  Market PV01 over a {b.trades.toLocaleString()}-trade book
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  The ladder above prices four trades, which across the whole run is under a
-                  thousand valuations. At that size the GPU comes last, and what that measures
-                  is the cost of using a GPU at all. This is the same job over{' '}
-                  {b.trades.toLocaleString()} trades: {b.bumps} quoted prices moved one basis
-                  point each, the curve re-solved for every one of them, and the whole book
-                  revalued against each result. {b.repricings.toLocaleString()} valuations.
-                  Both lanes read the same solved curves, so what separates them is where the
-                  arithmetic runs. They agree to <Sci v={b.agreement} /> of notional, and the
-                  discount half is checked against QuantLib itself at 3.7e-16.
+                  {b.bumps} quoted prices bumped a basis point each, the curve re-solved
+                  for every one, the book revalued against each result:{' '}
+                  {b.repricings.toLocaleString()} valuations. The lanes agree to{' '}
+                  <Sci v={b.agreement} /> of notional.
                 </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {b.cashflows.toLocaleString()} cashflows &middot; {b.threads} cores
@@ -1186,7 +1170,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Spent rebuilding curves</div>
                     <div className="font-mono text-sm" style={{ color: 'var(--text-primary)' }}>{b.bootstrapShareHost}%</div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      of the run, against 99.998% at four trades. Most of that rebuilding
+                      of the run, against over 99.9% at two trades. Most of that rebuilding
                       turned out to be repetition
                     </div>
                   </div>
@@ -1200,15 +1184,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 </div>
 
                 <h3 className="text-sm font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
-                  Checking the ladder itself against QuantLib
+                  Ladder accuracy against QuantLib
                 </h3>
-                <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  Every lane reprices curves that were solved once, so a difference between them
-                  is the pricer and cannot be the curve. That matters. Two lanes that each
-                  built their own bumped curve disagreed by 285 on a single bucket while their
-                  totals matched to 0.05%. The trade it showed up on was the one whose
-                  cashflows fall between the curve&apos;s pillars.
-                </p>
                 <div className="grid md:grid-cols-2 gap-3">
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
                     <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Against notional</div>
@@ -1216,8 +1193,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                       <Sci v={m.gpuVsQlNotional} />
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-                      GPU against QuantLib across all {m.bumps} bumps. This is the flattering
-                      scale, and it is the one most people quote
+                      GPU against QuantLib across all {m.bumps} bumps. Of the two scales
+                      this is the flattering one
                     </div>
                   </div>
                   <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
@@ -1236,8 +1213,145 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             );
           })()}
 
+          {perf.aggBench && (() => {
+            const a = perf.aggBench;
+            const zl = a.ladder.zero;
+            const fl = a.ladder.forward;
+            const mp = a.marketPv01;
+            const nCores = a.threads ?? 16;
+            const bar = (label: string, ms: number, kind: 'cpu' | 'gpu' | 'agg' | 'boot', max: number) => (
+              <div key={label} className="mb-2">
+                <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                  <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{fmtMs(ms)}</span>
+                </div>
+                <div style={{ height: 8, background: 'var(--bg-surface)', borderRadius: 2 }}>
+                  <div style={{
+                    height: 8, borderRadius: 2, width: `${Math.max(1, 100 * ms / max)}%`,
+                    background: kind === 'gpu' ? '#d4a853' : kind === 'agg' ? '#5cb87a'
+                      : kind === 'boot' ? '#8b8a97' : '#5b8fc9',
+                  }} />
+                </div>
+              </div>
+            );
+            const sub = (title: string) => (
+              <h4 className="text-xs font-semibold mb-2 mt-6" style={{ color: 'var(--text-primary)' }}>{title}</h4>
+            );
+            return (
+              <div className="mb-10">
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Collapsing the book to curve level
+                </h3>
+                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  Cashflows sharing the same curves and dates have their coefficients
+                  added before any curve is read. Exact, but only book-level answers
+                  survive. Here {a.cashflows.toLocaleString()} cashflows collapse to{' '}
+                  {a.terms.toLocaleString()} terms. The {fmtMs(a.buildMs)} build is
+                  charged in full to every green bar below.
+                </p>
+                <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
+                  {a.cashflows.toLocaleString()} cashflows &rarr; {a.terms.toLocaleString()} terms
+                  &middot; collapsed lane runs on one core, build included
+                  &middot; lower is faster
+                </p>
+
+                {sub('Book value')}
+                <div className="max-w-2xl">
+                  {bar('All ' + nCores + ' cores, trade by trade', a.bookNpv.cpuMt, 'cpu', a.bookNpv.gpuTrade)}
+                  {bar('GPU, trade by trade', a.bookNpv.gpuTrade, 'gpu', a.bookNpv.gpuTrade)}
+                  {bar('Collapsed, one core, build charged here',
+                       a.bookNpv.agg, 'agg', a.bookNpv.gpuTrade)}
+                  {a.evalMs != null &&
+                    bar('Collapsed, one core, book already built',
+                        a.evalMs, 'agg', a.bookNpv.gpuTrade)}
+                </div>
+                <p className="text-xs mt-2 mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  The two collapsed bars are the same method with and without the build.
+                  Once the book is collapsed, a valuation costs
+                  {a.evalMs != null && <> {fmtMs(a.evalMs)} against{' '}
+                  {fmtMs(a.bookNpv.cpuMt)}</>} on the cores; a real-time engine builds
+                  once and pays only the smaller figure.
+                </p>
+
+                {zl && (<>
+                  {sub('Zero and forward PV01 ladders')}
+                  <div className="max-w-2xl">
+                    {bar('All ' + nCores + ' cores, trade by trade', zl.tradeMt, 'cpu', zl.tradeMt)}
+                    {bar('GPU, trade by trade', zl.gpuTrade, 'gpu', zl.tradeMt)}
+                    {bar('Collapsed, one core', zl.agg, 'agg', zl.tradeMt)}
+                  </div>
+                  <p className="text-xs mt-2 mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                    The book revalued against {a.ladder.buckets} versions of its curves.
+                    Trade by trade the GPU beats the cores: the book crosses once and
+                    is read {a.ladder.buckets} times. Collapsed, the whole ladder takes{' '}
+                    {fmtMs(zl.agg)} on one core, build included{fl && <>; the
+                    forward-rate version, {fmtMs(fl.agg)} against {fmtMs(fl.tradeMt)}</>}.
+                  </p>
+                </>)}
+
+                {sub('Market PV01')}
+                <div className="max-w-2xl">
+                  {bar('Re-solving the curves, ' + mp.bumps + ' times', mp.bootstrapMs, 'boot', mp.bootstrapMs)}
+                  {bar('Revaluing: all ' + nCores + ' cores, trade by trade', mp.cpuMt, 'cpu', mp.bootstrapMs)}
+                  {bar('Revaluing: GPU, trade by trade', mp.gpuTrade, 'gpu', mp.bootstrapMs)}
+                  {bar('Revaluing: collapsed, one core', mp.agg, 'agg', mp.bootstrapMs)}
+                </div>
+                <p className="text-xs mt-2 mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  Re-solving the curves dominates at {fmtMs(mp.bootstrapMs)} whichever
+                  method revalues. Collapsing cuts the revaluing from {fmtMs(mp.cpuMt)}{' '}
+                  to {fmtMs(mp.agg)}; any further gain has to come from the re-solving.
+                </p>
+
+                <div className="grid md:grid-cols-3 gap-3 mt-4">
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Book risk, against the cores</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      {zl ? (zl.tradeMt / zl.agg).toFixed(0) + '×' : 'n/a'}
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      the full bucket ladder, collapsed on one core with the build
+                      included, against all {nCores} cores at trade level
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Book value, against the cores</div>
+                    <div className="font-mono text-sm" style={{ color: '#c86e6e' }}>
+                      {(a.bookNpv.agg / a.bookNpv.cpuMt).toFixed(1)}&times; slower
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      one valuation cannot repay the build, and this figure charges the
+                      whole build to one. Against a book already collapsed the same
+                      valuation is the fastest lane here by a wide margin, which is why
+                      an engine that keeps the collapsed book standing uses it for both
+                    </div>
+                  </div>
+                  <div className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-[10px] uppercase mb-0.5" style={{ color: 'var(--text-dim)' }}>Same answer</div>
+                    <div className="font-mono text-sm" style={{ color: 'var(--accent-green)' }}>
+                      <Sci v={a.bookNpv.recon} />
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                      book value against the trade-level run, relative.
+                      {a.worstPv01Rel && <>{' '}The bucket sensitivities agree to{' '}
+                      <Sci v={a.worstPv01Rel} /> at the worst bucket; a sensitivity is a
+                      small difference of large values, so reordering the additions
+                      shows up sooner there</>}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  Once the book is collapsed there is no work left for a GPU at book
+                  level{a.evalMs != null && a.gpuAggKernelMs != null && <>: one core
+                  evaluates the {a.terms.toLocaleString()} terms in {fmtMs(a.evalMs)},
+                  less than the GPU&apos;s kernel alone took</>}. A blotter still needs
+                  every trade valued, so the trade-level comparison keeps its place.
+                </p>
+              </div>
+            );
+          })()}
+
           <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
-            Do the faster methods give the same answer
+            Accuracy
           </h3>
           <div className="grid md:grid-cols-3 gap-3">
             {perf.accuracy.map(a => (
@@ -1252,15 +1366,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
           {perf.agreement && perf.agreement.length > 0 && (
             <>
               <h3 className="text-sm font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
-                Checking each method against QuantLib
+                Agreement with QuantLib
               </h3>
               <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                Every method above is checked against QuantLib for each trade, at every
-                book size. A quicker method is only worth reporting if it gives the same
-                answer. A wrong one usually returns numbers that look perfectly reasonable.
-                Differences are quoted against notional rather than NPV, because a swap
-                struck near par has an NPV close to zero and dividing by it makes a
-                negligible difference look large.
+                Every method above, checked per trade at every book size. Differences
+                are against notional, since a near-par swap&apos;s NPV is close to zero.
               </p>
               <div className="grid md:grid-cols-3 gap-3">
                 {perf.agreement.map(a => (
@@ -1299,12 +1409,12 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   What it adds up to
                 </h3>
                 <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  What was worth doing, in the order it was done. The first two are
-                  changes to the code and cost nothing but the work. The third is a
+                  The changes below are in the order they were made. All but the third
+                  are changes to the code and cost nothing but the work. The third is a
                   purchase, and whether it repays depends on the job and on the machine
                   it goes into.
                 </p>
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className={perf.aggBench ? 'grid md:grid-cols-2 lg:grid-cols-4 gap-3' : 'grid md:grid-cols-3 gap-3'}>
                   {cell('1. Leave the object model',
                         ns.topFlatVsQuantLib + '\u00d7',
                         'same arithmetic, same curve, one core, no special hardware',
@@ -1315,35 +1425,35 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                         true)}
                   {cell('3. Add a GPU',
                         'it depends on the link',
-                        'Over this desktop slot, ' + (gpuRisk ?? '?') + '\u00d7 on bucketed risk but ' +
+                        'Over this desktop slot, ' + (gpuRisk ?? '?') + '\u00d7 on trade-level bucketed risk but ' +
                         (gpuNpv && gpuNpv < 1 ? (1 / gpuNpv).toFixed(1) + '\u00d7 slower' : 'slower') +
                         ' valuing the book. On a shared memory link that second one becomes ' +
                         (ns.topNvlinkVsMt ?? '?') + '\u00d7 ahead.',
                         false)}
+                  {perf.aggBench && perf.aggBench.ladder.zero &&
+                    cell('4. Collapse the book',
+                         (perf.aggBench.ladder.zero.tradeMt / perf.aggBench.ladder.zero.agg).toFixed(0) + '\u00d7',
+                         'on book-level risk, exact, on one core. It applies to book totals only; '
+                         + 'a blotter and per-trade risk keep the lanes above.',
+                         true)}
                 </div>
                 <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
                   Whether the GPU earns its place comes down to how much work each transfer
-                  buys. A risk run sends the book across once and then values it against{' '}
-                  {risk.buckets} versions of the curve. Valuing the book once reads each
-                  cashflow a single time. Most of that job is spent moving data rather than
-                  using it, which is why the link decides that one.
+                  buys. A trade-level risk run sends the book across once and then values
+                  it against {risk.buckets} versions of the curve, and there the GPU beats
+                  the cores it competes with. Valuing the book once reads each cashflow a
+                  single time, so that job is mostly the transfer, and the link decides it.
                 </p>
-                <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-                  There is a fourth job, and it wanted a different lever entirely. A
-                  hedging ladder rebuilds the curve for every price it moves, and that
-                  rebuilding runs on the processor. Timing it apart showed where it went:
-                  an overnight curve spent 2259 ms assembling its rate helpers before the
-                  solver started, against 4.8 ms for a EURIBOR curve, because thirty-one
-                  overnight swaps each lay out a daily fixing schedule to fifty years and
-                  none of that structure changes when a quote does. Holding the helpers and moving
-                  the quote instead was most of it. Sharing each distinct bumped curve across
-                  the trades that read it was the rest, since the same 28 EURIBOR curves were
-                  being solved once per trade and the curve does not depend on the trade.
-                  Together they took this ladder from 267 seconds to{' '}
-                  {perf.marketLanes ? fmtMs(perf.marketLanes.bootstrapMs) : 'under half a minute'},
-                  with every one of the 228 sensitivities identical to the digit. It was never
-                  a hardware question.
-                </p>
+                {perf.aggBench && (
+                  <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                    The collapse is the one change that removes work instead of speeding
+                    it up. For questions about the whole book it leaves{' '}
+                    {perf.aggBench.terms.toLocaleString()} terms where the GPU was given
+                    millions of cashflows, and at that size one core is quicker than a
+                    device can be started. The GPU keeps the trade-level work, which is
+                    the work a blotter and per-trade risk ask for.
+                  </p>
+                )}
               </div>
             );
           })()}

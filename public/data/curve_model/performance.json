@@ -1,12 +1,11 @@
 {
- "date": "2025-09-15",
  "patterns": [
   {
    "id": "pricing",
    "name": "Portfolio repricing",
    "workload": "150,000 swaps, 6,339,223 cashflows, priced end to end",
    "baseline": "Processor, curve values from QuantLib",
-   "note": "Both bars value the same cashflows off the same curve. The processor asks QuantLib for each curve value; the GPU works them out itself from the curve it was sent. The chart further down takes this apart properly, across book sizes and with the curve stored rather than recalculated.",
+   "note": "Both bars value the same cashflows off the same curve. The processor asks QuantLib for each curve value; the GPU works them out itself from the curve it was sent. The book is generated for this benchmark. The desk-sized ladder further down generates its own book of the same trade count, so the two cashflow counts differ. The chart further down takes this apart properly, across book sizes and with the curve stored rather than recalculated.",
    "lanes": [
     {
      "lane": "Processor, curve values from QuantLib",
@@ -23,28 +22,28 @@
   {
    "id": "sensi",
    "name": "Market-quote PV01 ladders",
-   "workload": "4 trades, 228 market quotes bumped 1bp, curve family re-bootstrapped per bump",
+   "workload": "3 trades, 174 market quotes bumped 1bp, curve family re-bootstrapped per bump",
    "baseline": "Processor only, start to finish",
-   "note": "One full hedging ladder over a handful of trades. Almost all of the time is spent rebuilding the curve, once for every quoted price moved, and the remainder is valuing the trades. At this size there is barely any valuing to do, so the GPU bar measures the cost of using a GPU at all rather than anything about the device; the chart below runs the same job over a desk-sized book, where that changes. Both bars rebuild the same curves and differ only in what values the trades on them. The rebuilding is not the solver: timing it apart shows an overnight curve spends 2130 ms assembling its 31 rate helpers before the solver starts, against 73 ms for a EURIBOR curve, because each overnight swap lays out a daily fixing schedule to fifty years and none of that structure changes when a quote does. Holding those helpers and moving the quote value through them took the rebuild from 267 seconds to 48, and solving each distinct bump once for the whole book took it to 31, with all 228 sensitivities unchanged to the digit.",
+   "note": "One full hedging ladder over a handful of trades. Nearly all of the time goes on re-solving the curve, once for every quoted price moved, and both bars re-solve the same curves. At this size there is too little valuing for the device to matter either way; the desk-sized ladder further down is where that changes. The re-solving was far slower before the assembly of its inputs was timed apart from the solver: an overnight curve spent 2.2 seconds building its rate helpers before the solver started, against 73 ms for a EURIBOR curve, because each overnight swap lays out a daily fixing schedule to fifty years and none of that changes when a quote does. The helpers are now held and only the quote value moves, which is most of why the bars are the length they are.",
    "lanes": [
     {
      "lane": "Processor only, start to finish",
-     "ms": 20117,
+     "ms": 6724,
      "kind": "cpu"
     },
     {
      "lane": "With the GPU, start to finish",
-     "ms": 20334,
+     "ms": 6887,
      "kind": "gpu"
     },
     {
      "lane": "of which rebuilding curves",
-     "ms": 20113.0,
+     "ms": 6722.0,
      "kind": "cpu"
     },
     {
      "lane": "of which revaluing the trades",
-     "ms": 221.0,
+     "ms": 165.0,
      "kind": "gpu"
     }
    ]
@@ -53,7 +52,7 @@
  "accuracy": [
   {
    "metric": "GPU vs QuantLib zero rate",
-   "value": "4.8e-14",
+   "value": "5.4e-14",
    "note": "max across all curves and evaluation dates"
   },
   {
@@ -910,30 +909,65 @@
  ],
  "bookScale": {
   "trades": 150000,
-  "cashflows": 7097844,
+  "cashflows": 7098277,
   "bumps": 58,
   "repricings": 8700000,
-  "bootstrapMs": 8235.05,
-  "hostMs": 2106.83,
-  "gpuMs": 1126.62,
-  "gpuH2dMs": 68.8571,
-  "gpuKernelMs": 1042.76,
-  "gpuMB": 523.862,
+  "bootstrapMs": 11660.5,
+  "hostMs": 1777.58,
+  "gpuMs": 1130.41,
+  "gpuH2dMs": 66.0461,
+  "gpuKernelMs": 1048.98,
+  "gpuMB": 523.89,
   "threads": 16,
-  "agreement": "1.37329e-16",
-  "gpuVsHost": 1.87,
-  "bootstrapShareHost": 80
+  "agreement": "2.03451e-16",
+  "gpuVsHost": 1.57,
+  "bootstrapShareHost": 87
  },
  "marketLanes": {
-  "bumps": 228,
-  "bootstrapMs": 20113.0,
-  "quantlibMs": 4.0,
-  "hostMs": 1.0,
-  "gpuMs": 221.0,
+  "bumps": 174,
+  "bootstrapMs": 6722.0,
+  "quantlibMs": 2.0,
+  "hostMs": 13.0,
+  "gpuMs": 165.0,
   "threads": 16,
-  "hostVsQlNotional": "3.346941e-17",
-  "gpuVsQlNotional": "2.910383e-17",
-  "hostVsQlLadder": "1.885588e-11",
-  "gpuVsQlLadder": "1.885588e-11"
+  "hostVsQlNotional": "8.440111e-17",
+  "gpuVsQlNotional": "8.149073e-17",
+  "hostVsQlLadder": "3.951671e-08",
+  "gpuVsQlLadder": "3.815407e-08"
+ },
+ "aggBench": {
+  "cashflows": 7098277,
+  "terms": 1755,
+  "buildMs": 67.6632,
+  "evalMs": 0.0395292,
+  "gpuAggKernelMs": 0.65536,
+  "threads": 16,
+  "bookNpv": {
+   "cpuMt": 26.3355,
+   "gpuTrade": 93.7568,
+   "agg": 67.7027,
+   "recon": "1.6e-13"
+  },
+  "ladder": {
+   "buckets": 60,
+   "zero": {
+    "tradeMt": 1792.33,
+    "gpuTrade": 1224.32,
+    "agg": 72.9429
+   },
+   "forward": {
+    "tradeMt": 1779.16,
+    "gpuTrade": 1222.01,
+    "agg": 73.3345
+   }
+  },
+  "marketPv01": {
+   "bumps": 58,
+   "bootstrapMs": 11914.1,
+   "cpuMt": 1757.18,
+   "gpuTrade": 1192.34,
+   "agg": 75.7761
+  },
+  "worstPv01Rel": "3.9e-5"
  }
 }

@@ -1,29 +1,51 @@
 %% Which curve needs which, and what is derived from them.
-%% The FX curve is named EURUSD in the engine and labelled "EUR under USD
-%% collateral" on the chart; both names are given here because neither on its
-%% own makes it obvious that this is the FX/cross-currency curve.
+%% The FX curves are named EURUSD and AUDUSD in the engine and labelled
+%% "under USD collateral" on the chart; both names are given here because
+%% neither on its own makes it obvious that these are the FX/cross-currency
+%% curves.
+%% One curve per currency prices the book: ESTR ECB, SOFR, SONIA and AONIA
+%% RBA. The four comparison builds (ESTR tenor, ESTR IMM, ESTR IMM+futures,
+%% AONIA tenor) carry no dependencies and nothing is valued on them, so they
+%% share one node instead of stretching the top row to eight boxes.
 flowchart TB
-  subgraph IND [Independent builds]
+  subgraph PRC [One pricing curve per currency]
     direction LR
-    ESTR["ESTR<br/><small>tenor OIS</small>"]
-    ECB["ESTR ECB<br/><small>meeting-dated · step+spline</small>"]
-    IMM["ESTR IMM<br/><small>IMM-dated · step+spline</small>"]
-    IMMF["ESTR IMM+fut<br/><small>IMM + futures</small>"]
-    SOFR["SOFR<br/><small>USD OIS</small>"]
-    SONIA["SONIA<br/><small>GBP OIS</small>"]
+    ECB["ESTR ECB<br/><small>ECB policy dated OIS · prices the EUR book</small>"]
+    SOFR["SOFR<br/><small>FOMC policy dated OIS · prices the USD book</small>"]
+    SONIA["SONIA<br/><small>MPC policy dated OIS · prices the GBP book</small>"]
+    RBA["AONIA RBA<br/><small>RBA policy dated OIS · prices the AUD trades</small>"]
   end
 
-  E6["EURIBOR 6M<br/><small>projection curve · discounted on ESTR</small>"]
-  XC["EURUSD — the FX / cross-currency curve<br/><small>EUR discounted under USD collateral</small><br/><small>built from FX swap points + xccy basis</small>"]
+  E6["EURIBOR 6M<br/><small>projection curve · discounted on ESTR ECB</small>"]
+  B3["BBSW 3M<br/><small>projection to 3Y · discounted on AONIA RBA</small>"]
+  B6["BBSW 6M<br/><small>projection from 4Y · discounted on AONIA RBA</small>"]
+  XC["EURUSD, the EUR FX / cross-currency curve<br/><small>EUR discounted under USD collateral</small><br/><small>built from FX swap points + xccy basis</small>"]
+  AXC["AUDUSD, the AUD FX / cross-currency curve<br/><small>AUD discounted under USD collateral</small><br/><small>built from FX swap points + xccy basis</small>"]
 
-  ESTR -- "discounts" --> E6
+  ECB -- "discounts" --> E6
+  ECB -- "EUR leg" --> XC
   SOFR -- "USD leg" --> XC
+  RBA -- "discounts" --> B3
+  RBA -- "discounts" --> B6
+  RBA -- "AUD leg" --> AXC
+  SOFR -- "USD leg" --> AXC
 
-  FWD["EUR/USD outright forwards<br/><small>spot × DF_EUR / DF_USD</small><br/><small>derived in the browser, not by the engine</small>"]
+  %% Invisible edges push the two xccy curves onto their own row; five
+  %% 260px nodes on one rank made the SVG too wide to read in the panel.
+  E6 ~~~ XC
+  B6 ~~~ AXC
+
+  FWD["FX outright forwards<br/><small>spot × DF_ccy / DF_USD</small><br/><small>derived in the browser, not by the engine</small>"]
   XC -- "EUR leg" --> FWD
+  AXC -- "AUD leg" --> FWD
   SOFR -- "USD leg" --> FWD
+
+  CMP["Comparison builds<br/><small>ESTR tenor · ESTR IMM · ESTR IMM+futures · AONIA tenor</small><br/><small>independent · nothing is valued on them</small>"]
+  AXC ~~~ CMP
 
   classDef dep stroke-width:1.5px
   classDef derived stroke-dasharray:4 3
-  class E6,XC dep
+  classDef cmp stroke-dasharray:2 3,opacity:0.7
+  class E6,B3,B6,XC,AXC dep
   class FWD derived
+  class CMP cmp

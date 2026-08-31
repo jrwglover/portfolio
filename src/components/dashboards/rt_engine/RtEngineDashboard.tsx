@@ -18,6 +18,11 @@ const LABEL: Record<string, string> = {
   USD_SOFR: 'SOFR',
   GBP_SONIA: 'SONIA',
   EUR_USD_XCCY: 'EUR/USD cross currency',
+  AUD_AONIA: 'AONIA',
+  AUD_AONIA_RBA: 'AONIA, meeting dated',
+  AUD_BBSW3M: 'BBSW 3M',
+  AUD_BBSW6M: 'BBSW 6M',
+  AUD_USD_XCCY: 'AUD/USD cross currency',
 };
 
 const chip = (on: boolean, colour: string) => ({
@@ -31,7 +36,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
   const [tl, setTl] = useState<Timeline | null>(null);
-  const [probe, setProbe] = useState('EUR_ESTR');
+  const [probe, setProbe] = useState('EUR_ESTR_ECB');
 
   useEffect(() => {
     const v = `?v=${BUILD_ID}`;
@@ -71,24 +76,15 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             The desk
           </h3>
           <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            This is a recording of the engine running, played back. The book is loaded
-            from the trade store at the open and comes to{' '}
-            {tl.trades.toLocaleString()} trades across eight curves. When a price
-            arrives, the curves built on it are solved again and the book is repriced.
-          </p>
-          <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Business is done during the session as well. A ticket sits pending until its
-            confirmation comes back, and only then does it join the book; the blotter
-            carries it throughout, and a toggle there puts the pending ones into the
-            totals and the ladders.
+            A recording of the engine, played back. The book comes to{' '}
+            {tl.trades.toLocaleString()} trades at the open; each currency discounts on
+            one meeting-dated curve, with projection and cross currency curves built on
+            those. The AUD curves are published on every set with nothing priced on them.
           </p>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            The timings on this page came off the engine. Solving the curves a price
-            touched takes up to a third of a second, and repricing all{' '}
-            {tl.trades.toLocaleString()} trades takes about a tenth of one, so both run
-            on every set that is published. A full risk ladder takes about three
-            seconds, which is why you have to ask for it and why it stays labelled with
-            the set it was run against.
+            When a price arrives, the curves built on it are re-solved and everything
+            below recalculates. Trades arrive during the session too, pending until
+            confirmed; the blotter toggle puts pending tickets into the totals.
           </p>
           <Workstation tl={tl} />
         </div>
@@ -100,27 +96,11 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             Why not just recalculate everything on a timer
           </h3>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            Most curve systems poll, and with good reason. A scheduled job wakes
-            up every minute or so, rebuilds every curve from the latest prices,
-            and publishes the lot. The work is bounded and the order is fixed.
-            When something looks wrong there is one place to look. On plenty of
-            desks that is the right answer.
-          </p>
-          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            The cost is that you have to pick an interval, and one interval has
-            to serve every curve and every kind of day. Five minutes is cheap.
-            In a fast move it puts a trader in front of a curve five minutes
-            old. Ten seconds is fresh, and it rebuilds all eight curves six
-            times a minute whether or not anything moved. A solve costs a few
-            tenths of a second, so that is affordable. It is still eight curves
-            when one of them moved. What suits a quiet morning does not suit a
-            payrolls number.
-          </p>
-          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            Rebuilding on the event takes the choice away. It also costs you the
-            bounded batch and the fixed order, which are the two things that made
-            polling easy to operate. That is why it is less common. The hard part
-            is the dependencies between curves.
+            Most curve systems rebuild everything on a timer. Set the interval long and
+            a trader can be looking at a stale curve while the market moves; set it
+            short and all thirteen curves rebuild whether or not anything happened.
+            Rebuilding on the event removes that choice. The hard part is that the
+            curves are built on each other.
           </p>
 
           <div className="rounded p-4 my-4 font-mono text-[11px]" style={{
@@ -129,35 +109,22 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           }}>
             <div style={{ color: 'var(--text-dim)' }}>a price moves on SOFR</div>
             <div>&nbsp;</div>
-            <div>SOFR ────────────┐</div>
-            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──&gt; EUR/USD cross currency</div>
-            <div>ESTR ──┬─────────┘</div>
-            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; EURIBOR 6M</div>
+            <div>SOFR ────────────────┬──&gt; EUR/USD cross currency</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; AUD/USD cross currency</div>
+            <div>ESTR ECB ──┬──&gt; EUR/USD cross currency</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; EURIBOR 6M</div>
+            <div>AONIA RBA ─┬──&gt; BBSW 3M and BBSW 6M</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; AUD/USD cross currency</div>
             <div>&nbsp;</div>
             <div style={{ color: 'var(--text-dim)' }}>SONIA (nothing is built on it)</div>
           </div>
 
-          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            The cross currency curve is built from both SOFR and ESTR. Say a
-            SOFR price and an ESTR price arrive together, and each one triggers a
-            rebuild of whatever depends on it. The cross currency curve gets
-            built twice. The first build used an ESTR curve that was about to be
-            replaced. Publish that and someone prices a trade against a market
-            state that never existed.
-          </p>
-          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
-            The work has to be collected before it is done, not done as it
-            arrives: gather everything affected, order it so each curve is built
-            after the curves it depends on, build each one once, and publish the
-            whole set together. Get that wrong and the failure is quiet. Nothing
-            crashes. A number is just slightly off, on one screen, for a few
-            seconds, and nobody can reproduce it afterwards.
-          </p>
           <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-            That is the part worth building carefully. It is also why polling
-            stays popular. Rebuilding everything in dependency order every time
-            is the brute force answer to the same question, and it has none of
-            these problems. It just costs you either latency or hardware.
+            If SOFR and ESTR prices arrive together and each triggers its own rebuild,
+            the cross currency curve builds twice, the first time against an ESTR
+            curve about to be replaced, a market state that never existed. So the work
+            is collected first: everything affected, ordered by dependency, built once,
+            published as one set.
           </p>
         </div>
       )}
@@ -165,19 +132,11 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       {tab === 'graph' && g && (
         <div>
           <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-            One price moves, and only some curves need rebuilding
+            What one price forces to rebuild
           </h3>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Curves are not independent. EURIBOR is discounted on ESTR, and the
-            cross currency curve is built on both SOFR and ESTR, so a change to
-            one can force others to rebuild. Rebuilding everything on every price
-            would be simpler and far too slow. Too little, and a stale number
-            sits on a screen someone is trading from.
-          </p>
-          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Pick a curve below to see what a change to it forces. The answer comes
-            from the same registry the batch engine reads, so the two cannot drift
-            apart.
+            Pick a curve to see what a change to it forces. The dependencies come from
+            the same registry the batch engine reads, so the two cannot drift apart.
           </p>
 
           <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
@@ -229,8 +188,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           </h3>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             {tab === 'engine'
-              ? 'The engine replaying a stream of price changes. Which curves rebuild, in what order, and what happens when a price repeats or arrives out of order. A solver fails, falls back to the last good curve, and recovers. A burst of 120 prices collapses into one rebuild, while two readers check that nothing they see is half updated.'
-              : 'The same engine from the desk side. Positions and their values, risk per curve bucket, and what a sell off in ESTR does to both. Profit and loss split between market moves and carry. A hypothetical trade priced without disturbing anything published.'}
+              ? 'A replayed stream of price changes, with repeats and out-of-order arrivals. A solver fails and the last good curve is served; a burst of 120 prices collapses into one rebuild while two readers check nothing is half updated.'
+              : 'The same engine from the desk side. It shows position values and risk per curve bucket, and what a sell off in ESTR does to each. Profit and loss is split between market moves and carry. A hypothetical trade is priced without disturbing anything published.'}
           </p>
           <pre className="rounded p-4 overflow-x-auto font-mono"
             style={{
@@ -242,8 +201,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             This is the program&apos;s own output, not a recording. The curve solver
             and the pricing kernel are stubbed behind the same interfaces the
-            batch engine implements. The timings here are the plumbing, not the
-            mathematics.
+            batch engine implements, so the timings here measure the plumbing
+            alone.
           </p>
         </div>
       )}

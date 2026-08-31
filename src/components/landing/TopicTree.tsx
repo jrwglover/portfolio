@@ -17,7 +17,7 @@ export default function TopicTree() {
           Technical Demos
         </p>
         <h2 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Interactive deep dives behind the projects
+          Interactive demos behind the projects
         </h2>
       </div>
 

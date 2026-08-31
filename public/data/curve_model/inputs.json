@@ -1,13 +1,4 @@
 {
- "date": "2025-09-15",
- "fixings": [
-  {
-   "index": "EURIBOR6M",
-   "from": "2024-09-02",
-   "to": "2025-09-15",
-   "rate": 0.0224
-  }
- ],
  "curves": [
   {
    "curve": "EUR_ESTR",
@@ -23,19 +14,9 @@
      "rate": 0.018778
     },
     {
-     "tenor": "2W",
-     "instrument": "OIS",
-     "rate": 0.018741
-    },
-    {
-     "tenor": "3W",
-     "instrument": "OIS",
-     "rate": 0.018704
-    },
-    {
      "tenor": "1M",
      "instrument": "OIS",
-     "rate": 0.018655
+     "rate": 0.018642
     },
     {
      "tenor": "2M",
@@ -45,12 +26,12 @@
     {
      "tenor": "3M",
      "instrument": "OIS",
-     "rate": 0.018323
+     "rate": 0.018317
     },
     {
      "tenor": "6M",
      "instrument": "OIS",
-     "rate": 0.017798
+     "rate": 0.017779
     },
     {
      "tenor": "9M",
@@ -60,7 +41,7 @@
     {
      "tenor": "10M",
      "instrument": "OIS",
-     "rate": 0.017081
+     "rate": 0.017064
     },
     {
      "tenor": "11M",
@@ -75,27 +56,27 @@
     {
      "tenor": "15M",
      "instrument": "OIS",
-     "rate": 0.016297
+     "rate": 0.016293
     },
     {
      "tenor": "18M",
      "instrument": "OIS",
-     "rate": 0.015972
+     "rate": 0.015957
     },
     {
      "tenor": "21M",
      "instrument": "OIS",
-     "rate": 0.015751
+     "rate": 0.015749
     },
     {
      "tenor": "2Y",
      "instrument": "OIS",
-     "rate": 0.015632
+     "rate": 0.01563
     },
     {
      "tenor": "3Y",
      "instrument": "OIS",
-     "rate": 0.015754
+     "rate": 0.015753
     },
     {
      "tenor": "4Y",
@@ -106,490 +87,6 @@
      "tenor": "5Y",
      "instrument": "OIS",
      "rate": 0.016986
-    },
-    {
-     "tenor": "6Y",
-     "instrument": "OIS",
-     "rate": 0.017634
-    },
-    {
-     "tenor": "7Y",
-     "instrument": "OIS",
-     "rate": 0.018254
-    },
-    {
-     "tenor": "8Y",
-     "instrument": "OIS",
-     "rate": 0.018834
-    },
-    {
-     "tenor": "9Y",
-     "instrument": "OIS",
-     "rate": 0.019363
-    },
-    {
-     "tenor": "10Y",
-     "instrument": "OIS",
-     "rate": 0.019844
-    },
-    {
-     "tenor": "13Y",
-     "instrument": "OIS",
-     "rate": 0.021003
-    },
-    {
-     "tenor": "15Y",
-     "instrument": "OIS",
-     "rate": 0.021579
-    },
-    {
-     "tenor": "20Y",
-     "instrument": "OIS",
-     "rate": 0.022505
-    },
-    {
-     "tenor": "25Y",
-     "instrument": "OIS",
-     "rate": 0.022932
-    },
-    {
-     "tenor": "30Y",
-     "instrument": "OIS",
-     "rate": 0.02309
-    },
-    {
-     "tenor": "40Y",
-     "instrument": "OIS",
-     "rate": 0.023063
-    },
-    {
-     "tenor": "50Y",
-     "instrument": "OIS",
-     "rate": 0.022883
-    }
-   ],
-   "interpolation": "LogCubicDiscount"
-  },
-  {
-   "curve": "EUR_ESTR_IMMFUT",
-   "currency": "EUR",
-   "index": "ESTR_IMMFUT",
-   "type": "OIS",
-   "day_counter": "Actual/360",
-   "settlement_days": 2,
-   "futures_convexity_sigma": 0.008,
-   "short_end_step": true,
-   "quotes": [
-    {
-     "tenor": "1W",
-     "rate": 0.018778,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "1M",
-     "rate": 0.018655,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "2M",
-     "rate": 0.01849,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "IMM1",
-     "rate": 0.018323,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM2",
-     "rate": 0.01718,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM3",
-     "rate": 0.016026,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM4",
-     "rate": 0.015078,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM5",
-     "price": 98.5466,
-     "instrument": "FUTURE"
-    },
-    {
-     "tenor": "IMM6",
-     "price": 98.5685,
-     "instrument": "FUTURE"
-    },
-    {
-     "tenor": "IMM7",
-     "price": 98.5609,
-     "instrument": "FUTURE"
-    },
-    {
-     "tenor": "2Y",
-     "instrument": "OIS",
-     "rate": 0.015632
-    },
-    {
-     "tenor": "3Y",
-     "instrument": "OIS",
-     "rate": 0.015754
-    },
-    {
-     "tenor": "4Y",
-     "instrument": "OIS",
-     "rate": 0.016327
-    },
-    {
-     "tenor": "5Y",
-     "instrument": "OIS",
-     "rate": 0.016986
-    },
-    {
-     "tenor": "6Y",
-     "instrument": "OIS",
-     "rate": 0.017634
-    },
-    {
-     "tenor": "7Y",
-     "instrument": "OIS",
-     "rate": 0.018254
-    },
-    {
-     "tenor": "8Y",
-     "instrument": "OIS",
-     "rate": 0.018834
-    },
-    {
-     "tenor": "9Y",
-     "instrument": "OIS",
-     "rate": 0.019363
-    },
-    {
-     "tenor": "10Y",
-     "instrument": "OIS",
-     "rate": 0.019844
-    },
-    {
-     "tenor": "13Y",
-     "instrument": "OIS",
-     "rate": 0.021003
-    },
-    {
-     "tenor": "15Y",
-     "instrument": "OIS",
-     "rate": 0.021579
-    },
-    {
-     "tenor": "20Y",
-     "instrument": "OIS",
-     "rate": 0.022505
-    },
-    {
-     "tenor": "25Y",
-     "instrument": "OIS",
-     "rate": 0.022932
-    },
-    {
-     "tenor": "30Y",
-     "instrument": "OIS",
-     "rate": 0.02309
-    },
-    {
-     "tenor": "40Y",
-     "instrument": "OIS",
-     "rate": 0.023063
-    },
-    {
-     "tenor": "50Y",
-     "instrument": "OIS",
-     "rate": 0.022883
-    }
-   ],
-   "interpolation": "LogCubicDiscount"
-  },
-  {
-   "curve": "EUR_ESTR_IMM",
-   "currency": "EUR",
-   "index": "ESTR_IMM",
-   "type": "OIS",
-   "day_counter": "Actual/360",
-   "settlement_days": 2,
-   "short_end_step": true,
-   "quotes": [
-    {
-     "tenor": "1W",
-     "rate": 0.018778,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "1M",
-     "rate": 0.018655,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "2M",
-     "rate": 0.01849,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "IMM1",
-     "rate": 0.018323,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM2",
-     "rate": 0.01718,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM3",
-     "rate": 0.016026,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM4",
-     "rate": 0.015078,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM5",
-     "rate": 0.014492,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM6",
-     "rate": 0.014253,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "IMM7",
-     "rate": 0.014304,
-     "instrument": "IMM_OIS"
-    },
-    {
-     "tenor": "2Y",
-     "instrument": "OIS",
-     "rate": 0.015632
-    },
-    {
-     "tenor": "3Y",
-     "instrument": "OIS",
-     "rate": 0.015754
-    },
-    {
-     "tenor": "4Y",
-     "instrument": "OIS",
-     "rate": 0.016327
-    },
-    {
-     "tenor": "5Y",
-     "instrument": "OIS",
-     "rate": 0.016986
-    },
-    {
-     "tenor": "6Y",
-     "instrument": "OIS",
-     "rate": 0.017634
-    },
-    {
-     "tenor": "7Y",
-     "instrument": "OIS",
-     "rate": 0.018254
-    },
-    {
-     "tenor": "8Y",
-     "instrument": "OIS",
-     "rate": 0.018834
-    },
-    {
-     "tenor": "9Y",
-     "instrument": "OIS",
-     "rate": 0.019363
-    },
-    {
-     "tenor": "10Y",
-     "instrument": "OIS",
-     "rate": 0.019844
-    },
-    {
-     "tenor": "13Y",
-     "instrument": "OIS",
-     "rate": 0.021003
-    },
-    {
-     "tenor": "15Y",
-     "instrument": "OIS",
-     "rate": 0.021579
-    },
-    {
-     "tenor": "20Y",
-     "instrument": "OIS",
-     "rate": 0.022505
-    },
-    {
-     "tenor": "25Y",
-     "instrument": "OIS",
-     "rate": 0.022932
-    },
-    {
-     "tenor": "30Y",
-     "instrument": "OIS",
-     "rate": 0.02309
-    },
-    {
-     "tenor": "40Y",
-     "instrument": "OIS",
-     "rate": 0.023063
-    },
-    {
-     "tenor": "50Y",
-     "instrument": "OIS",
-     "rate": 0.022883
-    }
-   ],
-   "interpolation": "LogCubicDiscount"
-  },
-  {
-   "curve": "EUR_ESTR_ECB",
-   "currency": "EUR",
-   "index": "ESTR_ECB",
-   "type": "OIS",
-   "day_counter": "Actual/360",
-   "settlement_days": 2,
-   "short_end_step": true,
-   "meeting_dates": [
-    "2025-10-29",
-    "2025-12-17",
-    "2026-02-04",
-    "2026-03-18",
-    "2026-04-29",
-    "2026-06-10",
-    "2026-07-22",
-    "2026-09-16",
-    "2026-10-28",
-    "2026-12-16",
-    "2027-02-03",
-    "2027-03-17",
-    "2027-04-28",
-    "2027-06-09",
-    "2027-07-21"
-   ],
-   "quotes": [
-    {
-     "tenor": "1W",
-     "rate": 0.018496,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "1M",
-     "rate": 0.018507,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "MTG0",
-     "rate": 0.018501,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG1",
-     "rate": 0.018037,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG2",
-     "rate": 0.017538,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG3",
-     "rate": 0.016816,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG4",
-     "rate": 0.016307,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG5",
-     "rate": 0.015813,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG6",
-     "rate": 0.015319,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG7",
-     "rate": 0.014829,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG8",
-     "rate": 0.014569,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG9",
-     "rate": 0.014328,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG10",
-     "rate": 0.014315,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG11",
-     "rate": 0.014313,
-     "instrument": "MTG_OIS"
-    },
-    {
-     "tenor": "MTG12",
-     "instrument": "MTG_OIS",
-     "rate": 0.014313
-    },
-    {
-     "tenor": "MTG13",
-     "instrument": "MTG_OIS",
-     "rate": 0.014319
-    },
-    {
-     "tenor": "MTG14",
-     "instrument": "MTG_OIS",
-     "rate": 0.014546
-    },
-    {
-     "tenor": "18M",
-     "rate": 0.015967,
-     "instrument": "OIS"
-    },
-    {
-     "tenor": "2Y",
-     "instrument": "OIS",
-     "rate": 0.015638
-    },
-    {
-     "tenor": "3Y",
-     "instrument": "OIS",
-     "rate": 0.015757
-    },
-    {
-     "tenor": "4Y",
-     "instrument": "OIS",
-     "rate": 0.01633
-    },
-    {
-     "tenor": "5Y",
-     "instrument": "OIS",
-     "rate": 0.016988
     },
     {
      "tenor": "6Y",
@@ -599,17 +96,17 @@
     {
      "tenor": "7Y",
      "instrument": "OIS",
-     "rate": 0.018255
+     "rate": 0.018254
     },
     {
      "tenor": "8Y",
      "instrument": "OIS",
-     "rate": 0.018835
+     "rate": 0.018834
     },
     {
      "tenor": "9Y",
      "instrument": "OIS",
-     "rate": 0.019364
+     "rate": 0.019363
     },
     {
      "tenor": "10Y",
@@ -619,40 +116,493 @@
     {
      "tenor": "13Y",
      "instrument": "OIS",
-     "rate": 0.021004
+     "rate": 0.021003
     },
     {
      "tenor": "15Y",
      "instrument": "OIS",
-     "rate": 0.02158
+     "rate": 0.021579
     },
     {
      "tenor": "20Y",
      "instrument": "OIS",
-     "rate": 0.022506
+     "rate": 0.022505
     },
     {
      "tenor": "25Y",
      "instrument": "OIS",
-     "rate": 0.022933
+     "rate": 0.022932
     },
     {
      "tenor": "30Y",
      "instrument": "OIS",
-     "rate": 0.023091
+     "rate": 0.02309
     },
     {
      "tenor": "40Y",
      "instrument": "OIS",
-     "rate": 0.023064
+     "rate": 0.023063
     },
     {
      "tenor": "50Y",
      "instrument": "OIS",
      "rate": 0.022883
     }
+   ]
+  },
+  {
+   "curve": "EUR_ESTR_IMMFUT",
+   "currency": "EUR",
+   "index": "ESTR_IMMFUT",
+   "type": "OIS",
+   "day_counter": "Actual/360",
+   "settlement_days": 2,
+   "futures_convexity_sigma": 0.008,
+   "quotes": [
+    {
+     "tenor": "1W",
+     "rate": 0.018778,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "1M",
+     "rate": 0.018642,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "2M",
+     "rate": 0.01849,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "IMM1",
+     "rate": 0.018069,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM2",
+     "rate": 0.016907,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM3",
+     "rate": 0.015782,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM4",
+     "rate": 0.014907,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM5",
+     "price": 98.5543,
+     "instrument": "FUTURE"
+    },
+    {
+     "tenor": "IMM6",
+     "price": 98.5694,
+     "instrument": "FUTURE"
+    },
+    {
+     "tenor": "IMM7",
+     "price": 98.5537,
+     "instrument": "FUTURE"
+    },
+    {
+     "tenor": "2Y",
+     "instrument": "OIS",
+     "rate": 0.01563
+    },
+    {
+     "tenor": "3Y",
+     "instrument": "OIS",
+     "rate": 0.015753
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "OIS",
+     "rate": 0.016327
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "OIS",
+     "rate": 0.016986
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.017636
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "OIS",
+     "rate": 0.018254
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.018834
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.019363
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "OIS",
+     "rate": 0.019845
+    },
+    {
+     "tenor": "13Y",
+     "instrument": "OIS",
+     "rate": 0.021003
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "OIS",
+     "rate": 0.021579
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "OIS",
+     "rate": 0.022505
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "OIS",
+     "rate": 0.022932
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "OIS",
+     "rate": 0.02309
+    },
+    {
+     "tenor": "40Y",
+     "instrument": "OIS",
+     "rate": 0.023063
+    },
+    {
+     "tenor": "50Y",
+     "instrument": "OIS",
+     "rate": 0.022883
+    }
+   ]
+  },
+  {
+   "curve": "EUR_ESTR_IMM",
+   "currency": "EUR",
+   "index": "ESTR_IMM",
+   "type": "OIS",
+   "day_counter": "Actual/360",
+   "settlement_days": 2,
+   "quotes": [
+    {
+     "tenor": "1W",
+     "rate": 0.018778,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "1M",
+     "rate": 0.018642,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "2M",
+     "rate": 0.01849,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "IMM1",
+     "rate": 0.018069,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM2",
+     "rate": 0.016907,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM3",
+     "rate": 0.015782,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM4",
+     "rate": 0.014907,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM5",
+     "rate": 0.014411,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM6",
+     "rate": 0.014239,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "IMM7",
+     "rate": 0.014369,
+     "instrument": "IMM_OIS"
+    },
+    {
+     "tenor": "2Y",
+     "instrument": "OIS",
+     "rate": 0.01563
+    },
+    {
+     "tenor": "3Y",
+     "instrument": "OIS",
+     "rate": 0.015753
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "OIS",
+     "rate": 0.016327
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "OIS",
+     "rate": 0.016986
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.017636
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "OIS",
+     "rate": 0.018254
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.018834
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.019363
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "OIS",
+     "rate": 0.019845
+    },
+    {
+     "tenor": "13Y",
+     "instrument": "OIS",
+     "rate": 0.021003
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "OIS",
+     "rate": 0.021579
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "OIS",
+     "rate": 0.022505
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "OIS",
+     "rate": 0.022932
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "OIS",
+     "rate": 0.02309
+    },
+    {
+     "tenor": "40Y",
+     "instrument": "OIS",
+     "rate": 0.023063
+    },
+    {
+     "tenor": "50Y",
+     "instrument": "OIS",
+     "rate": 0.022883
+    }
+   ]
+  },
+  {
+   "curve": "EUR_ESTR_ECB",
+   "currency": "EUR",
+   "index": "ESTR_ECB",
+   "type": "OIS",
+   "day_counter": "Actual/360",
+   "settlement_days": 2,
+   "meeting_dates": [
+    "2026-09-16",
+    "2026-11-04",
+    "2026-12-23",
+    "2027-02-10",
+    "2027-03-24",
+    "2027-05-05",
+    "2027-06-16",
+    "2027-07-28",
+    "2027-09-15",
+    "2027-11-03",
+    "2027-12-22"
    ],
-   "interpolation": "LogCubicDiscount"
+   "quotes": [
+    {
+     "tenor": "1W",
+     "rate": 0.018743,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "1M",
+     "rate": 0.018599,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "MTG0",
+     "instrument": "MTG_OIS",
+     "rate": 0.018726
+    },
+    {
+     "tenor": "MTG1",
+     "instrument": "MTG_OIS",
+     "rate": 0.018284
+    },
+    {
+     "tenor": "MTG2",
+     "instrument": "MTG_OIS",
+     "rate": 0.017785
+    },
+    {
+     "tenor": "MTG3",
+     "instrument": "MTG_OIS",
+     "rate": 0.017061
+    },
+    {
+     "tenor": "MTG4",
+     "instrument": "MTG_OIS",
+     "rate": 0.016554
+    },
+    {
+     "tenor": "MTG5",
+     "instrument": "MTG_OIS",
+     "rate": 0.01606
+    },
+    {
+     "tenor": "MTG6",
+     "instrument": "MTG_OIS",
+     "rate": 0.015566
+    },
+    {
+     "tenor": "MTG7",
+     "instrument": "MTG_OIS",
+     "rate": 0.015078
+    },
+    {
+     "tenor": "MTG8",
+     "instrument": "MTG_OIS",
+     "rate": 0.014817
+    },
+    {
+     "tenor": "MTG9",
+     "instrument": "MTG_OIS",
+     "rate": 0.01457
+    },
+    {
+     "tenor": "MTG10",
+     "instrument": "MTG_OIS",
+     "rate": 0.014326
+    },
+    {
+     "tenor": "18M",
+     "rate": 0.016,
+     "instrument": "OIS"
+    },
+    {
+     "tenor": "2Y",
+     "instrument": "OIS",
+     "rate": 0.015662
+    },
+    {
+     "tenor": "3Y",
+     "instrument": "OIS",
+     "rate": 0.015775
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "OIS",
+     "rate": 0.016344
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "OIS",
+     "rate": 0.016999
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.017647
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "OIS",
+     "rate": 0.018263
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.018842
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.01937
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "OIS",
+     "rate": 0.019852
+    },
+    {
+     "tenor": "13Y",
+     "instrument": "OIS",
+     "rate": 0.021009
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "OIS",
+     "rate": 0.021584
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "OIS",
+     "rate": 0.022509
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "OIS",
+     "rate": 0.022936
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "OIS",
+     "rate": 0.023093
+    },
+    {
+     "tenor": "40Y",
+     "instrument": "OIS",
+     "rate": 0.023066
+    },
+    {
+     "tenor": "50Y",
+     "instrument": "OIS",
+     "rate": 0.022885
+    }
+   ]
   },
   {
    "curve": "USD_SOFR",
@@ -661,6 +611,19 @@
    "type": "OIS",
    "day_counter": "Actual/360",
    "settlement_days": 2,
+   "meeting_dates": [
+    "2026-09-17",
+    "2026-10-29",
+    "2026-12-10",
+    "2027-01-28",
+    "2027-03-18",
+    "2027-04-29",
+    "2027-06-10",
+    "2027-07-29",
+    "2027-09-16",
+    "2027-10-28",
+    "2027-12-09"
+   ],
    "quotes": [
     {
      "tenor": "1W",
@@ -668,74 +631,74 @@
      "rate": 0.040293
     },
     {
-     "tenor": "2W",
-     "instrument": "OIS",
-     "rate": 0.040207
-    },
-    {
-     "tenor": "3W",
-     "instrument": "OIS",
-     "rate": 0.040122
-    },
-    {
      "tenor": "1M",
      "instrument": "OIS",
-     "rate": 0.040013
+     "rate": 0.039982
     },
     {
-     "tenor": "2M",
-     "instrument": "OIS",
-     "rate": 0.039656
+     "tenor": "MTG0",
+     "instrument": "MTG_OIS",
+     "rate": 0.03996
     },
     {
-     "tenor": "3M",
-     "instrument": "OIS",
-     "rate": 0.039322
+     "tenor": "MTG1",
+     "instrument": "MTG_OIS",
+     "rate": 0.039267
     },
     {
-     "tenor": "6M",
-     "instrument": "OIS",
-     "rate": 0.038423
+     "tenor": "MTG2",
+     "instrument": "MTG_OIS",
+     "rate": 0.038197
     },
     {
-     "tenor": "9M",
-     "instrument": "OIS",
-     "rate": 0.037639
+     "tenor": "MTG3",
+     "instrument": "MTG_OIS",
+     "rate": 0.037171
     },
     {
-     "tenor": "10M",
-     "instrument": "OIS",
-     "rate": 0.03741
+     "tenor": "MTG4",
+     "instrument": "MTG_OIS",
+     "rate": 0.036176
     },
     {
-     "tenor": "11M",
-     "instrument": "OIS",
-     "rate": 0.037188
+     "tenor": "MTG5",
+     "instrument": "MTG_OIS",
+     "rate": 0.035346
     },
     {
-     "tenor": "12M",
-     "instrument": "OIS",
-     "rate": 0.036978
+     "tenor": "MTG6",
+     "instrument": "MTG_OIS",
+     "rate": 0.034678
     },
     {
-     "tenor": "15M",
-     "instrument": "OIS",
-     "rate": 0.036174
+     "tenor": "MTG7",
+     "instrument": "MTG_OIS",
+     "rate": 0.034051
+    },
+    {
+     "tenor": "MTG8",
+     "instrument": "MTG_OIS",
+     "rate": 0.033451
+    },
+    {
+     "tenor": "MTG9",
+     "instrument": "MTG_OIS",
+     "rate": 0.03296
+    },
+    {
+     "tenor": "MTG10",
+     "instrument": "MTG_OIS",
+     "rate": 0.032577
     },
     {
      "tenor": "18M",
      "instrument": "OIS",
-     "rate": 0.03558
-    },
-    {
-     "tenor": "21M",
-     "instrument": "OIS",
-     "rate": 0.035117
+     "rate": 0.035554
     },
     {
      "tenor": "2Y",
      "instrument": "OIS",
-     "rate": 0.034763
+     "rate": 0.034752
     },
     {
      "tenor": "3Y",
@@ -755,7 +718,7 @@
     {
      "tenor": "6Y",
      "instrument": "OIS",
-     "rate": 0.033551
+     "rate": 0.033552
     },
     {
      "tenor": "7Y",
@@ -775,7 +738,7 @@
     {
      "tenor": "10Y",
      "instrument": "OIS",
-     "rate": 0.034747
+     "rate": 0.034748
     },
     {
      "tenor": "13Y",
@@ -812,8 +775,7 @@
      "instrument": "OIS",
      "rate": 0.035855
     }
-   ],
-   "interpolation": "LogCubicDiscount"
+   ]
   },
   {
    "curve": "GBP_SONIA",
@@ -822,81 +784,94 @@
    "type": "OIS",
    "day_counter": "Actual/365 (Fixed)",
    "settlement_days": 0,
+   "meeting_dates": [
+    "2026-09-17",
+    "2026-11-05",
+    "2026-12-17",
+    "2027-02-04",
+    "2027-03-18",
+    "2027-04-29",
+    "2027-06-17",
+    "2027-07-29",
+    "2027-09-16",
+    "2027-11-04",
+    "2027-12-16"
+   ],
    "quotes": [
     {
      "tenor": "1W",
      "instrument": "OIS",
-     "rate": 0.03946
-    },
-    {
-     "tenor": "2W",
-     "instrument": "OIS",
-     "rate": 0.03942
-    },
-    {
-     "tenor": "3W",
-     "instrument": "OIS",
-     "rate": 0.039381
+     "rate": 0.039453
     },
     {
      "tenor": "1M",
      "instrument": "OIS",
-     "rate": 0.039328
+     "rate": 0.039322
     },
     {
-     "tenor": "2M",
-     "instrument": "OIS",
-     "rate": 0.039155
+     "tenor": "MTG0",
+     "instrument": "MTG_OIS",
+     "rate": 0.039325
     },
     {
-     "tenor": "3M",
-     "instrument": "OIS",
-     "rate": 0.039014
+     "tenor": "MTG1",
+     "instrument": "MTG_OIS",
+     "rate": 0.038875
     },
     {
-     "tenor": "6M",
-     "instrument": "OIS",
-     "rate": 0.038604
+     "tenor": "MTG2",
+     "instrument": "MTG_OIS",
+     "rate": 0.038243
     },
     {
-     "tenor": "9M",
-     "instrument": "OIS",
-     "rate": 0.038265
+     "tenor": "MTG3",
+     "instrument": "MTG_OIS",
+     "rate": 0.037703
     },
     {
-     "tenor": "10M",
-     "instrument": "OIS",
-     "rate": 0.038167
+     "tenor": "MTG4",
+     "instrument": "MTG_OIS",
+     "rate": 0.037193
     },
     {
-     "tenor": "11M",
-     "instrument": "OIS",
-     "rate": 0.038068
+     "tenor": "MTG5",
+     "instrument": "MTG_OIS",
+     "rate": 0.036784
     },
     {
-     "tenor": "12M",
-     "instrument": "OIS",
-     "rate": 0.037987
+     "tenor": "MTG6",
+     "instrument": "MTG_OIS",
+     "rate": 0.036403
     },
     {
-     "tenor": "15M",
-     "instrument": "OIS",
-     "rate": 0.037494
+     "tenor": "MTG7",
+     "instrument": "MTG_OIS",
+     "rate": 0.036042
+    },
+    {
+     "tenor": "MTG8",
+     "instrument": "MTG_OIS",
+     "rate": 0.035752
+    },
+    {
+     "tenor": "MTG9",
+     "instrument": "MTG_OIS",
+     "rate": 0.03547
+    },
+    {
+     "tenor": "MTG10",
+     "instrument": "MTG_OIS",
+     "rate": 0.035234
     },
     {
      "tenor": "18M",
      "instrument": "OIS",
-     "rate": 0.037162
-    },
-    {
-     "tenor": "21M",
-     "instrument": "OIS",
-     "rate": 0.036929
+     "rate": 0.037154
     },
     {
      "tenor": "2Y",
      "instrument": "OIS",
-     "rate": 0.036774
+     "rate": 0.036772
     },
     {
      "tenor": "3Y",
@@ -906,7 +881,7 @@
     {
      "tenor": "4Y",
      "instrument": "OIS",
-     "rate": 0.036081
+     "rate": 0.036082
     },
     {
      "tenor": "5Y",
@@ -916,7 +891,7 @@
     {
      "tenor": "6Y",
      "instrument": "OIS",
-     "rate": 0.036366
+     "rate": 0.036367
     },
     {
      "tenor": "7Y",
@@ -926,7 +901,7 @@
     {
      "tenor": "8Y",
      "instrument": "OIS",
-     "rate": 0.036876
+     "rate": 0.036877
     },
     {
      "tenor": "9Y",
@@ -936,7 +911,7 @@
     {
      "tenor": "10Y",
      "instrument": "OIS",
-     "rate": 0.03733
+     "rate": 0.037331
     },
     {
      "tenor": "13Y",
@@ -973,8 +948,7 @@
      "instrument": "OIS",
      "rate": 0.035725
     }
-   ],
-   "interpolation": "LogCubicDiscount"
+   ]
   },
   {
    "curve": "EUR_EURIBOR6M",
@@ -987,12 +961,12 @@
     {
      "tenor": "6M",
      "instrument": "DEPOSIT",
-     "rate": 0.019559
+     "rate": 0.01954
     },
     {
      "tenor": "7M",
      "instrument": "FRA",
-     "rate": 0.019163
+     "rate": 0.019118
     },
     {
      "tenor": "8M",
@@ -1002,12 +976,12 @@
     {
      "tenor": "9M",
      "instrument": "FRA",
-     "rate": 0.018368
+     "rate": 0.018361
     },
     {
      "tenor": "10M",
      "instrument": "FRA",
-     "rate": 0.017968
+     "rate": 0.017952
     },
     {
      "tenor": "11M",
@@ -1017,17 +991,17 @@
     {
      "tenor": "12M",
      "instrument": "FRA",
-     "rate": 0.017285
+     "rate": 0.017267
     },
     {
      "tenor": "13M",
      "instrument": "FRA",
-     "rate": 0.016971
+     "rate": 0.016948
     },
     {
      "tenor": "15M",
      "instrument": "FRA",
-     "rate": 0.016483
+     "rate": 0.016481
     },
     {
      "tenor": "17M",
@@ -1037,7 +1011,7 @@
     {
      "tenor": "18M",
      "instrument": "FRA",
-     "rate": 0.016042
+     "rate": 0.016039
     },
     {
      "tenor": "21M",
@@ -1047,17 +1021,17 @@
     {
      "tenor": "2Y",
      "instrument": "IRS",
-     "rate": 0.017555
+     "rate": 0.017575
     },
     {
      "tenor": "3Y",
      "instrument": "IRS",
-     "rate": 0.017642
+     "rate": 0.017643
     },
     {
      "tenor": "4Y",
      "instrument": "IRS",
-     "rate": 0.018175
+     "rate": 0.018176
     },
     {
      "tenor": "5Y",
@@ -1067,7 +1041,7 @@
     {
      "tenor": "6Y",
      "instrument": "IRS",
-     "rate": 0.019416
+     "rate": 0.019427
     },
     {
      "tenor": "7Y",
@@ -1087,7 +1061,7 @@
     {
      "tenor": "10Y",
      "instrument": "IRS",
-     "rate": 0.021534
+     "rate": 0.021541
     },
     {
      "tenor": "13Y",
@@ -1107,25 +1081,24 @@
     {
      "tenor": "25Y",
      "instrument": "IRS",
-     "rate": 0.024434
+     "rate": 0.024435
     },
     {
      "tenor": "30Y",
      "instrument": "IRS",
-     "rate": 0.024556
+     "rate": 0.024558
     },
     {
      "tenor": "40Y",
      "instrument": "IRS",
-     "rate": 0.024479
+     "rate": 0.02448
     },
     {
      "tenor": "50Y",
      "instrument": "IRS",
-     "rate": 0.024265
+     "rate": 0.024266
     }
-   ],
-   "interpolation": "LogCubicDiscount"
+   ]
   },
   {
    "curve": "EUR_USD_XCCY",
@@ -1158,7 +1131,7 @@
     },
     {
      "tenor": "1M",
-     "rate": 0.002227,
+     "rate": 0.002433,
      "instrument": "FXSWAP"
     },
     {
@@ -1168,97 +1141,766 @@
     },
     {
      "tenor": "3M",
-     "rate": 0.006353,
+     "rate": 0.006486,
      "instrument": "FXSWAP"
+    },
+    {
+     "tenor": "2026-12-31",
+     "instrument": "FXSWAP",
+     "rate": 0.00873084
+    },
+    {
+     "tenor": "2027-01-04",
+     "instrument": "FXSWAP",
+     "rate": 0.00905555
     },
     {
      "tenor": "5M",
      "instrument": "FXSWAP",
-     "rate": 0.01043
+     "rate": 0.010492
     },
     {
      "tenor": "6M",
-     "rate": 0.012245,
+     "rate": 0.012502,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "9M",
-     "rate": 0.018139,
+     "rate": 0.018202,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "1Y",
-     "rate": 0.02395,
+     "rate": 0.024013,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "18M",
-     "rate": 0.035075,
+     "rate": 0.035439,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "2Y",
-     "rate": 0.04581,
+     "rate": 0.046044,
      "instrument": "FXSWAP"
     },
     {
      "tenor": "3Y",
      "instrument": "XCCY",
-     "rate": -0.001255
+     "rate": -0.001274
     },
     {
      "tenor": "4Y",
      "instrument": "XCCY",
-     "rate": -0.00127
+     "rate": -0.001285
     },
     {
      "tenor": "5Y",
      "instrument": "XCCY",
-     "rate": -0.001285
+     "rate": -0.001297
     },
     {
      "tenor": "7Y",
      "instrument": "XCCY",
-     "rate": -0.001312
+     "rate": -0.001321
     },
     {
      "tenor": "9Y",
      "instrument": "XCCY",
-     "rate": -0.001336
+     "rate": -0.001343
     },
     {
      "tenor": "10Y",
      "instrument": "XCCY",
-     "rate": -0.001347
+     "rate": -0.001353
     },
     {
      "tenor": "12Y",
      "instrument": "XCCY",
-     "rate": -0.001367
+     "rate": -0.001372
     },
     {
      "tenor": "15Y",
      "instrument": "XCCY",
-     "rate": -0.001393
+     "rate": -0.001397
     },
     {
      "tenor": "20Y",
      "instrument": "XCCY",
-     "rate": -0.001427
+     "rate": -0.001431
     },
     {
      "tenor": "25Y",
      "instrument": "XCCY",
-     "rate": -0.001453
+     "rate": -0.001456
     },
     {
      "tenor": "30Y",
      "instrument": "XCCY",
-     "rate": -0.001473
+     "rate": -0.001476
     }
+   ]
+  },
+  {
+   "curve": "AUD_AONIA",
+   "currency": "AUD",
+   "index": "AONIA",
+   "type": "OIS",
+   "day_counter": "Actual/365 (Fixed)",
+   "settlement_days": 1,
+   "quotes": [
+    {
+     "tenor": "1W",
+     "instrument": "OIS",
+     "rate": 0.03574
+    },
+    {
+     "tenor": "1M",
+     "instrument": "OIS",
+     "rate": 0.035592
+    },
+    {
+     "tenor": "2M",
+     "instrument": "OIS",
+     "rate": 0.03542
+    },
+    {
+     "tenor": "3M",
+     "instrument": "OIS",
+     "rate": 0.035265
+    },
+    {
+     "tenor": "6M",
+     "instrument": "OIS",
+     "rate": 0.034873
+    },
+    {
+     "tenor": "9M",
+     "instrument": "OIS",
+     "rate": 0.0346
+    },
+    {
+     "tenor": "10M",
+     "instrument": "OIS",
+     "rate": 0.034527
+    },
+    {
+     "tenor": "11M",
+     "instrument": "OIS",
+     "rate": 0.034465
+    },
+    {
+     "tenor": "12M",
+     "instrument": "OIS",
+     "rate": 0.034414
+    },
+    {
+     "tenor": "15M",
+     "instrument": "OIS",
+     "rate": 0.03408
+    },
+    {
+     "tenor": "18M",
+     "instrument": "OIS",
+     "rate": 0.033905
+    },
+    {
+     "tenor": "21M",
+     "instrument": "OIS",
+     "rate": 0.033837
+    },
+    {
+     "tenor": "2Y",
+     "instrument": "OIS",
+     "rate": 0.033845
+    },
+    {
+     "tenor": "3Y",
+     "instrument": "OIS",
+     "rate": 0.03401
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "OIS",
+     "rate": 0.034508
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "OIS",
+     "rate": 0.035129
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.035769
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "OIS",
+     "rate": 0.036367
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.036902
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.037373
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "OIS",
+     "rate": 0.037772
+    },
+    {
+     "tenor": "13Y",
+     "instrument": "OIS",
+     "rate": 0.038643
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "OIS",
+     "rate": 0.039017
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "OIS",
+     "rate": 0.039522
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "OIS",
+     "rate": 0.03971
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "OIS",
+     "rate": 0.039762
+    },
+    {
+     "tenor": "40Y",
+     "instrument": "OIS",
+     "rate": 0.039732
+    },
+    {
+     "tenor": "50Y",
+     "instrument": "OIS",
+     "rate": 0.039671
+    }
+   ]
+  },
+  {
+   "curve": "AUD_AONIA_RBA",
+   "currency": "AUD",
+   "index": "AONIA_RBA",
+   "type": "OIS",
+   "day_counter": "Actual/365 (Fixed)",
+   "settlement_days": 1,
+   "meeting_dates": [
+    "2026-09-30",
+    "2026-11-04",
+    "2026-12-09",
+    "2027-02-10",
+    "2027-03-24",
+    "2027-05-05",
+    "2027-06-23",
+    "2027-08-11",
+    "2027-09-29",
+    "2027-11-03",
+    "2027-12-15"
    ],
-   "interpolation": "LogCubicDiscount"
+   "quotes": [
+    {
+     "tenor": "1W",
+     "instrument": "OIS",
+     "rate": 0.035512
+    },
+    {
+     "tenor": "1M",
+     "instrument": "OIS",
+     "rate": 0.035554
+    },
+    {
+     "tenor": "MTG0",
+     "instrument": "MTG_OIS",
+     "rate": 0.035252
+    },
+    {
+     "tenor": "MTG1",
+     "instrument": "MTG_OIS",
+     "rate": 0.03508
+    },
+    {
+     "tenor": "MTG2",
+     "instrument": "MTG_OIS",
+     "rate": 0.034579
+    },
+    {
+     "tenor": "MTG3",
+     "instrument": "MTG_OIS",
+     "rate": 0.034112
+    },
+    {
+     "tenor": "MTG4",
+     "instrument": "MTG_OIS",
+     "rate": 0.033589
+    },
+    {
+     "tenor": "MTG5",
+     "instrument": "MTG_OIS",
+     "rate": 0.033323
+    },
+    {
+     "tenor": "MTG6",
+     "instrument": "MTG_OIS",
+     "rate": 0.033081
+    },
+    {
+     "tenor": "MTG7",
+     "instrument": "MTG_OIS",
+     "rate": 0.032835
+    },
+    {
+     "tenor": "MTG8",
+     "instrument": "MTG_OIS",
+     "rate": 0.032822
+    },
+    {
+     "tenor": "MTG9",
+     "instrument": "MTG_OIS",
+     "rate": 0.032794
+    },
+    {
+     "tenor": "MTG10",
+     "instrument": "MTG_OIS",
+     "rate": 0.032578
+    },
+    {
+     "tenor": "18M",
+     "instrument": "OIS",
+     "rate": 0.033892
+    },
+    {
+     "tenor": "2Y",
+     "instrument": "OIS",
+     "rate": 0.033835
+    },
+    {
+     "tenor": "3Y",
+     "instrument": "OIS",
+     "rate": 0.034003
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "OIS",
+     "rate": 0.034502
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "OIS",
+     "rate": 0.035125
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "OIS",
+     "rate": 0.035765
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "OIS",
+     "rate": 0.036364
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "OIS",
+     "rate": 0.0369
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "OIS",
+     "rate": 0.03737
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "OIS",
+     "rate": 0.03777
+    },
+    {
+     "tenor": "13Y",
+     "instrument": "OIS",
+     "rate": 0.038641
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "OIS",
+     "rate": 0.039015
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "OIS",
+     "rate": 0.039521
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "OIS",
+     "rate": 0.039709
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "OIS",
+     "rate": 0.039761
+    },
+    {
+     "tenor": "40Y",
+     "instrument": "OIS",
+     "rate": 0.039731
+    },
+    {
+     "tenor": "50Y",
+     "instrument": "OIS",
+     "rate": 0.03967
+    }
+   ]
+  },
+  {
+   "curve": "AUD_BBSW3M",
+   "currency": "AUD",
+   "index": "BBSW3M",
+   "type": "IBOR",
+   "day_counter": "Actual/365 (Fixed)",
+   "settlement_days": 1,
+   "futures_convexity_sigma": 0.008,
+   "quotes": [
+    {
+     "tenor": "3M",
+     "instrument": "DEPOSIT",
+     "rate": 0.03727
+    },
+    {
+     "tenor": "ASX1",
+     "instrument": "FUTURE",
+     "price": 96.296
+    },
+    {
+     "tenor": "ASX2",
+     "instrument": "FUTURE",
+     "price": 96.3987
+    },
+    {
+     "tenor": "ASX3",
+     "instrument": "FUTURE",
+     "price": 96.4684
+    },
+    {
+     "tenor": "ASX4",
+     "instrument": "FUTURE",
+     "price": 96.5094
+    },
+    {
+     "tenor": "ASX5",
+     "instrument": "FUTURE",
+     "price": 96.5289
+    },
+    {
+     "tenor": "ASX6",
+     "instrument": "FUTURE",
+     "price": 96.5305
+    },
+    {
+     "tenor": "2Y",
+     "instrument": "IRS",
+     "rate": 0.035352
+    },
+    {
+     "tenor": "3Y",
+     "instrument": "IRS",
+     "rate": 0.035469
+    }
+   ]
+  },
+  {
+   "curve": "AUD_BBSW6M",
+   "currency": "AUD",
+   "index": "BBSW6M",
+   "type": "IBOR",
+   "day_counter": "Actual/365 (Fixed)",
+   "settlement_days": 1,
+   "quotes": [
+    {
+     "tenor": "6M",
+     "instrument": "DEPOSIT",
+     "rate": 0.037893
+    },
+    {
+     "tenor": "7M",
+     "instrument": "FRA",
+     "rate": 0.03754
+    },
+    {
+     "tenor": "8M",
+     "instrument": "FRA",
+     "rate": 0.037216
+    },
+    {
+     "tenor": "9M",
+     "instrument": "FRA",
+     "rate": 0.036945
+    },
+    {
+     "tenor": "10M",
+     "instrument": "FRA",
+     "rate": 0.03668
+    },
+    {
+     "tenor": "11M",
+     "instrument": "FRA",
+     "rate": 0.036492
+    },
+    {
+     "tenor": "12M",
+     "instrument": "FRA",
+     "rate": 0.036312
+    },
+    {
+     "tenor": "15M",
+     "instrument": "FRA",
+     "rate": 0.035951
+    },
+    {
+     "tenor": "18M",
+     "instrument": "FRA",
+     "rate": 0.035785
+    },
+    {
+     "tenor": "21M",
+     "instrument": "FRA",
+     "rate": 0.035781
+    },
+    {
+     "tenor": "24M",
+     "instrument": "FRA",
+     "rate": 0.035911
+    },
+    {
+     "tenor": "30M",
+     "instrument": "FRA",
+     "rate": 0.036447
+    },
+    {
+     "tenor": "36M",
+     "instrument": "FRA",
+     "rate": 0.03719
+    },
+    {
+     "tenor": "42M",
+     "instrument": "FRA",
+     "rate": 0.038027
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "IRS",
+     "rate": 0.037033
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "IRS",
+     "rate": 0.037599
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "IRS",
+     "rate": 0.038186
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "IRS",
+     "rate": 0.038736
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "IRS",
+     "rate": 0.039228
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "IRS",
+     "rate": 0.039657
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "IRS",
+     "rate": 0.040021
+    },
+    {
+     "tenor": "13Y",
+     "instrument": "IRS",
+     "rate": 0.040803
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "IRS",
+     "rate": 0.04113
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "IRS",
+     "rate": 0.041551
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "IRS",
+     "rate": 0.041684
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "IRS",
+     "rate": 0.041698
+    },
+    {
+     "tenor": "40Y",
+     "instrument": "IRS",
+     "rate": 0.041623
+    },
+    {
+     "tenor": "50Y",
+     "instrument": "IRS",
+     "rate": 0.041536
+    }
+   ]
+  },
+  {
+   "curve": "AUD_USD_XCCY",
+   "currency": "AUD",
+   "index": "AUDUSD",
+   "type": "FX_XCCY",
+   "day_counter": "Actual/365 (Fixed)",
+   "settlement_days": 2,
+   "fx_spot": 0.655,
+   "quotes": [
+    {
+     "tenor": "SPOT",
+     "instrument": "SPOT",
+     "rate": 0.655
+    },
+    {
+     "tenor": "1W",
+     "instrument": "FXSWAP",
+     "rate": 7.2e-05
+    },
+    {
+     "tenor": "2W",
+     "instrument": "FXSWAP",
+     "rate": 0.000126
+    },
+    {
+     "tenor": "3W",
+     "instrument": "FXSWAP",
+     "rate": 0.000179
+    },
+    {
+     "tenor": "1M",
+     "instrument": "FXSWAP",
+     "rate": 0.000268
+    },
+    {
+     "tenor": "2M",
+     "instrument": "FXSWAP",
+     "rate": 0.000461
+    },
+    {
+     "tenor": "3M",
+     "instrument": "FXSWAP",
+     "rate": 0.000659
+    },
+    {
+     "tenor": "4M",
+     "instrument": "FXSWAP",
+     "rate": 0.000834
+    },
+    {
+     "tenor": "6M",
+     "instrument": "FXSWAP",
+     "rate": 0.0011
+    },
+    {
+     "tenor": "9M",
+     "instrument": "FXSWAP",
+     "rate": 0.001369
+    },
+    {
+     "tenor": "1Y",
+     "instrument": "FXSWAP",
+     "rate": 0.001494
+    },
+    {
+     "tenor": "18M",
+     "instrument": "FXSWAP",
+     "rate": 0.001343
+    },
+    {
+     "tenor": "2Y",
+     "instrument": "FXSWAP",
+     "rate": 0.000766
+    },
+    {
+     "tenor": "3Y",
+     "instrument": "XCCY",
+     "rate": 0.000768
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "XCCY",
+     "rate": 0.000788
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "XCCY",
+     "rate": 0.000807
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "XCCY",
+     "rate": 0.000841
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "XCCY",
+     "rate": 0.000871
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "XCCY",
+     "rate": 0.000884
+    },
+    {
+     "tenor": "12Y",
+     "instrument": "XCCY",
+     "rate": 0.000909
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "XCCY",
+     "rate": 0.000941
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "XCCY",
+     "rate": 0.000984
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "XCCY",
+     "rate": 0.001017
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "XCCY",
+     "rate": 0.001042
+    }
+   ]
   }
  ],
- "_provenance": "Synthetic market quotes, frozen. Each quote was implied once from a single arbitrage-free discount curve using the exact conventions of the rate helper that consumes it, so the set is mutually consistent. From here the pipeline bootstraps these quotes and nothing else - there is no parametric term-structure model in the runtime path."
+ "_provenance": "Frozen quote set. A curve was fit to publicly available data, and each quote here was priced off that fitted curve using the exact conventions of the rate helper that consumes it, so the set is mutually consistent. From here the pipeline bootstraps these quotes and nothing else - there is no parametric term-structure model in the runtime path."
 }

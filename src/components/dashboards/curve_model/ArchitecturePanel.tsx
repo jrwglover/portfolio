@@ -51,8 +51,8 @@ function Layer({ kicker, title, children, accent }:
    of the runtime bundle and makes a broken diagram a build failure rather than
    a blank box in production. The source is shown on demand because a diagram
    you cannot diff is a screenshot. */
-function Figure({ src, source, alt, caption }:
-  { src: string; source: string; alt: string; caption?: string }) {
+function Figure({ src, source, alt, caption, minWidth }:
+  { src: string; source: string; alt: string; caption?: string; minWidth?: number }) {
   const [showSrc, setShowSrc] = useState(false);
   return (
     <figure className="my-3 rounded-lg overflow-hidden" style={{ border: `1px solid ${EDGE}` }}>
@@ -72,7 +72,7 @@ function Figure({ src, source, alt, caption }:
              style={{ background: 'var(--bg-surface)', color: SEC }}>{source.trim()}</pre>
       ) : (
         <div className="p-3" style={{ background: CARD, overflowX: 'auto' }}>
-          <img src={src} alt={alt} style={{ width: '100%', minWidth: 520, display: 'block' }} />
+          <img src={src} alt={alt} style={{ width: '100%', minWidth: minWidth ?? 520, display: 'block' }} />
         </div>
       )}
       {caption && <figcaption className="px-3 py-2 text-[11px]"
@@ -85,11 +85,9 @@ export default function ArchitecturePanel() {
   return (
     <div>
       <p className="text-sm mb-6 max-w-3xl" style={{ color: SEC }}>
-        How the engine is put together, from the quotes going in to where each piece of
-        the work is done. All eight curves are built the same way. Anything priced off
-        them is worked out twice, once through QuantLib and once on the GPU, and every
-        run subtracts one answer from the other. A difference bigger than rounding fails
-        the run and names the two numbers that disagreed.
+        How the engine is put together. Everything priced is worked out twice, once
+        through QuantLib and once on the GPU, and every run subtracts one answer from
+        the other. A difference bigger than rounding fails the run.
       </p>
 
       <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
@@ -103,110 +101,75 @@ export default function ArchitecturePanel() {
         C4 Level 2 · Containers
       </p>
       <Figure src="/diagrams/c4-container.svg" source={contSrc}
-              alt="C4 container diagram: inside the host process, curve construction writes eight term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
+              alt="C4 container diagram: inside the host process, curve construction writes thirteen term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
               caption="Each container names its technology. The host/device split is a real boundary. One cudaMemcpy crosses it, and that copy is the only place the two paths can diverge, which is why reconciliation sits downstream of both." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 supplementary · Dynamic view of one valuation run
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
-              alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; meeting- and IMM-dated curves take a two-stage path with a flat-forward strip pinned into a spline; all pillars are solved simultaneously; log discount factors are sampled per interval into cubic coefficients and copied to the device; CPU and GPU paths are then differenced over 227 instruments."
-              caption="Sequence. Watch the two-stage branch and the simultaneous pillar solve. The coefficient upload is an identity rather than a fit, which is what lets the two paths reconcile at all." />
+              alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; curves are built in dependency order, with dual-curve and cross-currency builds attaching an already-built foreign curve; all pillars are solved simultaneously; per-interval coefficients are copied to the device; CPU and GPU paths are then differenced over 341 instruments."
+              caption="Watch the build order and the simultaneous pillar solve. The device is sent the coefficients the curve is already made of, so the upload is exact, which is what lets the two paths reconcile." />
 
       <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         How one curve gets built
       </p>
       <Figure src="/diagrams/construction.svg" source={buildSrc}
-              alt="Flowchart of curve construction: each quote maps to a rate helper by instrument type; curves flagged short_end_step take a two-stage flat-forward-then-spline path composited at tCut, all others go straight to a log-cubic global bootstrap."
-              caption="Construction. No branch here is decoration. Each one went in after a measured failure: the helper mapping keyed on instrument type, the two-stage build for policy-dated curves, the log-discount-factor domain." />
+              alt="Flowchart of curve construction: each quote maps to a rate helper chosen by its instrument type, and all of the helpers for a curve go into one global bootstrap that produces the calibrated term structure and its pillar dates, times and zeros."
+              caption="Each instrument type gets its own helper, and one solve takes all of them together." />
 
       <div className="flex flex-col items-center max-w-3xl">
         <Layer kicker="1" title="Prices come in">
-          The prices each curve is built from: deposits, OIS, futures, FRAs, swaps,
-          FX swap points and cross currency basis, one file per valuation date. Each
-          quote states what kind of instrument it is. The builder never has to work
-          that out from the tenor, which is where this usually goes wrong. The prices
-          are synthetic, generated from a single arbitrage free forward path so the
-          set is consistent with itself. The file says so on its face.
+          Deposits, OIS, futures, FRAs, swaps, FX swap points and cross currency basis,
+          one file per valuation date. Each quote states its instrument type, so the
+          builder never guesses from the tenor.
         </Layer>
         <Arrow />
 
         <Layer kicker="2" title="Curves are solved from them">
-                    Each curve is solved from the instruments that pin it down, and a smooth
-          shape is fitted between them. What that shape is fitted to matters more than
-          which shape is used. Fit it to discount factors and the forward rates come out
-          smooth, because the forward is then the slope of the thing being fitted. Fit it
-          to zero rates and the forward instead depends on how fast the zero curve is
-          bending, an error that grows with maturity. Measured here, seventeen to eighteen
-          times worse at the long end.
-          <br /><br />
-                    The curve is also solved as a whole rather than one point at a time. Because
-          the fitted shape is smooth across the join, moving any one point changes the
-          curve everywhere, so the points cannot be pinned down one after another.
+          Every pillar is solved at once, so a quote is repriced by the same finished
+          curve it helped build. An earlier pillar-by-pillar version stopped converging
+          on the long end, which is what put the global solve in.
         </Layer>
         <Arrow />
 
         <Layer kicker="3" title="Some curves are built on others">
-          <Figure src="/diagrams/curve-graph.svg" source={curveSrc}
-                  alt="Curve dependency graph: six curves build independently; EURIBOR 6M is discounted on ESTR; the EURUSD cross-currency curve takes SOFR as its USD leg; and the EUR/USD outright forwards are derived in the browser from that curve and SOFR." />
+          <Figure src="/diagrams/curve-graph.svg" source={curveSrc} minWidth={1000}
+                  alt="Curve dependency graph: four pricing curves build independently, one per currency; EURIBOR 6M and the two BBSW curves are discounted on their currency's meeting-dated curve; each cross-currency curve takes SOFR as its USD leg and its own currency's meeting-dated curve as the other; the four comparison builds carry nothing; and the FX outright forwards are derived in the browser." />
           <div className="mt-2">
-                        Two of the curves are built in two parts. Out to the last policy or futures
-            date the rate holds flat from one date to the next; beyond it a smooth curve
-            takes over, joined so the two agree at the handover. A staircase is the right
-            answer at the short end. An overnight rate really does hold still between
-            central bank meetings and then step.
-            <br /><br />
-            Two of the curves cannot be built until others exist. EURIBOR projects off
-            its own prices but discounts on ESTR, so ESTR has to come first. The EUR
-            under USD collateral curve is not built from EUR prices at all. It is implied
-            from FX swap points and cross currency basis against the USD curve, which puts
-            SOFR ahead of it in the queue. Get the order wrong and the build either fails
-            outright or, worse, quietly runs on a curve that is out of date.
-            <br /><br />
-                        EURIBOR is built from the six month fixing and a run of overlapping forward
-            rate agreements, which is how a desk quotes it: each one shares five of its
-            six months with the next. Plot the most sensitive view of the curve and you
-            can see a ripple of about 3bp between 6M and 2.5Y from that overlap. It is
-            not an error in the curve. Recovering a rate at a point from a stack of
-            near-identical six month averages means taking differences between numbers
-            that barely differ, and the noise ends up there. The six month rate the
-            agreements actually quote is smooth to within 0.63bp, which is why this never
-            reaches a trading screen.
+            EURIBOR discounts on the meeting-dated ESTR curve, and each cross currency
+            curve is implied against SOFR, so those curves must exist first. Get the
+            order wrong and the build fails or, worse, quietly runs on a stale curve.
           </div>
         </Layer>
         <Arrow label="the same curve object, two ways" />
 
         <div className="grid gap-3 w-full" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
           <Layer kicker="4a" title="Valued on the processor" accent={CPU}>
-                        Values and risk read straight off the curves as the library built them. For
-            the hedging view, one quoted price is moved, the curve is rebuilt from
-            scratch and the trade valued again, so the effect spreads through the curve
-            the way it would on a desk.
+            Values and risk read straight off the curves as the library built them.
+            For the hedging view, one quoted price is moved, the curve rebuilt, the
+            trade revalued.
           </Layer>
           <Layer kicker="4b" title="Valued on the GPU" accent={GPU}>
-                        The GPU never rebuilds a curve. Each section of it is sent across as the
-            handful of numbers that describe that section, and the GPU evaluates those
-            directly. Because the curve genuinely <em>is</em> piecewise cubic in the
-            interpolated quantity, that upload is an identity rather than a fit.
+            The GPU never rebuilds a curve. It receives the numbers the curve is
+            already made of and evaluates them directly; nothing is approximated on
+            the way across.
           </Layer>
         </div>
         <Arrow />
 
         <Layer kicker="5" title="The two are checked against each other">
-          All 227 calibration instruments repriced down both paths and differenced, plus a
-          direct curve-vs-curve comparison across every exported point. Current worst
-          agreement 3.6 × 10⁻¹⁴. A separate check
-          re-derives every input quote from the finished curve with its own conventions.
-          All eight calibrate inside 0.01bp.
+          All 341 calibration instruments repriced down both paths and differenced;
+          worst agreement 5.4 × 10⁻¹⁴. A separate check re-derives every input quote
+          from the finished curve; the worst residual is 0.07 of a basis point.
         </Layer>
         <Arrow />
 
         <Layer kicker="6" title="Results published to this site">
-          Curves, trades, cashflows, risk ladders and benchmarks are written as static JSON
-          and served with the page. The browser does no curve construction and no pricing: it
-          renders what the engine produced. The one exception is the EUR/USD outright forward
-          chart, which is computed client-side as spot times the ratio of the two discount
-          factors, because it is a two-line identity off curves that are already published.
+          Curves, trades, risk ladders and benchmarks are written as static JSON and
+          served with the page. The browser prices nothing: it renders what the engine
+          produced. The one exception is the FX forward chart, a two-line identity off
+          curves already published.
         </Layer>
       </div>
 
@@ -215,14 +178,12 @@ export default function ArchitecturePanel() {
       </p>
       <div className="rounded-lg overflow-hidden max-w-3xl" style={{ border: `1px solid ${EDGE}` }}>
         {[
-          ['Interpolate log discount factors, not zeros',
-           'On log-DF the forward is the spline derivative, so it is C¹ with no t-amplification. On zeros the forward inherits t·z‴ and rings at every knot.'],
-          ['Solve globally, not pillar-by-pillar',
-           'A global interpolator has no bracketing sequential solve; the iterative bootstrap silently failed to converge on the long end.'],
+          ['Solve every pillar at once',
+           'Pinning the pillars down one after another silently failed to converge on the long end. Solving them together fixed it.'],
           ['Pin the short end with instruments',
-           'FRAs starting inside an uninstrumented region let the spline invent that shape. Synthetic deposits derived from OIS plus basis removed a 7.4bp kink at the deposit/FRA join.'],
+           'A region with no instrument in it leaves the curve free to take whatever shape it likes there. Synthetic deposits derived from OIS plus basis removed a 7.4bp kink at the deposit/FRA join.'],
           ['Ship coefficients to the GPU, not a curve',
-           'The device evaluates a polynomial it did not build. Keeps the kernel branch-free and makes CPU/GPU agreement an identity to verify rather than a tolerance to argue about.'],
+           'The device evaluates numbers it did not produce, which keeps the kernel branch-free and makes CPU/GPU agreement something to verify rather than a tolerance to argue about.'],
         ].map(([h, b], i) => (
           <div key={h} className="px-4 py-3"
                style={{ borderTop: i ? `1px solid ${EDGE}` : undefined, background: CARD }}>

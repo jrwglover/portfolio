@@ -4,7 +4,7 @@
 %% device boundary also name the protocol. Shapes are secondary to the labels
 %% and are explained in the key.
 %% .
-%% Deliberately NOT one container per source file: the eight term structures are
+%% Deliberately not one container per source file: the thirteen term structures are
 %% process state rather than a container, and the CSV/JSON outputs are one
 %% dataset. An earlier version listed both and laid out 4613px wide, which is
 %% not readable on a page.
@@ -14,14 +14,14 @@ flowchart TB
   subgraph HOST["Rates engine, host process"]
     direction TB
     BOOT@{ shape: subproc, label: "Curve construction<br/><b>[C++17 / QuantLib]</b><br/><small>Helpers per instrument type;<br/>all pillars solved at once</small>" }
-    COEF@{ shape: subproc, label: "Coefficient extraction<br/><b>[C++17]</b><br/><small>Four logDF samples per<br/>interval give c0..c3</small>" }
+    COEF@{ shape: subproc, label: "Coefficient extraction<br/><b>[C++17]</b><br/><small>Reads the coefficients<br/>each interval holds</small>" }
     RISK@{ shape: subproc, label: "Risk engine<br/><b>[C++17 / OpenMP]</b><br/><small>PV01 by re-bootstrapping<br/>each bumped quote</small>" }
     RECON@{ shape: diam, label: "Reconciliation<br/><b>[C++17 / Python]</b><br/><small>Differences both paths;<br/>re-derives every quote</small>" }
   end
 
   subgraph DEV["CUDA device"]
     direction TB
-    CMEM@{ shape: win-pane, label: "Coefficient store<br/><b>[CUDA global memory]</b><br/><small>c0..c3, bounds, form<br/>per curve slot</small>" }
+    CMEM@{ shape: win-pane, label: "Coefficient store<br/><b>[CUDA global memory]</b><br/><small>coefficients, bounds, form<br/>per curve slot</small>" }
     KERN@{ shape: hex, label: "Evaluation kernels<br/><b>[CUDA C++]</b><br/><small>Binary search then Horner;<br/>never rebuilds a curve</small>" }
   end
 
