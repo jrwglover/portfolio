@@ -1249,6 +1249,24 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   {a.terms.toLocaleString()} terms. The {fmtMs(a.buildMs)} build is
                   charged in full to every green bar below.
                 </p>
+                <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+                  <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                    Technical note:{' '}
+                  </span>
+                  every cashflow flattens to one of three shapes, each a coefficient
+                  times values read off its curves: fixed pays N·r·a, floating pays
+                  N·a/(t<sub>e</sub>−t<sub>s</sub>) times DF<sub>p</sub>(start)/DF
+                  <sub>p</sub>(end)−1, compounded overnight pays N times the same
+                  ratio, all discounted at the pay date. The coefficient carries no
+                  market data: a forward is never stored, it is read at valuation time
+                  as a ratio of two discount factors, which is why a curve move
+                  reprices every term with nothing regenerated. Terms that read the
+                  same curves on the same dates sum their coefficients; the keys are
+                  whole days and curve ids, so cashflows match exactly or not at all,
+                  and only the order of the additions changes. The one frozen value is
+                  a settled fixing, which becomes a fixed amount because history must
+                  not move with the curve.
+                </p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {a.cashflows.toLocaleString()} cashflows &rarr; {a.terms.toLocaleString()} terms
                   &middot; collapsed lane runs on one core, build included
