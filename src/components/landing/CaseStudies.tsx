@@ -23,8 +23,8 @@ const CASES: Case[] = [
       'Value the book on the GPU from the curve the processor built, not an approximation of it. Then reprice every instrument both ways and compare.',
     ],
     results: [
-      'GPU marks match QuantLib to 10⁻¹⁴ on all thirteen curves',
-      '341 calibration instruments repriced identically on CPU and GPU',
+      'GPU marks match QuantLib to 10⁻¹⁴ on all fourteen curves',
+      '348 calibration instruments repriced identically on CPU and GPU',
       'Risk shown against the instruments a desk would hedge with, one bar per quoted price',
       'Aged and broken-dated trades valued off their settled fixings, matching the reference to the last decimal',
     ],
@@ -63,7 +63,7 @@ const CASES: Case[] = [
       'Publish each set of curves as one immutable version, so whatever reads it gets a single coherent moment.',
     ],
     results: [
-      'A SONIA change rebuilds SONIA alone; a SOFR change carries into both cross currency curves',
+      'A SONIA change rebuilds SONIA alone; a SOFR change carries into both cross currency curves and the CTD discount curve built on them',
       '120 prices arriving at once collapse into a single rebuild rather than 120',
       'Two readers checking continuously while curves rebuilt underneath them found no inconsistent set',
       'A failed solve keeps the last good curve, marks it stale, and lets the rest carry on',

@@ -123,6 +123,7 @@ const LABEL: Record<string, string> = {
   USD_SOFR: 'SOFR', GBP_SONIA: 'SONIA', EUR_USD_XCCY: 'EUR/USD xccy',
   AUD_AONIA: 'AONIA', AUD_AONIA_RBA: 'AONIA meeting', AUD_BBSW3M: 'BBSW 3M',
   AUD_BBSW6M: 'BBSW 6M', AUD_USD_XCCY: 'AUD/USD xccy',
+  USD_CSA_CTD: 'USD CSA CTD',
 };
 
 // The curve model's own colours, so a curve is the same colour on both projects.
@@ -131,7 +132,7 @@ const COLOUR: Record<string, string> = {
   EUR_ESTR_IMMFUT: '#b8b04a', EUR_EURIBOR6M: '#8b7ec8', EUR_USD_XCCY: '#4a9a68',
   USD_SOFR: '#9a8bd8', GBP_SONIA: '#c86e6e',
   AUD_AONIA: '#63c4f0', AUD_AONIA_RBA: '#3b87d4', AUD_BBSW3M: '#e896cc',
-  AUD_BBSW6M: '#b34a85', AUD_USD_XCCY: '#3fc4a5',
+  AUD_BBSW6M: '#b34a85', AUD_USD_XCCY: '#3fc4a5', USD_CSA_CTD: '#e8963c',
 };
 
 const chip = (on: boolean, colour: string) => ({

@@ -23,6 +23,7 @@ const LABEL: Record<string, string> = {
   AUD_BBSW3M: 'BBSW 3M',
   AUD_BBSW6M: 'BBSW 6M',
   AUD_USD_XCCY: 'AUD/USD cross currency',
+  USD_CSA_CTD: 'USD CSA cheapest-to-deliver',
 };
 
 const chip = (on: boolean, colour: string) => ({
@@ -98,7 +99,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
             Most curve systems rebuild everything on a timer. Set the interval long and
             a trader can be looking at a stale curve while the market moves; set it
-            short and all thirteen curves rebuild whether or not anything happened.
+            short and all fourteen curves rebuild whether or not anything happened.
             Rebuilding on the event removes that choice. The hard part is that the
             curves are built on each other.
           </p>

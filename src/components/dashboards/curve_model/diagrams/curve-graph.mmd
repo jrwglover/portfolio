@@ -17,8 +17,8 @@ flowchart TB
   end
 
   E6["EURIBOR 6M<br/><small>projection curve · discounted on ESTR ECB</small>"]
-  B3["BBSW 3M<br/><small>projection to 3Y · discounted on AONIA RBA</small>"]
-  B6["BBSW 6M<br/><small>projection from 4Y · discounted on AONIA RBA</small>"]
+  B3["BBSW 3M<br/><small>own quotes to 3Y, 3s6s basis to 30Y · discounted on AONIA RBA</small>"]
+  B6["BBSW 6M<br/><small>own swaps from 4Y, 3s6s basis below · discounted on AONIA RBA</small>"]
   XC["EURUSD, the EUR FX / cross-currency curve<br/><small>EUR discounted under USD collateral</small><br/><small>built from FX swap points + xccy basis</small>"]
   AXC["AUDUSD, the AUD FX / cross-currency curve<br/><small>AUD discounted under USD collateral</small><br/><small>built from FX swap points + xccy basis</small>"]
 
@@ -27,6 +27,7 @@ flowchart TB
   SOFR -- "USD leg" --> XC
   RBA -- "discounts" --> B3
   RBA -- "discounts" --> B6
+  B3 <-. "3s6s tenor basis, staged joint solve" .-> B6
   RBA -- "AUD leg" --> AXC
   SOFR -- "USD leg" --> AXC
 
@@ -40,6 +41,11 @@ flowchart TB
   AXC -- "AUD leg" --> FWD
   SOFR -- "USD leg" --> FWD
 
+  CTD["USD CSA CTD<br/><small>cheapest-to-deliver discount curve</small><br/><small>derived: max of the three parents' forwards</small>"]
+  SOFR -- "parent" --> CTD
+  XC -- "parent" --> CTD
+  AXC -- "parent" --> CTD
+
   CMP["Comparison builds<br/><small>ESTR tenor · ESTR IMM · ESTR IMM+futures · AONIA tenor</small><br/><small>independent · nothing is valued on them</small>"]
   AXC ~~~ CMP
 
@@ -47,5 +53,5 @@ flowchart TB
   classDef derived stroke-dasharray:4 3
   classDef cmp stroke-dasharray:2 3,opacity:0.7
   class E6,B3,B6,XC,AXC dep
-  class FWD derived
+  class FWD,CTD derived
   class CMP cmp

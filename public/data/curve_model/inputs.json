@@ -1021,27 +1021,27 @@
     {
      "tenor": "2Y",
      "instrument": "IRS",
-     "rate": 0.017575
+     "rate": 0.01757
     },
     {
      "tenor": "3Y",
      "instrument": "IRS",
-     "rate": 0.017643
+     "rate": 0.01764
     },
     {
      "tenor": "4Y",
      "instrument": "IRS",
-     "rate": 0.018176
+     "rate": 0.018174
     },
     {
      "tenor": "5Y",
      "instrument": "IRS",
-     "rate": 0.018799
+     "rate": 0.018798
     },
     {
      "tenor": "6Y",
      "instrument": "IRS",
-     "rate": 0.019427
+     "rate": 0.019426
     },
     {
      "tenor": "7Y",
@@ -1066,17 +1066,17 @@
     {
      "tenor": "13Y",
      "instrument": "IRS",
-     "rate": 0.022642
+     "rate": 0.022643
     },
     {
      "tenor": "15Y",
      "instrument": "IRS",
-     "rate": 0.023189
+     "rate": 0.02319
     },
     {
      "tenor": "20Y",
      "instrument": "IRS",
-     "rate": 0.024054
+     "rate": 0.024055
     },
     {
      "tenor": "25Y",
@@ -1096,7 +1096,7 @@
     {
      "tenor": "50Y",
      "instrument": "IRS",
-     "rate": 0.024266
+     "rate": 0.024267
     }
    ]
   },
@@ -1616,7 +1616,67 @@
     {
      "tenor": "3Y",
      "instrument": "IRS",
-     "rate": 0.035469
+     "rate": 0.03547
+    },
+    {
+     "tenor": "4Y",
+     "instrument": "TBS",
+     "rate": 0.000958
+    },
+    {
+     "tenor": "5Y",
+     "instrument": "TBS",
+     "rate": 0.000946
+    },
+    {
+     "tenor": "6Y",
+     "instrument": "TBS",
+     "rate": 0.000935
+    },
+    {
+     "tenor": "7Y",
+     "instrument": "TBS",
+     "rate": 0.000924
+    },
+    {
+     "tenor": "8Y",
+     "instrument": "TBS",
+     "rate": 0.000915
+    },
+    {
+     "tenor": "9Y",
+     "instrument": "TBS",
+     "rate": 0.000906
+    },
+    {
+     "tenor": "10Y",
+     "instrument": "TBS",
+     "rate": 0.000899
+    },
+    {
+     "tenor": "13Y",
+     "instrument": "TBS",
+     "rate": 0.000879
+    },
+    {
+     "tenor": "15Y",
+     "instrument": "TBS",
+     "rate": 0.000868
+    },
+    {
+     "tenor": "20Y",
+     "instrument": "TBS",
+     "rate": 0.000847
+    },
+    {
+     "tenor": "25Y",
+     "instrument": "TBS",
+     "rate": 0.000833
+    },
+    {
+     "tenor": "30Y",
+     "instrument": "TBS",
+     "rate": 0.000823
     }
    ]
   },
@@ -1659,114 +1719,89 @@
      "rate": 0.036492
     },
     {
-     "tenor": "12M",
-     "instrument": "FRA",
-     "rate": 0.036312
+     "tenor": "1Y",
+     "instrument": "TBS",
+     "rate": 0.001005
     },
     {
-     "tenor": "15M",
-     "instrument": "FRA",
-     "rate": 0.035951
+     "tenor": "2Y",
+     "instrument": "TBS",
+     "rate": 0.000988
     },
     {
-     "tenor": "18M",
-     "instrument": "FRA",
-     "rate": 0.035785
-    },
-    {
-     "tenor": "21M",
-     "instrument": "FRA",
-     "rate": 0.035781
-    },
-    {
-     "tenor": "24M",
-     "instrument": "FRA",
-     "rate": 0.035911
-    },
-    {
-     "tenor": "30M",
-     "instrument": "FRA",
-     "rate": 0.036447
-    },
-    {
-     "tenor": "36M",
-     "instrument": "FRA",
-     "rate": 0.03719
-    },
-    {
-     "tenor": "42M",
-     "instrument": "FRA",
-     "rate": 0.038027
+     "tenor": "3Y",
+     "instrument": "TBS",
+     "rate": 0.000971
     },
     {
      "tenor": "4Y",
      "instrument": "IRS",
-     "rate": 0.037033
+     "rate": 0.037035
     },
     {
      "tenor": "5Y",
      "instrument": "IRS",
-     "rate": 0.037599
+     "rate": 0.0376
     },
     {
      "tenor": "6Y",
      "instrument": "IRS",
-     "rate": 0.038186
+     "rate": 0.038187
     },
     {
      "tenor": "7Y",
      "instrument": "IRS",
-     "rate": 0.038736
+     "rate": 0.038737
     },
     {
      "tenor": "8Y",
      "instrument": "IRS",
-     "rate": 0.039228
+     "rate": 0.039229
     },
     {
      "tenor": "9Y",
      "instrument": "IRS",
-     "rate": 0.039657
+     "rate": 0.039659
     },
     {
      "tenor": "10Y",
      "instrument": "IRS",
-     "rate": 0.040021
+     "rate": 0.040023
     },
     {
      "tenor": "13Y",
      "instrument": "IRS",
-     "rate": 0.040803
+     "rate": 0.040804
     },
     {
      "tenor": "15Y",
      "instrument": "IRS",
-     "rate": 0.04113
+     "rate": 0.041131
     },
     {
      "tenor": "20Y",
      "instrument": "IRS",
-     "rate": 0.041551
+     "rate": 0.041552
     },
     {
      "tenor": "25Y",
      "instrument": "IRS",
-     "rate": 0.041684
+     "rate": 0.041685
     },
     {
      "tenor": "30Y",
      "instrument": "IRS",
-     "rate": 0.041698
+     "rate": 0.041699
     },
     {
      "tenor": "40Y",
      "instrument": "IRS",
-     "rate": 0.041623
+     "rate": 0.041624
     },
     {
      "tenor": "50Y",
      "instrument": "IRS",
-     "rate": 0.041536
+     "rate": 0.041537
     }
    ]
   },
@@ -1900,6 +1935,17 @@
      "rate": 0.001042
     }
    ]
+  },
+  {
+   "curve": "USD_CSA_CTD",
+   "currency": "USD",
+   "index": "CSA_CTD",
+   "type": "DERIVED",
+   "day_counter": "Actual/365 (Fixed)",
+   "settlement_days": 2,
+   "derived": true,
+   "derivation": "max(f_SOFR, f_EURUSD_XCCY, f_AUDUSD_XCCY) pointwise on the instantaneous forwards, integrated to discount factors out to 30Y. Deterministic, zero volatility, no collateral switch option value.",
+   "quotes": []
   }
  ],
  "_provenance": "Frozen quote set. A curve was fit to publicly available data, and each quote here was priced off that fitted curve using the exact conventions of the rate helper that consumes it, so the set is mutually consistent. From here the pipeline bootstraps these quotes and nothing else - there is no parametric term-structure model in the runtime path."

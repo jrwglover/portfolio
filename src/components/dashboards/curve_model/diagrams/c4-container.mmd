@@ -4,7 +4,7 @@
 %% device boundary also name the protocol. Shapes are secondary to the labels
 %% and are explained in the key.
 %% .
-%% Deliberately not one container per source file: the thirteen term structures are
+%% Deliberately not one container per source file: the fourteen term structures are
 %% process state rather than a container, and the CSV/JSON outputs are one
 %% dataset. An earlier version listed both and laid out 4613px wide, which is
 %% not readable on a page.
@@ -35,7 +35,7 @@ flowchart TB
   CMEM -->|"read by every thread"| KERN
   KERN -->|"device prices and ladders<br/><b>[kernel launch]</b>"| RISK
   KERN -->|"device values<br/><b>[kernel launch]</b>"| RECON
-  RECON -->|"agreement, worst 3.6e-14"| PUB
+  RECON -->|"agreement, worst 5.4e-14"| PUB
   RISK -->|"ladders and cashflows"| PUB
 
   subgraph KEY[" Key "]

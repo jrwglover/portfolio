@@ -10,9 +10,9 @@ sequenceDiagram
   participant GPU as CUDA device
   participant V as reconcile
 
-  MD->>B: 13 curves of tagged quotes
+  MD->>B: 14 curves of tagged quotes
 
-  Note over B: build order is forced, not arbitrary:<br/>ESTR ECB before EURIBOR, AONIA RBA before BBSW,<br/>SOFR before the two FX curves
+  Note over B: build order is forced, not arbitrary:<br/>ESTR ECB before EURIBOR, AONIA RBA before BBSW,<br/>SOFR before the two FX curves. The BBSW pair is a<br/>staged joint solve on the 3s6s basis, and the CTD<br/>curve is derived last from SOFR and both FX curves
 
   loop per curve, in dependency order
     B->>B: quote to RateHelper by type
@@ -41,5 +41,5 @@ sequenceDiagram
     GPU->>V: device prices, pillar ladder
   end
 
-  V->>V: difference both paths, 341 instruments
+  V->>V: difference both paths, 348 instruments
   V-->>MD: worst agreement 5.4e-14

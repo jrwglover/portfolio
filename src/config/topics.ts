@@ -37,9 +37,9 @@ export const topics: Topic[] = [
             title: 'Curve Market Data Model',
             subtitle: 'The instruments each curve is built from, and the quotes behind them',
             description:
-              'These are the prices every curve is built from: overnight index swaps, futures, forward rate agreements, swaps, FX swap points and cross currency basis. Every one of them is a price the curve has to reprice correctly, and a place risk can sit.',
+              'These are the prices every curve is built from: overnight index swaps, futures, forward rate agreements, swaps, tenor basis swaps, FX swap points and cross currency basis. Every one of them is a price the curve has to reprice correctly, and a place risk can sit.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap', 'CUDA'],
-            highlights: ['Meeting-dated ESTR, SOFR, SONIA and AONIA strips', 'ASX bank bill futures on the BBSW 3M front', 'FX swaps + xccy basis in two pairs'],
+            highlights: ['Meeting-dated ESTR, SOFR, SONIA and AONIA strips', 'AUD 3s6s tenor basis strip linking the BBSW pair', 'FX swaps + xccy basis in two pairs'],
             status: 'live',
             dashboard: { component: 'CurveModelDashboard', defaultTab: 'inputs' },
             breadcrumb: ['Rates', 'Curve Bootstrapping', 'Curve Market Data Model'],
@@ -79,7 +79,7 @@ export const topics: Topic[] = [
             id: 'curve-domains',
             slug: 'curve-domains',
             title: 'Bootstrapped Curves',
-            subtitle: 'All thirteen curves, read as forwards, zeros or discount factors',
+            subtitle: 'All fourteen curves, read as forwards, zeros or discount factors',
             description:
               'One chart covers the whole curve set. Pick curves, then read them as discrete forwards (the 3M or 6M rate a FRA or future pays), as zero rates, or as raw discount factors, out to 2.5, 10 or 30 years. Each curve is pinned by the instruments a desk quotes for it, and every pillar on a curve is solved at once, so a quote is repriced by the same finished curve it helped build. EURIBOR 6M projects off its own quotes and discounts on the meeting-dated ESTR curve, and the BBSW curves discount on the RBA-dated AONIA curve. Each FX curve is implied from FX swap points and cross currency basis against the USD curve.',
             techBadges: ['C++', 'QuantLib', 'GlobalBootstrap', 'CUDA'],

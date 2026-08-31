@@ -10,8 +10,9 @@ flowchart TB
   T -->|FRA| H5@{ shape: subproc, label: "FraRateHelper" }
   T -->|IRS| H6@{ shape: subproc, label: "SwapRateHelper<br/><small>dual-curve: project / discount</small>" }
   T -->|FXSWAP / XCCY| H7@{ shape: subproc, label: "FxSwapRateHelper<br/>CrossCurrencyBasisSwapRateHelper" }
+  T -->|TBS| H8@{ shape: subproc, label: "IborIborBasisSwapRateHelper<br/><small>3s6s: float vs float, partner curve exogenous</small>" }
 
-  H1 & H2 & H3 & H4 & H5 & H6 & H7 --> G@{ shape: hex, label: "PiecewiseYieldCurve<br/>GlobalBootstrap" }
+  H1 & H2 & H3 & H4 & H5 & H6 & H7 & H8 --> G@{ shape: hex, label: "PiecewiseYieldCurve<br/>GlobalBootstrap" }
 
   G --> C@{ shape: win-pane, label: "calibrated term structure" }
   C --> X@{ shape: doc, label: "pillar dates, times, zeros" }

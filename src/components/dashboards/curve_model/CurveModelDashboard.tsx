@@ -18,6 +18,7 @@ interface MarketCurve {
   day_counter: string; settlement_days: number;
   fx_spot?: number; futures_convexity_sigma?: number;
   meeting_dates?: string[]; quotes: Quote[];
+  derived?: boolean; derivation?: string;
 }
 interface Inputs { curves: MarketCurve[] }
 
@@ -103,6 +104,11 @@ const CURVE_COLORS: Record<string, string> = {
   EURIBOR6M: '#8b7ec8', EURUSD: '#4a9a68', SOFR: '#9a8bd8', SONIA: '#c86e6e',
   AONIA: '#63c4f0', AONIA_RBA: '#3b87d4', BBSW3M: '#e896cc', BBSW6M: '#b34a85',
   AUDUSD: '#3fc4a5',
+  // Vivid amber-orange: the one mid-luminance hue band still free on this
+  // chart, and it sits opposite the violet/teal/green of the CTD curve's
+  // three parents (SOFR, EURUSD, AUDUSD), so the envelope stays separable
+  // from the curves it rides under both protan and deutan vision.
+  CSA_CTD: '#e8963c',
 };
 const CURVE_LABELS: Record<string, string> = {
   ESTR: 'ESTR (tenor OIS, comparison)', ESTR_ECB: 'ESTR ECB meeting-dated',
@@ -110,13 +116,14 @@ const CURVE_LABELS: Record<string, string> = {
   EURIBOR6M: 'EURIBOR 6M (dual-curve)', EURUSD: 'EUR under USD collateral (xccy)',
   SOFR: 'SOFR FOMC meeting-dated', SONIA: 'SONIA MPC meeting-dated',
   AONIA: 'AONIA (tenor OIS, comparison)', AONIA_RBA: 'AONIA RBA meeting-dated',
-  BBSW3M: 'BBSW 3M (dual-curve, to 3Y)', BBSW6M: 'BBSW 6M (dual-curve, from 4Y)',
+  BBSW3M: 'BBSW 3M (dual-curve, 3s6s long end)', BBSW6M: 'BBSW 6M (dual-curve, 3s6s front)',
   AUDUSD: 'AUD under USD collateral (xccy)',
+  CSA_CTD: 'USD CSA cheapest-to-deliver (derived)',
 };
 const INSTR_BADGE: Record<string, string> = {
   OIS: '#5eaab5', IMM_OIS: '#5cb87a', MTG_OIS: '#e07850', FUTURE: '#b8b04a',
   DEPOSIT: '#8b8a97', FRA: '#8b8a97', IMM_FRA: '#5cb87a', IRS: '#8b7ec8',
-  FXSWAP: '#4a9a68', XCCY: '#d4a853', SPOT: '#c9a227',
+  FXSWAP: '#4a9a68', XCCY: '#d4a853', SPOT: '#c9a227', TBS: '#c9699e',
 };
 
 type Measure = 'market' | 'zero' | 'forward';
@@ -253,8 +260,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     // Past its last exported point a curve clamps flat, which fabricates a
     // rising forward at the right edge, so each SERIES stops at its own last
     // pillar (a period forward at t needs data out to t + tenor). The grid
-    // itself runs to the longest shown curve: BBSW 3M ends at 3Y by design,
-    // and clamping the whole chart to the shortest curve cut every line off.
+    // itself runs to the longest shown curve: the xccy and CTD curves end at
+    // their 30Y pillar while the majors run to 50Y, and clamping the whole
+    // chart to the shortest curve cut every line off.
     const pad = domain === 'fwd' ? fwdTenor : 0;
     const lastOf: Record<string, number> = {};
     for (const k of keys) lastOf[k] = curves[k][curves[k].length - 1][0] - pad;
@@ -452,6 +460,18 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                 {selMkt.futures_convexity_sigma && <span>futures σ {(selMkt.futures_convexity_sigma * 100).toFixed(1)}%</span>}
                 {selMkt.meeting_dates && <span>{selMkt.meeting_dates.length} policy effective dates</span>}
               </div>
+              {selMkt.derived ? (
+                <div className="rounded px-4 py-3 text-sm max-w-3xl"
+                     style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                  <p className="mb-2">
+                    Derived curve. No quotes of its own: it is computed after its
+                    parents, not bootstrapped.
+                  </p>
+                  <p className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>
+                    {selMkt.derivation}
+                  </p>
+                </div>
+              ) : (
               <div className="overflow-x-auto rounded" style={{ border: '1px solid var(--border-subtle)' }}>
                 <table className="w-full font-mono text-xs">
                   <thead>
@@ -475,13 +495,15 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                           {q.price != null ? q.price.toFixed(2) + ' (price)'
                             : q.instrument === 'SPOT' ? (q.rate ?? 0).toFixed(4)
                               : q.instrument === 'FXSWAP' ? ((q.rate ?? 0) * 1e4).toFixed(2) + ' pts'
-                                : ((q.rate ?? 0) * 100).toFixed(4) + '%'}
+                                : q.instrument === 'TBS' ? ((q.rate ?? 0) * 1e4).toFixed(2) + ' bp'
+                                  : ((q.rate ?? 0) * 100).toFixed(4) + '%'}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           )}
         </div>
@@ -558,7 +580,21 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             The cross currency curves are not built from local quotes at all; they are
             implied from FX swap points and basis against SOFR, which is why they sit
             apart. The two BBSW curves split where the AUD market does: quarterly 3M
-            swaps to 3Y, semi-annual 6M swaps from 4Y.
+            swaps to 3Y, semi-annual 6M swaps from 4Y. A quoted 6M/3M tenor basis
+            strip stitches the halves together, so both curves run the full range.
+            The basis swaps are solved as real float against float instruments,
+            which makes the pair a joint solve: the engine stages it and iterates
+            to a fixed point.
+          </p>
+          <p className="text-xs mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The CTD curve is derived, not bootstrapped. Under a USD CSA that accepts
+            USD, EUR or AUD cash, the poster delivers whichever is cheapest and can
+            substitute daily. At each instant that is the highest of the three
+            collateral curves&apos; forwards, so the curve is the pointwise maximum of
+            SOFR and the two cross currency curves, integrated to discount factors.
+            Zero volatility construction: rates are today&apos;s forwards, and the
+            option to switch later carries no value here. A stochastic model would
+            discount strictly below this envelope.
           </p>
         </div>
       )}
