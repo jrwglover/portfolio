@@ -72,7 +72,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
       {tab === 'desk' && tl && (
         <div>
-          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             The desk
           </h3>
           <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -92,7 +92,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
       {tab === 'why' && (
         <div className="max-w-3xl">
-          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             Why not just recalculate everything on a timer
           </h3>
           <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
@@ -131,7 +131,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
       {tab === 'graph' && g && (
         <div>
-          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             What one price forces to rebuild
           </h3>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -183,7 +183,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
       {(tab === 'engine' || tab === 'trader') && demo && (
         <div>
-          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             {tab === 'engine' ? 'A run of the engine' : 'The same run, from a trading view'}
           </h3>
           <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>

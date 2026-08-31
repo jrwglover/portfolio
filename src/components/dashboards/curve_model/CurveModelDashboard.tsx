@@ -601,7 +601,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
           {selTrade && !selTrade.fx && (
             <div>
-              <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+              <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                 Risk ladders: Market PV01 &middot; Zero PV01 &middot; Forward PV01
               </h3>
               <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -750,7 +750,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
           {selTrade && selTrade.cashflows.length > 0 && (
             <div className="mt-10">
-              <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+              <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                 Cashflow schedule
               </h3>
               <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -876,7 +876,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             const hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
             return (
               <div key={p.id} className="mb-10">
-                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{p.name}</h3>
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{p.name}</h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>{p.note}</p>
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>{p.workload}</p>
                 <ResponsiveContainer width="100%" height={44 + data.length * 40}>
@@ -935,7 +935,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             const rHi = Math.pow(10, Math.ceil(Math.log10(Math.max(...rv))));
             return (
               <div key={mode} className="mb-10">
-                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                   Risk run: cost against book size
                 </h3>
                 <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -1015,7 +1015,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             const top = ns.points[ns.points.length - 1];
             return (
               <div className="mb-10">
-                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                   Book value: cost against book size
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -1137,7 +1137,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             const max = Math.max(b.bootstrapMs, b.hostMs, b.gpuMs);
             return (
               <div className="mb-10">
-                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                   Market PV01 over a {b.trades.toLocaleString()}-trade book
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -1183,7 +1183,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
                   </div>
                 </div>
 
-                <h3 className="text-sm font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="text-base font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
                   Ladder accuracy against QuantLib
                 </h3>
                 <div className="grid md:grid-cols-2 gap-3">
@@ -1235,11 +1235,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               </div>
             );
             const sub = (title: string) => (
-              <h4 className="text-xs font-semibold mb-2 mt-6" style={{ color: 'var(--text-primary)' }}>{title}</h4>
+              <h4 className="text-sm font-semibold mb-2 mt-6" style={{ color: 'var(--text-primary)' }}>{title}</h4>
             );
             return (
               <div className="mb-10">
-                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                   Collapsing the book to curve level
                 </h3>
                 <p className="text-xs mb-1 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -1368,7 +1368,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             );
           })()}
 
-          <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-base font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
             Accuracy
           </h3>
           <div className="grid md:grid-cols-3 gap-3">
@@ -1383,7 +1383,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
 
           {perf.agreement && perf.agreement.length > 0 && (
             <>
-              <h3 className="text-sm font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
+              <h3 className="text-base font-semibold mb-1 mt-8" style={{ color: 'var(--text-primary)' }}>
                 Agreement with QuantLib
               </h3>
               <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
@@ -1423,7 +1423,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             );
             return (
               <div className="mt-12 pt-8" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                   What it adds up to
                 </h3>
                 <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
