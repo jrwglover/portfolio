@@ -201,7 +201,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
-  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df' | 'fx'>('fwd');
+  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df' | 'fx'>('inst');
   const [fwdTenor, setFwdTenor] = useState(0.25);
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
