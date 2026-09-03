@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Workstation, { type Timeline } from './Workstation';
+import RiskTab from './RiskTab';
+import ValuationsTab from './ValuationsTab';
+import { type RiskVal } from './riskval';
 
 declare const __BUILD_ID__: string;
 const BUILD_ID = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
@@ -37,6 +41,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
   const [tl, setTl] = useState<Timeline | null>(null);
+  const [rv, setRv] = useState<RiskVal | null>(null);
   const [probe, setProbe] = useState('EUR_ESTR_ECB');
 
   useEffect(() => {
@@ -47,6 +52,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       .then(r => r.json()).then(setDemo).catch(() => {});
     fetch(`/data/rt_engine/timeline.json${v}`, { cache: 'no-store' })
       .then(r => r.json()).then(setTl).catch(() => {});
+    fetch(`/data/rt_engine/risk_val.json${v}`, { cache: 'no-store' })
+      .then(r => r.json()).then(setRv).catch(() => {});
   }, []);
 
   const rebuilds = useMemo(() => {
@@ -56,6 +63,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
   const TABS: [string, string][] = [
     ['desk', 'Desk view'],
+    ['risk', 'Risk'],
+    ['val', 'Valuations'],
     ['why', 'Why events'],
     ['graph', 'What one price touches'],
     ['engine', 'Engine output'],
@@ -82,13 +91,27 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             one meeting-dated curve, with projection and cross currency curves built on
             those. The AUD curves are published on every set with nothing priced on them.
           </p>
-          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
             When a price arrives, the curves built on it are re-solved and everything
             below recalculates. Trades arrive during the session too, pending until
             confirmed; the blotter toggle puts pending tickets into the totals.
           </p>
+          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            The performance behind real-time VaR and PV01 comes from collapsing the
+            book&apos;s cashflow schedules to curve-level coefficients. The{' '}
+            <Link to="/learn/curve-data-model#collapse" style={{ color: 'var(--accent-warm)' }}>
+              collapse analysis
+            </Link>{' '}
+            on the curve model page shows where the time goes.
+          </p>
           <Workstation tl={tl} />
         </div>
+      )}
+
+      {tab === 'risk' && rv && <RiskTab rv={rv} />}
+      {tab === 'val' && rv && <ValuationsTab rv={rv} />}
+      {(tab === 'risk' || tab === 'val') && !rv && (
+        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
 
       {tab === 'why' && (

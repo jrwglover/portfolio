@@ -203,7 +203,10 @@ function instAt(pts: Pt[], t: number): number {
 
 
 export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] }) {
-  const [tab, setTab] = useState<Tab>((defaultTab as Tab) ?? 'inputs');
+  // #collapse deep-links the RT engine page to the collapse analysis: open on
+  // the perf tab and scroll once its data has arrived.
+  const wantCollapse = typeof window !== 'undefined' && window.location.hash === '#collapse';
+  const [tab, setTab] = useState<Tab>(wantCollapse ? 'perf' : (defaultTab as Tab) ?? 'inputs');
   const [inputs, setInputs] = useState<Inputs | null>(null);
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
@@ -243,6 +246,11 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
     get('trades.json', setTrades);
     get('performance.json', setPerf);
   }, []);
+
+  useEffect(() => {
+    if (wantCollapse && perf) document.getElementById('collapse')?.scrollIntoView({ behavior: 'smooth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perf]);
 
   const selMkt = inputs?.curves.find(c => c.curve === selCurve);
   const curveKeys = Object.keys(CURVE_LABELS).filter(k => curves[k]);
@@ -1274,7 +1282,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
               <h4 className="text-sm font-semibold mb-2 mt-6" style={{ color: 'var(--text-primary)' }}>{title}</h4>
             );
             return (
-              <div className="mb-10">
+              <div id="collapse" className="mb-10">
                 <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                   Collapsing the book to curve level
                 </h3>
