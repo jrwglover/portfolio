@@ -63,20 +63,42 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
   const TABS: [string, string][] = [
     ['desk', 'Desk view'],
-    ['risk', 'Risk'],
-    ['val', 'Valuations'],
     ['why', 'Why events'],
     ['graph', 'What one price touches'],
     ['engine', 'Engine output'],
     ['trader', 'Trader output'],
   ];
+  const RISK_TABS: [string, string][] = [
+    ['limits', 'Limits'],
+    ['var', 'Value at Risk'],
+    ['stress', 'Stress'],
+  ];
+  const VAL_TABS: [string, string][] = [
+    ['ipv', 'IPV'],
+    ['exit', 'Close-out and AVA'],
+    ['inventory', 'Model inventory'],
+  ];
+  const groupLabel = { color: 'var(--text-dim)', letterSpacing: '0.08em' };
 
   return (
     <div>
-      <div className="flex gap-2 mb-6 font-mono text-[11px] flex-wrap">
+      <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap">
         {TABS.map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
             style={chip(tab === k, '#5b8fc9')}>{label}</button>
+        ))}
+      </div>
+      <div className="flex gap-2 mb-6 font-mono text-[11px] flex-wrap items-center">
+        <span className="text-[10px] uppercase mr-1" style={groupLabel}>Risk</span>
+        {RISK_TABS.map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
+            style={chip(tab === k, '#d4a853')}>{label}</button>
+        ))}
+        <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
+        <span className="text-[10px] uppercase mr-1" style={groupLabel}>Valuations</span>
+        {VAL_TABS.map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
+            style={chip(tab === k, '#5eaab5')}>{label}</button>
         ))}
       </div>
 
@@ -108,9 +130,11 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
         </div>
       )}
 
-      {tab === 'risk' && rv && <RiskTab rv={rv} />}
-      {tab === 'val' && rv && <ValuationsTab rv={rv} />}
-      {(tab === 'risk' || tab === 'val') && !rv && (
+      {(tab === 'limits' || tab === 'var' || tab === 'stress') && rv &&
+        <RiskTab rv={rv} panel={tab as 'limits' | 'var' | 'stress'} />}
+      {(tab === 'ipv' || tab === 'exit' || tab === 'inventory') && rv &&
+        <ValuationsTab rv={rv} panel={tab as 'ipv' | 'exit' | 'inventory'} />}
+      {['limits', 'var', 'stress', 'ipv', 'exit', 'inventory'].includes(tab) && !rv && (
         <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
 

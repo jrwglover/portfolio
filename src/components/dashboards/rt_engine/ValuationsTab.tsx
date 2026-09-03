@@ -13,7 +13,9 @@ const STATUS = [
 
 const bp = (v: number, dp = 2) => v.toFixed(dp);
 
-export default function ValuationsTab({ rv }: { rv: RiskVal }) {
+export type ValPanel = 'ipv' | 'exit' | 'inventory';
+
+export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPanel }) {
   const [ipvCurve, setIpvCurve] = useState<string | null>(null);
 
   const ipvCurves = useMemo(() => {
@@ -38,7 +40,7 @@ export default function ValuationsTab({ rv }: { rv: RiskVal }) {
   return (
     <div className="space-y-8">
       {/* ================= IPV ================= */}
-      <Group title="Independent price verification"
+      {panel === 'ipv' && <Group title="Independent price verification"
         note="The engine's marks held against prices it did not produce, and against its own second route.">
         <PanelCard title="Consensus IPV"
           intro="The marks checked against a consensus service in the Totem style: a monthly run over the quoted instrument universe, each quote carrying a consensus mid, contributor count, dispersion and a half bid-offer read off the consensus range. The consensus set is generated off the fitted curves with dispersion by instrument type and maturity, because real consensus data cannot ship with this site.">
@@ -142,10 +144,10 @@ export default function ValuationsTab({ rv }: { rv: RiskVal }) {
             prices on the AUD curves.
           </p>
         </PanelCard>
-      </Group>
+      </Group>}
 
       {/* ================= EXIT COSTS AND PRUDENT VALUATION ================= */}
-      <Group title="Exit costs and prudent valuation"
+      {panel === 'exit' && <Group title="Exit costs and prudent valuation"
         note="Two readings of the same consensus data: what leaving the book would cost, and what the regulation deducts for the uncertainty of staying.">
         <div className="grid lg:grid-cols-[2fr_3fr] gap-4 items-start">
           <PanelCard title="Close-out cost"
@@ -237,10 +239,10 @@ export default function ValuationsTab({ rv }: { rv: RiskVal }) {
             </p>
           </PanelCard>
         </div>
-      </Group>
+      </Group>}
 
       {/* ================= MODEL GOVERNANCE ================= */}
-      <Group title="Model governance"
+      {panel === 'inventory' && <Group title="Model governance"
         note="What is on the books methodologically, and what checks stand behind it.">
         <PanelCard title="Model inventory"
           intro="Every curve in the registry, its construction derived from the spec and the instruments actually quoted on it, and the verification checks the engine ran against the final set with their measured values. Nothing in this table is hand-typed where the registry can derive it.">
@@ -293,7 +295,7 @@ export default function ValuationsTab({ rv }: { rv: RiskVal }) {
             rather than hidden.
           </p>
         </PanelCard>
-      </Group>
+      </Group>}
     </div>
   );
 }

@@ -14,7 +14,9 @@ import { Group, PanelCard } from './PanelCard';
 const utilColour = (util: number) =>
   util > 1.0 ? '#c86e6e' : util > 0.85 ? '#d4a853' : '#5eaab5';
 
-export default function RiskTab({ rv }: { rv: RiskVal }) {
+export type RiskPanel = 'limits' | 'var' | 'stress';
+
+export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }) {
   const v = rv.var;
 
   // The limit panel opens on the worst frame of the session, which is a
@@ -68,7 +70,7 @@ export default function RiskTab({ rv }: { rv: RiskVal }) {
   return (
     <div className="space-y-8">
       {/* ================= LIMITS ================= */}
-      <Group title="Limits"
+      {panel === 'limits' && <Group title="Limits"
         note="What the desk is allowed to run, against what it is running.">
         <PanelCard title="PV01 limits"
           intro="Net DV01 per curve on each published set, from the zero-bucket ladders the engine publishes, against a desk limit structure configured in the engine. The limit levels are illustrative calibration; the utilization under them is measured.">
@@ -112,11 +114,11 @@ export default function RiskTab({ rv }: { rv: RiskVal }) {
               : 'Every line is inside its limit on this set. The mark past the end of each bar is 100%.'}
           </p>
         </PanelCard>
-      </Group>
+      </Group>}
 
       {/* ================= VALUE AT RISK ================= */}
-      <Group title="Value at Risk"
-        note="Full revaluation through the collapsed book: the measure, its stressed counterpart, and the shocks a committee asks about.">
+      {panel === 'var' && <Group title="Value at Risk"
+        note="Full revaluation through the collapsed book: the measure and its stressed counterpart.">
         <PanelCard title="Portfolio VaR, full revaluation"
           intro={<>
             Historical-simulation VaR in the CRR Art. 365 shape, fully revaluing the
@@ -271,7 +273,11 @@ export default function RiskTab({ rv }: { rv: RiskVal }) {
             </div>
           </div>
         </PanelCard>
+      </Group>}
 
+      {/* ================= STRESS ================= */}
+      {panel === 'stress' && <Group title="Stress scenarios"
+        note="The shocks a committee asks about, through the same collapsed lane.">
         <PanelCard title="Stress scenarios"
           intro="Named deterministic shocks, revalued through the same collapsed lane, whole book and per book. The shock definitions are stated in each row; nothing else is assumed.">
           <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
@@ -309,11 +315,11 @@ export default function RiskTab({ rv }: { rv: RiskVal }) {
             every curve it names and finds no position there.
           </p>
         </PanelCard>
-      </Group>
+      </Group>}
 
       {/* ---- footnote ---- */}
       <p className="text-[11px] max-w-3xl" style={dimText}>
-        Every figure on this tab was computed by the engine on the closing book
+        Every figure on this panel was computed by the engine on the closing book
         ({rv.meta.trades.toLocaleString()} trades, {(rv.meta.cashflows / 1e6).toFixed(1)}m
         cashflows collapsed to {rv.meta.terms.toLocaleString()} terms) against set{' '}
         {rv.meta.epoch}, and exported as JSON. The browser draws it and adds nothing.
