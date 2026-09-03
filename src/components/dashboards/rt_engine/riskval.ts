@@ -18,23 +18,41 @@ export interface RvLimits {
   frames: LimitFrame[];
 }
 
+export interface VarRegime {
+  name: string; start: string; end: string;
+  startIdx: number; endIdx: number; volMult: number; tailDf: number;
+}
+export interface VarPairRow {
+  horizon: string; var99: number; es99: number; svar99: number; ses99: number;
+}
 export interface RvVar {
-  scenarios: number; seed: number; pillars: number[];
-  stress: { start: number; end: number; volMult: number };
+  scenarios: number; seed: number; window: number;
+  from: string; to: string; pillars: number[];
+  regimes: VarRegime[];
+  rows: VarPairRow[];
   var95: number; var99: number; es95: number; es99: number;
-  var99TenDay: number;
-  stressed: { start: number; end: number; var99: number; es99: number; var99TenDay: number };
+  svarRatio: number;
+  trailing: { from: string; to: string; startIdx: number };
+  stressed: {
+    startIdx: number; endIdx: number; start: string; end: string;
+    var99: number; es99: number;
+  };
   backtest: {
     tested: number; exceptions: number;
     last250Tested: number; last250Exceptions: number; zone: string;
+    from: string;
   };
+  yearTicks: { idx: number; label: string }[];
   hist: { lo: number; width: number; counts: number[] };
   pnl: number[];
   timing: {
     collapsedUs: number; perScenarioUs: number;
     tradeLevelPerScenarioUs: number; equivalentTradeLevelMs: number;
   };
-  recon: { day: number; collapsed: number; tradeLevel: number; absDiff: number }[];
+  recon: {
+    day: number; date: string; collapsed: number; tradeLevel: number;
+    absDiff: number;
+  }[];
   worstScenAbsDiff: number;
 }
 
