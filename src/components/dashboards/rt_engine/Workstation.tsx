@@ -3,6 +3,7 @@ import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
+import { type RiskVal } from './riskval';
 
 interface Row {
   id: string; book: string; npv: number; dv01: number; fair: number; degraded: boolean;
@@ -48,6 +49,11 @@ interface Frame {
   feed: FeedRow[];
   deskNpv: number; deskDv01: number; deskTrades: number;
   npvUs: number; riskUs: number; threads: number; buckets: number;
+  // Per-set VaR: the whole book (opening book plus executed tickets) fully
+  // revalued under the 250 most recent days of the dated scenario history,
+  // through the collapsed lane, on this set. us is the measured wall clock
+  // including the evaluator compile against this set's curves.
+  varRt?: { var99: number; var95: number; es99: number; us: number };
   // The times each curve is published at. A curve appears here on the frame
   // its times change and not otherwise. A time can appear twice: where the
   // forward jumps, the value on each side is published and the chart draws
@@ -228,7 +234,9 @@ function drawPoints(c: CurveVals, view: string, tMax: number) {
 
 // ---------------------------------------------------------------------------
 
-export default function Workstation({ tl }: { tl: Timeline }) {
+export default function Workstation({ tl, rv }: {
+  tl: Timeline; rv?: RiskVal | null;
+}) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(true);
   // Curves that rebuilt on the current frame are held lit briefly, so the
@@ -282,6 +290,17 @@ export default function Workstation({ tl }: { tl: Timeline }) {
 
   const f = tl.frames[i];
   const prev = i > 0 ? tl.frames[i - 1] : null;
+
+  // The limit rows for the set on screen. The engine evaluated one row set
+  // per session frame, in the same order as the timeline's frames.
+  const limitFrame = rv?.limits.frames[i] ?? null;
+  const limitLevel = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const c of rv?.limits.config ?? []) m[c.key] = c.limit;
+    return m;
+  }, [rv]);
+  const limitBreaches = useMemo(
+    () => limitFrame?.rows.filter(r => r.breach) ?? [], [limitFrame]);
 
   useEffect(() => {
     setFlash(new Set(f.rebuilt));
@@ -613,10 +632,13 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       </div>
 
       {/* ---- what each clock cost on this cycle ---- */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4 font-mono text-[11px]">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-2 mb-1 font-mono text-[11px]">
         {([['Curves rebuilt', ms(f.cycleUs), f.rebuilt.length + ' of ' + tl.curveIds.length + ' curves'],
           ['Book revalued', ms(f.npvUs), 'every trade, ' + tl.threads + ' cores'],
           ['Risk ladders', ms(f.riskUs), f.buckets + ' buckets, zero and forward'],
+          ['1-day VaR, 99%', f.varRt ? millions(f.varRt.var99) : '-',
+            f.varRt ? 'full reval, 250 scenarios, in ' + ms(f.varRt.us)
+              : 'not in this recording'],
           ['Market PV01', f.mkt ? ms(f.mktUs) : '-',
             f.mkt ? mktTotals.quotes + ' quotes bumped, ' + f.mktRebuilds + ' curve solves'
               : 'not run, a curve is stale']]
@@ -628,6 +650,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </div>
         ))}
       </div>
+      <p className="text-[11px] mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+        VaR runs on every published set: a full revaluation of the book under the
+        250 most recent days of the generated scenario history, through the
+        collapsed book, wall clock measured per set including the rebind to the
+        new curves.
+      </p>
 
       <div className="rounded px-4 py-3 mb-4" style={{ border: '1px solid #d4a85355', background: '#d4a8530a' }}>
         <div className="font-mono text-xs mb-1" style={{ color: '#d4a853' }}>{f.label}</div>
@@ -784,6 +812,51 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           )}
         </div>
       </div>
+
+      {/* ---- limits ---- */}
+      {limitFrame && (
+        <div className="mt-4">
+          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Limits</div>
+          <div className="rounded px-3 py-2.5" style={{ border: '1px solid var(--border-subtle)' }}>
+            <div className="space-y-1.5">
+              {limitFrame.rows.map(r => {
+                const colour = r.util > 1.0 ? '#c86e6e' : r.util > 0.85 ? '#d4a853' : '#5eaab5';
+                const w = Math.min(r.util, 1.25) / 1.25 * 100;
+                return (
+                  <div key={r.key} className="grid gap-2 items-center font-mono text-[10.5px]"
+                    style={{ gridTemplateColumns: '100px 1fr 210px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      {r.key === 'TOTAL' ? 'Desk total' : (LABEL[r.key] ?? r.key)}
+                    </span>
+                    <div className="rounded-sm relative" style={{ height: 8, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                      <div className="rounded-sm" style={{ height: '100%', width: `${w}%`, background: colour }} />
+                      <div style={{ position: 'absolute', top: -2, bottom: -2, left: `${100 / 1.25}%`, width: 1, background: 'var(--text-dim)' }} />
+                    </div>
+                    <span className="text-right" style={{ color: colour }}>
+                      {(r.util * 100).toFixed(1)}%
+                      <span style={{ color: 'var(--text-dim)' }}>
+                        {' '}&middot; {money(r.dv01)} / {money(limitLevel[r.key] ?? 0)}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            Net DV01 per curve on this set against the desk limit structure, from
+            the ladders above; the levels are illustrative calibration. The mark
+            past the end of each bar is 100%.
+            {limitBreaches.length > 0 && <>
+              {' '}<span style={{ color: '#c86e6e' }}>
+                {limitBreaches.map(b => b.key === 'TOTAL' ? 'Desk total' : (LABEL[b.key] ?? b.key)).join(' and ')}{' '}
+                {limitBreaches.length === 1 ? 'is' : 'are'} over the line
+              </span>: the book runs a structural short in EUR discount DV01
+              against a limit set below it.
+            </>}
+          </p>
+        </div>
+      )}
 
       {/* ---- curves ---- */}
       <div className="mt-4">
