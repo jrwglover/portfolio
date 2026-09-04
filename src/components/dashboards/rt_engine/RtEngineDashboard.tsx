@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Workstation, { type Timeline } from './Workstation';
+import EodMarkingTab, { type EodMarking } from './EodMarkingTab';
 // The Risk and Valuations panels (RiskTab, ValuationsTab, PanelCard) are
 // built and working but unwired from the nav for now: the desk view carries
 // the per-set VaR tile and the Limits section instead (both read the
@@ -42,6 +43,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
   const [tl, setTl] = useState<Timeline | null>(null);
+  const [em, setEm] = useState<EodMarking | null>(null);
   const [probe, setProbe] = useState('EUR_ESTR_ECB');
 
   useEffect(() => {
@@ -52,6 +54,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       .then(r => r.json()).then(setDemo).catch(() => {});
     fetch(`/data/rt_engine/timeline.json${v}`, { cache: 'no-store' })
       .then(r => r.json()).then(setTl).catch(() => {});
+    fetch(`/data/rt_engine/eod_marking.json${v}`, { cache: 'no-store' })
+      .then(r => r.json()).then(setEm).catch(() => {});
   }, []);
 
   const rebuilds = useMemo(() => {
@@ -61,6 +65,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
   const TABS: [string, string][] = [
     ['desk', 'Desk view'],
+    ['eod', 'EOD marking'],
     ['why', 'Why events'],
     ['graph', 'What one price touches'],
     ['engine', 'Engine output'],
@@ -102,6 +107,11 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           </p>
           <Workstation tl={tl} />
         </div>
+      )}
+
+      {tab === 'eod' && em && <EodMarkingTab em={em} />}
+      {tab === 'eod' && !em && (
+        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
 
       {tab === 'why' && (
