@@ -636,9 +636,8 @@ export default function Workstation({ tl, rv }: {
         {([['Curves rebuilt', ms(f.cycleUs), f.rebuilt.length + ' of ' + tl.curveIds.length + ' curves'],
           ['Book revalued', ms(f.npvUs), 'every trade, ' + tl.threads + ' cores'],
           ['Risk ladders', ms(f.riskUs), f.buckets + ' buckets, zero and forward'],
-          ['1-day VaR, 99%', f.varRt ? millions(f.varRt.var99) : '-',
-            f.varRt ? 'full reval, 250 scenarios, in ' + ms(f.varRt.us)
-              : 'not in this recording'],
+          ['1-day VaR, 99%', f.varRt ? ms(f.varRt.us) : '-',
+            f.varRt ? 'full reval, 250 scenarios' : 'not in this recording'],
           ['Market PV01', f.mkt ? ms(f.mktUs) : '-',
             f.mkt ? mktTotals.quotes + ' quotes bumped, ' + f.mktRebuilds + ' curve solves'
               : 'not run, a curve is stale']]
