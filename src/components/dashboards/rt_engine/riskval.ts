@@ -11,7 +11,11 @@ export interface RvMeta {
 
 export interface LimitRow { key: string; dv01: number; util: number; breach: boolean }
 export interface LimitFrame {
-  label: string; epoch: number; published: boolean; rows: LimitRow[];
+  label: string; epoch: number; published: boolean;
+  // Limits key off the market PV01 ladders only. A set where that run was
+  // skipped is not evaluated and carries no rows.
+  evaluated: boolean;
+  rows: LimitRow[];
 }
 export interface RvLimits {
   config: { key: string; limit: number }[];

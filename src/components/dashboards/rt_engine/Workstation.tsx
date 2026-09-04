@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart,
+  ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
-import { type RiskVal } from './riskval';
 
 interface Row {
   id: string; book: string; npv: number; dv01: number; fair: number; degraded: boolean;
@@ -54,6 +53,22 @@ interface Frame {
   // through the collapsed lane, on this set. us is the measured wall clock
   // including the evaluator compile against this set's curves.
   varRt?: { var99: number; var95: number; es99: number; us: number };
+  // Per-set limits, evaluated on this set's market PV01 ladder and nothing
+  // else: net rows per curve plus the desk total, per-bucket utilizations
+  // and caps aligned with the mktQ axes (null = uncapped or unbuilt), and
+  // the crossings against the last evaluated set. null on a set where the
+  // market run was skipped: limits are then not evaluated, not read off
+  // another ladder.
+  bl?: {
+    net: { key: string; dv01: number; limit: number; util: number; breach: boolean }[];
+    rows: Record<string, (number | null)[]>;
+    lims: Record<string, (number | null)[]>;
+    events: {
+      kind: 'bucket' | 'net'; curve: string; q?: string; years?: number;
+      util: number; prev: number; enter: boolean;
+      cause?: 'ticket' | 'flow' | 'price'; ticket?: string;
+    }[];
+  } | null;
   // The times each curve is published at. A curve appears here on the frame
   // its times change and not otherwise. A time can appear twice: where the
   // forward jumps, the value on each side is published and the chart draws
@@ -234,9 +249,7 @@ function drawPoints(c: CurveVals, view: string, tMax: number) {
 
 // ---------------------------------------------------------------------------
 
-export default function Workstation({ tl, rv }: {
-  tl: Timeline; rv?: RiskVal | null;
-}) {
+export default function Workstation({ tl }: { tl: Timeline }) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(true);
   // Curves that rebuilt on the current frame are held lit briefly, so the
@@ -254,8 +267,10 @@ export default function Workstation({ tl, rv }: {
     ['EUR_ESTR', 'EUR_ESTR_ECB', 'EUR_EURIBOR6M', 'EUR_USD_XCCY']);
   const [riskCurve, setRiskCurve] = useState('EUR_ESTR_ECB');
   // Three domains over the same book: market quotes, zero buckets, forward
-  // buckets. What differs is what a bucket means, not how the ladder is shown.
-  const [riskMode, setRiskMode] = useState<'mkt' | 'zero' | 'fwd'>('zero');
+  // buckets. What differs is what a bucket means, not how the ladder is
+  // shown. Market opens the view: it is the space the desk deals in and the
+  // one the limit framework lives on.
+  const [riskMode, setRiskMode] = useState<'mkt' | 'zero' | 'fwd'>('mkt');
   // The position panel. Its ladders were measured against one published set,
   // so all three domains are read off that same set and the panel says which.
   const detail = tl.detail;
@@ -274,7 +289,7 @@ export default function Workstation({ tl, rv }: {
   const [posId, setPosId] = useState<string | null>(
     detail?.positions.find(p => p.kind === 'fed')?.id
     ?? detail?.positions[0]?.id ?? null);
-  const [posDomain, setPosDomain] = useState<'mkt' | 'zero' | 'fwd'>('zero');
+  const [posDomain, setPosDomain] = useState<'mkt' | 'zero' | 'fwd'>('mkt');
   const [posCurve, setPosCurve] = useState<string | null>(null);
   // Pending tickets are not positions. The toggle puts them into the totals and
   // the ladders anyway, which is the question a desk asks before it commits.
@@ -291,16 +306,13 @@ export default function Workstation({ tl, rv }: {
   const f = tl.frames[i];
   const prev = i > 0 ? tl.frames[i - 1] : null;
 
-  // The limit rows for the set on screen. The engine evaluated one row set
-  // per session frame, in the same order as the timeline's frames.
-  const limitFrame = rv?.limits.frames[i] ?? null;
-  const limitLevel = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const c of rv?.limits.config ?? []) m[c.key] = c.limit;
-    return m;
-  }, [rv]);
+  // The limit evaluation for the set on screen, straight off this frame's
+  // market PV01 ladder. null means the run was skipped and limits were not
+  // evaluated on this set.
+  const bl = f.bl ?? null;
+  const [drillCurve, setDrillCurve] = useState<string | null>(null);
   const limitBreaches = useMemo(
-    () => limitFrame?.rows.filter(r => r.breach) ?? [], [limitFrame]);
+    () => bl?.net.filter(r => r.breach) ?? [], [bl]);
 
   useEffect(() => {
     setFlash(new Set(f.rebuilt));
@@ -316,10 +328,16 @@ export default function Workstation({ tl, rv }: {
   }, [i, playing, tl.frames.length]);
 
   const feed = useMemo(() => {
-    const out: { label: string; ticks: string[]; rebuilt: number; dup: number }[] = [];
+    const out: {
+      label: string; ticks: string[]; rebuilt: number; dup: number;
+      events: NonNullable<Frame['bl']>['events'];
+    }[] = [];
     for (let k = i; k >= 0 && out.length < 6; k--) {
       const fr = tl.frames[k];
-      out.push({ label: fr.label, ticks: fr.ticks, rebuilt: fr.rebuilt.length, dup: fr.duplicate });
+      out.push({
+        label: fr.label, ticks: fr.ticks, rebuilt: fr.rebuilt.length,
+        dup: fr.duplicate, events: fr.bl?.events ?? [],
+      });
     }
     return out;
   }, [i, tl.frames]);
@@ -482,11 +500,22 @@ export default function Workstation({ tl, rv }: {
   const mktChart = useMemo(() => {
     const rows = mktLadder?.[curveOn] ?? [];
     const ids = here.mktQ[curveOn] ?? [];
+    // The bucket caps and utilizations the engine evaluated on this set,
+    // aligned with the same axes. The utilization colours the bar only when
+    // the ladder on screen is the membership the limits were evaluated on
+    // (pending tickets are not in the limit check).
+    const lims = f.bl?.lims[curveOn] ?? [];
+    const utils = f.bl?.rows[curveOn] ?? [];
     return rows.map((pv01, n) => ({
       label: (ids[n] ?? '').split('/')[0], full: ids[n] ?? '', pv01,
-    })).filter(r => r.pv01 !== null) as
-      { label: string; full: string; pv01: number }[];
-  }, [mktLadder, curveOn, here]);
+      lim: lims[n] ?? null,
+      limNeg: lims[n] !== null && lims[n] !== undefined ? -(lims[n] as number) : null,
+      util: withPending ? null : (utils[n] ?? null),
+    })).filter(r => r.pv01 !== null) as {
+      label: string; full: string; pv01: number;
+      lim: number | null; limNeg: number | null; util: number | null;
+    }[];
+  }, [mktLadder, curveOn, here, f.bl, withPending]);
   const mktCurveTotal = mktChart.reduce((s, r) => s + r.pv01, 0);
   // The forward-bucket ladder over the same set and membership, summed. A
   // basis point on every forward interval and a basis point on every quote
@@ -694,12 +723,32 @@ export default function Workstation({ tl, rv }: {
             minHeight: 132,
           }}>
             {feed.map((e, k) => (
-              <div key={k} className="flex justify-between gap-3 py-0.5"
-                style={{ color: k === 0 ? 'var(--text-secondary)' : 'var(--text-dim)', opacity: 1 - k * 0.14 }}>
-                <span className="truncate">{e.ticks.length ? e.ticks[0] : e.label}</span>
-                <span style={{ color: e.dup ? '#c86e6e' : e.rebuilt ? '#d4a853' : 'var(--text-dim)' }}>
-                  {e.dup ? 'rejected' : e.rebuilt ? `${e.rebuilt} rebuilt` : 'no change'}
-                </span>
+              <div key={k} style={{ opacity: 1 - k * 0.14 }}>
+                <div className="flex justify-between gap-3 py-0.5"
+                  style={{ color: k === 0 ? 'var(--text-secondary)' : 'var(--text-dim)' }}>
+                  <span className="truncate">{e.ticks.length ? e.ticks[0] : e.label}</span>
+                  <span style={{ color: e.dup ? '#c86e6e' : e.rebuilt ? '#d4a853' : 'var(--text-dim)' }}>
+                    {e.dup ? 'rejected' : e.rebuilt ? `${e.rebuilt} rebuilt` : 'no change'}
+                  </span>
+                </div>
+                {/* Limit crossings the engine detected on this set, in the
+                    stream where the desk watches everything else land. */}
+                {e.events.map((ev, j) => (
+                  <div key={j} className="flex justify-between gap-3 py-0.5"
+                    style={{ color: ev.enter ? '#c86e6e' : 'var(--accent-green)' }}>
+                    <span className="truncate">
+                      LIMIT {ev.kind === 'net' ? 'net ' : ''}
+                      {LABEL[ev.curve] ?? ev.curve}
+                      {ev.q ? ' ' + ev.q.split('/')[0] : ''}{' '}
+                      {ev.enter ? 'breach' : 'back inside'} at {(ev.util * 100).toFixed(0)}%
+                      {ev.enter && ev.cause === 'ticket' && ev.ticket &&
+                        `, ${ev.ticket} executed`}
+                      {ev.enter && ev.cause === 'flow' && ', ticket flow'}
+                      {ev.enter && ev.cause === 'price' && ', on the price move'}
+                    </span>
+                    <span>{ev.enter ? 'BREACH' : 'cleared'}</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -813,104 +862,113 @@ export default function Workstation({ tl, rv }: {
       </div>
 
       {/* ---- limits ---- */}
-      {limitFrame && (
-        <div className="mt-4">
-          <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Limits</div>
-          <div className="rounded px-3 py-2.5" style={{ border: '1px solid var(--border-subtle)' }}>
-            <div className="space-y-1.5">
-              {limitFrame.rows.map(r => {
-                const colour = r.util > 1.0 ? '#c86e6e' : r.util > 0.85 ? '#d4a853' : '#5eaab5';
-                const w = Math.min(r.util, 1.25) / 1.25 * 100;
-                return (
-                  <div key={r.key} className="grid gap-2 items-center font-mono text-[10.5px]"
-                    style={{ gridTemplateColumns: '100px 1fr 210px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>
-                      {r.key === 'TOTAL' ? 'Desk total' : (LABEL[r.key] ?? r.key)}
-                    </span>
-                    <div className="rounded-sm relative" style={{ height: 8, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-                      <div className="rounded-sm" style={{ height: '100%', width: `${w}%`, background: colour }} />
-                      <div style={{ position: 'absolute', top: -2, bottom: -2, left: `${100 / 1.25}%`, width: 1, background: 'var(--text-dim)' }} />
-                    </div>
-                    <span className="text-right" style={{ color: colour }}>
-                      {(r.util * 100).toFixed(1)}%
-                      <span style={{ color: 'var(--text-dim)' }}>
-                        {' '}&middot; {money(r.dv01)} / {money(limitLevel[r.key] ?? 0)}
-                      </span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-            Net DV01 per curve on this set against the desk limit structure, from
-            the ladders above; the levels are illustrative calibration. The mark
-            past the end of each bar is 100%.
-            {limitBreaches.length > 0 && <>
-              {' '}<span style={{ color: '#c86e6e' }}>
-                {limitBreaches.map(b => b.key === 'TOTAL' ? 'Desk total' : (LABEL[b.key] ?? b.key)).join(' and ')}{' '}
-                {limitBreaches.length === 1 ? 'is' : 'are'} over the line
-              </span>: the book runs a structural short in EUR discount DV01
-              against a limit set below it.
-            </>}
-          </p>
-        </div>
-      )}
-
-      {/* ---- curves ---- */}
       <div className="mt-4">
-        <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Curves</div>
-        <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px]">
-          {tl.curveIds.map(k => (
-            <button key={k}
-              onClick={() => setShown(v => v.includes(k) ? v.filter(x => x !== k) : [...v, k])}
-              className="px-2 py-0.5 rounded"
-              style={chip(shown.includes(k), COLOUR[k] ?? '#8b8a97')}>{LABEL[k] ?? k}</button>
-          ))}
-        </div>
-        <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
-          {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'],
-             ['zero', 'zero rates'], ['df', 'discount factors']] as const).map(([d, label]) => (
-            <button key={d} onClick={() => setDomain(d)} className="px-2 py-0.5 rounded"
-              style={chip(domain === d, '#5eaab5')}>{label}</button>
-          ))}
-          <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
-          {[2.5, 10, 30, 50].map(x => (
-            <button key={x} onClick={() => setTMax(x)} className="px-2 py-0.5 rounded"
-              style={chip(tMax === x, '#8b7ec8')}>{x}Y</button>
-          ))}
-        </div>
-        <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
-              <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="t" type="number" domain={[0, tMax]} allowDataOverflow
-                allowDuplicatedCategory={false} stroke="#55546a" tick={{ fontSize: 10 }}
-                tickFormatter={(v: number) => v + 'Y'} />
-              <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={52}
-                domain={['auto', 'auto']}
-                tickFormatter={(v: number) => domain === 'df'
-                  ? Number(v).toFixed(3) : Number(v).toFixed(2) + '%'} />
-              <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
-                labelFormatter={(v: any) => 't = ' + Number(v).toFixed(2) + 'Y'}
-                formatter={(v: any, n: any) => [
-                  domain === 'df' ? Number(v).toFixed(6) : Number(v).toFixed(4) + '%',
-                  LABEL[n] ?? n]} />
-              {curveLines.map(({ id, pts }) => (
-                <Line key={id} data={pts} dataKey="y" name={id} type="linear"
-                  isAnimationActive={false} stroke={COLOUR[id] ?? '#8b8a97'}
-                  strokeWidth={flash.has(id) ? 2.6 : 1.6} dot={false} />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
-          The engine evaluates each published curve itself; nothing on screen is
-          derived in the browser. Two shapes are real, not artifacts: the EURIBOR 6M
-          bump between 13 and 16 months sits where its quote spacing changes, and the
-          ~25bp drop in the EUR/USD instantaneous forward across year end is the
-          year-end turn.
-        </p>
+        <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Limits</div>
+        {!bl ? (
+          <div className="rounded px-4 py-4" style={{ border: '1px dashed var(--border-subtle)' }}>
+            <p className="text-xs max-w-2xl" style={{ color: 'var(--text-dim)' }}>
+              Not evaluated on this set. Limits key off the market PV01 ladder and
+              nothing else, and that run was skipped while a curve is served
+              stale; the last evaluated state stands, and a crossing lands on the
+              next set that measures.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="rounded px-3 py-2.5" style={{ border: '1px solid var(--border-subtle)' }}>
+              <div className="space-y-1.5">
+                {bl.net.map(r => {
+                  const colour = r.util > 1.0 ? '#c86e6e' : r.util > 0.85 ? '#d4a853' : '#5eaab5';
+                  const w = Math.min(r.util, 1.25) / 1.25 * 100;
+                  // The curve's worst bucket on this set, for the drill hint.
+                  const rows = bl.rows[r.key] ?? [];
+                  let worstN = -1;
+                  rows.forEach((u2, n) => {
+                    if (u2 !== null && (worstN < 0 || u2 > (rows[worstN] ?? 0))) worstN = n;
+                  });
+                  const worstU = worstN >= 0 ? rows[worstN] as number : null;
+                  const worstQ = worstN >= 0 ? (here.mktQ[r.key] ?? [])[worstN] : null;
+                  const canDrill = r.key !== 'TOTAL' && rows.length > 0;
+                  const drilled = drillCurve === r.key;
+                  return (
+                    <div key={r.key}>
+                      <div className="grid gap-2 items-center font-mono text-[10.5px]"
+                        onClick={canDrill ? () => setDrillCurve(drilled ? null : r.key) : undefined}
+                        style={{
+                          gridTemplateColumns: '100px 1fr 200px 150px',
+                          cursor: canDrill ? 'pointer' : 'default',
+                        }}>
+                        <span style={{ color: drilled ? '#5eaab5' : 'var(--text-secondary)' }}>
+                          {r.key === 'TOTAL' ? 'Desk total' : (LABEL[r.key] ?? r.key)}
+                        </span>
+                        <div className="rounded-sm relative" style={{ height: 8, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                          <div className="rounded-sm" style={{ height: '100%', width: `${w}%`, background: colour }} />
+                          <div style={{ position: 'absolute', top: -2, bottom: -2, left: `${100 / 1.25}%`, width: 1, background: 'var(--text-dim)' }} />
+                        </div>
+                        <span className="text-right" style={{ color: colour }}>
+                          {(r.util * 100).toFixed(1)}%
+                          <span style={{ color: 'var(--text-dim)' }}>
+                            {' '}&middot; {money(r.dv01)} / {money(r.limit)}
+                          </span>
+                        </span>
+                        <span className="text-right" style={{ color: 'var(--text-dim)' }}>
+                          {worstU !== null && worstQ && <>
+                            worst{' '}
+                            <span style={{
+                              color: worstU > 1.0 ? '#c86e6e' : worstU > 0.85 ? '#d4a853' : 'var(--text-secondary)',
+                            }}>{worstQ.split('/')[0]} {(worstU * 100).toFixed(0)}%</span>
+                          </>}
+                        </span>
+                      </div>
+                      {drilled && (
+                        <div className="mt-1.5 mb-2 ml-2 pl-3 space-y-1"
+                          style={{ borderLeft: '2px solid #5eaab540' }}>
+                          {rows.map((u2, n) => {
+                            if (u2 === null) return null;
+                            const qid = (here.mktQ[r.key] ?? [])[n] ?? '';
+                            const bcol = u2 > 1.0 ? '#c86e6e' : u2 > 0.85 ? '#d4a853' : '#5eaab5';
+                            const bw = Math.min(u2, 1.25) / 1.25 * 100;
+                            const lim = (bl.lims[r.key] ?? [])[n];
+                            return (
+                              <div key={qid} className="grid gap-2 items-center font-mono text-[10px]"
+                                style={{ gridTemplateColumns: '88px 1fr 190px' }}>
+                                <span style={{ color: 'var(--text-dim)' }}>{qid.split('/')[0]}</span>
+                                <div className="rounded-sm relative" style={{ height: 6, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                                  <div className="rounded-sm" style={{ height: '100%', width: `${bw}%`, background: bcol }} />
+                                  <div style={{ position: 'absolute', top: -2, bottom: -2, left: `${100 / 1.25}%`, width: 1, background: 'var(--text-dim)' }} />
+                                </div>
+                                <span className="text-right" style={{ color: bcol }}>
+                                  {(u2 * 100).toFixed(0)}%
+                                  <span style={{ color: 'var(--text-dim)' }}>
+                                    {' '}&middot; cap {money(lim ?? 0)}
+                                  </span>
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+              Limits are set and monitored in the quote space the desk deals in:
+              a curve's net figure is the sum of its market PV01 ladder and the
+              bucket caps sit on that same ladder. Levels are illustrative
+              calibration; utilization is measured on every evaluated set. Click
+              a curve for its bucket ladder; the mark past the end of each bar
+              is 100%.
+              {limitBreaches.length > 0 && <>
+                {' '}<span style={{ color: '#c86e6e' }}>
+                  {limitBreaches.map(b => b.key === 'TOTAL' ? 'Desk total' : (LABEL[b.key] ?? b.key)).join(' and ')}{' '}
+                  {limitBreaches.length === 1 ? 'is' : 'are'} over the net line on this set.
+                </span>
+              </>}
+            </p>
+          </>
+        )}
       </div>
 
       {/* ---- risk ---- */}
@@ -976,7 +1034,7 @@ export default function Workstation({ tl, rv }: {
             <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
               <ResponsiveContainer width="100%" height={240}>
                 {riskMode === 'mkt' ? (
-                  <BarChart data={mktChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
+                  <ComposedChart data={mktChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
                     <CartesianGrid stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="label" stroke="#55546a" tick={{ fontSize: 9 }}
                       interval={Math.max(0, Math.ceil(mktChart.length / 16) - 1)}
@@ -985,10 +1043,40 @@ export default function Workstation({ tl, rv }: {
                       tickFormatter={(v: number) => Math.round(v).toLocaleString()} />
                     <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
                       labelFormatter={(_: any, p: any) => p?.[0]?.payload?.full ?? ''}
-                      formatter={(v: any) => [Math.round(Number(v)).toLocaleString(), 'value of 1bp']} />
+                      formatter={(v: any, _n: any, p: any) => [
+                        Math.round(Number(v)).toLocaleString() +
+                        (p?.payload?.util !== null && p?.payload?.util !== undefined
+                          ? ` (${(p.payload.util * 100).toFixed(0)}% of its cap)` : ''),
+                        'value of 1bp']} />
                     <ReferenceLine y={0} stroke="#55546a" />
-                    <Bar dataKey="pv01" fill={COLOUR[curveOn] ?? '#5b8fc9'} isAnimationActive={false} />
-                  </BarChart>
+                    <Bar dataKey="pv01" fill={COLOUR[curveOn] ?? '#5b8fc9'} isAnimationActive={false}>
+                      {/* Breached bars also carry a light stroke: SONIA's own
+                          colour is the breach red, and a state must survive
+                          the collision. */}
+                      {mktChart.map((r, n) => {
+                        const over = r.util !== null && r.util > 1.0;
+                        return (
+                          <Cell key={n}
+                            fill={over ? '#c86e6e'
+                              : r.util !== null && r.util > 0.85 ? '#d4a853'
+                                : (COLOUR[curveOn] ?? '#5b8fc9')}
+                            stroke={over ? '#f0d8d8' : undefined}
+                            strokeWidth={over ? 1 : 0} />
+                        );
+                      })}
+                    </Bar>
+                    {/* The bucket-cap envelope: a signed ladder against an
+                        absolute cap draws as symmetric marks at plus and
+                        minus the level. Gaps are uncapped buckets. */}
+                    <Line dataKey="lim" type="step" stroke="#7d7c92"
+                      strokeDasharray="3 2" strokeWidth={1} dot={false}
+                      isAnimationActive={false} connectNulls={false}
+                      tooltipType="none" legendType="none" />
+                    <Line dataKey="limNeg" type="step" stroke="#7d7c92"
+                      strokeDasharray="3 2" strokeWidth={1} dot={false}
+                      isAnimationActive={false} connectNulls={false}
+                      tooltipType="none" legendType="none" />
+                  </ComposedChart>
                 ) : (
                   <BarChart data={riskChart} margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
                     <CartesianGrid stroke="rgba(255,255,255,0.05)" />
@@ -1031,6 +1119,13 @@ export default function Workstation({ tl, rv }: {
                 book reprices. The totals above sit side by side because a basis point
                 on every quote and on every forward interval are two routes to the same
                 move.
+                {f.bl && <>
+                  {' '}The dashed envelope is the bucket cap, drawn at plus and minus
+                  its level because the cap is absolute and the ladder is signed:
+                  illustrative levels, measured utilization, a bar past its cap turns
+                  red. On a set where the market run is skipped the envelope goes with
+                  the rest of the ladder.
+                </>}
               </> : <>
                 What the book gains or loses for one basis point at each{' '}
                 {riskMode === 'zero' ? 'node' : 'interval'} of{' '}
@@ -1044,6 +1139,62 @@ export default function Workstation({ tl, rv }: {
             </p>
           </>
         )}
+      </div>
+
+      {/* ---- curves ---- */}
+      <div className="mt-4">
+        <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Curves</div>
+        <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px]">
+          {tl.curveIds.map(k => (
+            <button key={k}
+              onClick={() => setShown(v => v.includes(k) ? v.filter(x => x !== k) : [...v, k])}
+              className="px-2 py-0.5 rounded"
+              style={chip(shown.includes(k), COLOUR[k] ?? '#8b8a97')}>{LABEL[k] ?? k}</button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
+          {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'],
+             ['zero', 'zero rates'], ['df', 'discount factors']] as const).map(([d, label]) => (
+            <button key={d} onClick={() => setDomain(d)} className="px-2 py-0.5 rounded"
+              style={chip(domain === d, '#5eaab5')}>{label}</button>
+          ))}
+          <span className="mx-1" style={{ color: 'var(--border-subtle)' }}>|</span>
+          {[2.5, 10, 30, 50].map(x => (
+            <button key={x} onClick={() => setTMax(x)} className="px-2 py-0.5 rounded"
+              style={chip(tMax === x, '#8b7ec8')}>{x}Y</button>
+          ))}
+        </div>
+        <div className="rounded p-2" style={{ border: '1px solid var(--border-subtle)' }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart margin={{ left: 4, right: 12, top: 6, bottom: 4 }}>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="t" type="number" domain={[0, tMax]} allowDataOverflow
+                allowDuplicatedCategory={false} stroke="#55546a" tick={{ fontSize: 10 }}
+                tickFormatter={(v: number) => v + 'Y'} />
+              <YAxis stroke="#55546a" tick={{ fontSize: 10 }} width={52}
+                domain={['auto', 'auto']}
+                tickFormatter={(v: number) => domain === 'df'
+                  ? Number(v).toFixed(3) : Number(v).toFixed(2) + '%'} />
+              <Tooltip contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 11 }}
+                labelFormatter={(v: any) => 't = ' + Number(v).toFixed(2) + 'Y'}
+                formatter={(v: any, n: any) => [
+                  domain === 'df' ? Number(v).toFixed(6) : Number(v).toFixed(4) + '%',
+                  LABEL[n] ?? n]} />
+              {curveLines.map(({ id, pts }) => (
+                <Line key={id} data={pts} dataKey="y" name={id} type="linear"
+                  isAnimationActive={false} stroke={COLOUR[id] ?? '#8b8a97'}
+                  strokeWidth={flash.has(id) ? 2.6 : 1.6} dot={false} />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          The engine evaluates each published curve itself; nothing on screen is
+          derived in the browser. Two shapes are real, not artifacts: the EURIBOR 6M
+          bump between 13 and 16 months sits where its quote spacing changes, and the
+          ~25bp drop in the EUR/USD instantaneous forward across year end is the
+          year-end turn.
+        </p>
       </div>
 
       {/* ---- position detail ---- */}

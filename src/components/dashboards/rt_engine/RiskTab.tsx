@@ -73,7 +73,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
       {panel === 'limits' && <Group title="Limits"
         note="What the desk is allowed to run, against what it is running.">
         <PanelCard title="PV01 limits"
-          intro="Net DV01 per curve on each published set, from the zero-bucket ladders the engine publishes, against a desk limit structure configured in the engine. The limit levels are illustrative calibration; the utilization under them is measured.">
+          intro="Net market PV01 per curve on each evaluated set, the sum of that curve's market PV01 ladder, against a desk limit structure configured in the engine. Limits are set and monitored in the quote space the desk deals in; a set whose market run was skipped is not evaluated. The limit levels are illustrative calibration; the utilization under them is measured.">
           <div className="flex gap-1.5 mb-3 flex-wrap font-mono text-[10px]">
             {rv.limits.frames.map((f, k) => (
               <button key={k} onClick={() => setFrameIdx(k)}

@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import Workstation, { type Timeline } from './Workstation';
 // The Risk and Valuations panels (RiskTab, ValuationsTab, PanelCard) are
 // built and working but unwired from the nav for now: the desk view carries
-// the per-set VaR tile and the Limits section instead, and the full panels
-// come back when they are ready.
-import { type RiskVal } from './riskval';
+// the per-set VaR tile and the Limits section instead (both read the
+// timeline file), and the full panels come back when they are ready.
 
 declare const __BUILD_ID__: string;
 const BUILD_ID = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
@@ -43,7 +42,6 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
   const [tl, setTl] = useState<Timeline | null>(null);
-  const [rv, setRv] = useState<RiskVal | null>(null);
   const [probe, setProbe] = useState('EUR_ESTR_ECB');
 
   useEffect(() => {
@@ -54,8 +52,6 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       .then(r => r.json()).then(setDemo).catch(() => {});
     fetch(`/data/rt_engine/timeline.json${v}`, { cache: 'no-store' })
       .then(r => r.json()).then(setTl).catch(() => {});
-    fetch(`/data/rt_engine/risk_val.json${v}`, { cache: 'no-store' })
-      .then(r => r.json()).then(setRv).catch(() => {});
   }, []);
 
   const rebuilds = useMemo(() => {
@@ -104,7 +100,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             </Link>{' '}
             on the curve model page shows where the time goes.
           </p>
-          <Workstation tl={tl} rv={rv} />
+          <Workstation tl={tl} />
         </div>
       )}
 
