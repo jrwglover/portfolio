@@ -128,7 +128,7 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
   return (
     <div>
       <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-        EOD marking and Totem-structure IPV
+        Independent Price Verification
       </h3>
       <p className="text-xs mb-2 max-w-3xl" style={dimText}>
         Intraday the desk trades on the meeting-dated model. At the close it marks a

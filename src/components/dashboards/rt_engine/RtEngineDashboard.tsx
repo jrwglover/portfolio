@@ -65,7 +65,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
   const TABS: [string, string][] = [
     ['desk', 'Desk view'],
-    ['eod', 'EOD marking'],
+    ['eod', 'Independent Price Verification'],
     ['why', 'Why events'],
     ['graph', 'What one price touches'],
     ['engine', 'Engine output'],
