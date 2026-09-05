@@ -105,7 +105,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
               </tbody>
             </table>
           </div>
-          <p className="text-[11px] mt-2 max-w-3xl" style={dimText}>
+          <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             The ten widest of the {s.quotes} checks, marks and mids in basis points of
             each quote's own units. The tolerance is expressed in units of the
             consensus half bid-offer: inside 0.5x verifies, past 1x is flagged.
@@ -135,7 +135,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
               </tbody>
             </table>
           </div>
-          <p className="text-[11px] mt-2 max-w-3xl" style={dimText}>
+          <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             The first lane prices the whole book two independent ways, trade by trade
             against the collapsed aggregation, and agrees to under a cent on a{' '}
             {millions(rv.meta.baseNpv)} book. The construction rows reprice the book
@@ -182,7 +182,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
                 </tbody>
               </table>
             </div>
-            <p className="text-[11px] mt-2" style={dimText}>
+            <p className="text-sm mt-2" style={dimText}>
               The MPU column is the same arithmetic at the 90% confidence width of
               the consensus dispersion instead of the half bid-offer; both feed the
               prudent valuation table beside this one.
@@ -230,7 +230,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
                 </tbody>
               </table>
             </div>
-            <p className="text-[11px] mt-2" style={dimText}>
+            <p className="text-sm mt-2" style={dimText}>
               Hover a row for its basis. Market price uncertainty reads the consensus
               dispersion, close-out costs the consensus half bid-offer, model risk
               the spread between the live meeting-dated EUR discount construction and
@@ -286,7 +286,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
               </div>
             ))}
           </div>
-          <p className="text-[11px] mt-2 max-w-3xl" style={dimText}>
+          <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             Hover a check for its unit and note. Checks marked not run are honest
             gaps: the comparison and AUD curves carry no positions, so there is no
             ladder to reconcile and no reason to bump their quotes. A FLAG is a

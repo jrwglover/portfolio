@@ -678,7 +678,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </div>
         ))}
       </div>
-      <p className="text-[11px] mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+      <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
         VaR runs on every published set: a full revaluation of the book under the
         250 most recent days of the generated scenario history, through the
         collapsed book, wall clock measured per set including the rebind to the
@@ -810,7 +810,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               </tbody>
             </table>
           </div>
-          <p className="text-[11px] mt-2" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
             On this move is against the previous published set. Since open is against the
             first one, which is the mark the session starts from.
             {withPending && ' Pending tickets are in these totals, because the blotter toggle below is on.'}
@@ -852,7 +852,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             </table>
           </div>
           {detail && (
-            <p className="text-[11px] mt-2" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
               These eight are from the book the desk opened with. The trades dealt
               during the session arrive on the blotter further down. Pick a row in
               either to put its own ladder on screen, below.
@@ -866,7 +866,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Limits</div>
         {!bl ? (
           <div className="rounded px-4 py-4" style={{ border: '1px dashed var(--border-subtle)' }}>
-            <p className="text-xs max-w-2xl" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm max-w-2xl" style={{ color: 'var(--text-dim)' }}>
               Not evaluated on this set. Limits key off the market PV01 ladder and
               nothing else, and that run was skipped while a curve is served
               stale; the last evaluated state stands, and a crossing lands on the
@@ -953,7 +953,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 })}
               </div>
             </div>
-            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
               Limits are set and monitored in the quote space the desk deals in:
               a curve's net figure is the sum of its market PV01 ladder and the
               bucket caps sit on that same ladder. Levels are illustrative
@@ -974,7 +974,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       {/* ---- risk ---- */}
       <div className="mt-6">
         <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Risk</div>
-        <p className="text-[11px] mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+        <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
           Three ladders, all run on every published set. Market PV01 buckets by quoted
           instrument, the ones a desk deals. Zero and forward PV01 bucket by curve
           node and interval.
@@ -993,7 +993,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         </div>
         {riskMode === 'mkt' && !f.mkt ? (
           <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
-            <p className="text-xs max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
               Market PV01 was not run on set {epochAt(i)}.{' '}
               {LABEL[f.mktStale ?? ''] ?? f.mktStale} is being served stale, so the
               published curve is not the solve of the quotes behind it, and a bump
@@ -1112,7 +1112,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 </span>
               </div>
             )}
-            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
               {riskMode === 'mkt' ? <>
                 Each bar is one quoted instrument of {LABEL[curveOn] ?? curveOn}: the
                 quote moves a basis point, the curves re-solve in dependency order, the
@@ -1133,7 +1133,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                 curve: the bump moves one bucket and leaves the rest alone.
               </>}
             </p>
-            <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
               The blotter toggle below adds pending tickets to the desk totals and
               every ladder together.
             </p>
@@ -1188,7 +1188,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+        <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
           The engine evaluates each published curve itself; nothing on screen is
           derived in the browser. Two shapes are real, not artifacts: the EURIBOR 6M
           bump between 13 and 16 months sits where its quote spacing changes, and the
@@ -1205,7 +1205,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </div>
 
           {/* ---- blotter ---- */}
-          <div className="text-[11px] mb-3 max-w-3xl space-y-2" style={{ color: 'var(--text-dim)' }}>
+          <div className="text-[11px] mb-3 max-w-4xl space-y-2" style={{ color: 'var(--text-dim)' }}>
             <p>
               The desk opened with {tl.trades.toLocaleString()} trades and{' '}
               {tl.cashflows.toLocaleString()} cashflow rows, and that book is already
@@ -1394,7 +1394,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           {posChart.length === 0 ? (
             <div className="rounded px-4 py-6 text-center"
               style={{ border: '1px dashed var(--border-subtle)' }}>
-              <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
                 Nothing built on this domain for this position.
               </p>
             </div>
@@ -1436,7 +1436,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             )}
           </div>
 
-          <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             {posDomain === 'mkt' ? (
               <>
                 One bar per quoted instrument on {LABEL[curveShown] ?? curveShown}. The
@@ -1462,7 +1462,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             )}
           </p>
 
-          <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             Zero and forward overlays cost {ms(detail.ladderUs)} for the{' '}
             {detail.positions.length} positions here. The market run re-solves the
             curve per quote ({detail.mktRebuilds.toLocaleString()} solves,{' '}
@@ -1472,7 +1472,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </p>
 
           {position.type === 'FX forward' && (
-            <p className="text-[11px] mt-2 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
               The three domains disagree on this one, so it is worth toggling between
               them. The zero ladder on the cross-currency curve is matched by an equal
               and opposite one on SOFR, which is why the parallel DV01 above comes out
@@ -1484,7 +1484,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         </>)}
         {!position && posDef && (
           <div className="rounded px-4 py-6" style={{ border: '1px dashed var(--border-subtle)' }}>
-            <p className="text-xs max-w-2xl" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm max-w-2xl" style={{ color: 'var(--text-dim)' }}>
               {posDef.id} was pulled before it confirmed. It never entered the book, so
               there is no mark and no ladder against it.
             </p>
@@ -1535,7 +1535,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           ) : (
             <div className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>waiting for curves</div>
           )}
-          <p className="text-[11px] mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             A payer swap against the same published curves the books above are using, so
             the numbers move with the session as it plays. Annual fixed against six month
             floating, projected on EURIBOR and discounted on the meeting-dated ESTR curve.

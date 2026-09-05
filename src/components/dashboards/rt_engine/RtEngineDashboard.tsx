@@ -86,18 +86,18 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             The desk
           </h3>
-          <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             A recording of the engine, played back. The book comes to{' '}
             {tl.trades.toLocaleString()} trades at the open; each currency discounts on
             one meeting-dated curve, with projection and cross currency curves built on
             those. The AUD curves are published on every set with nothing priced on them.
           </p>
-          <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             When a price arrives, the curves built on it are re-solved and everything
             below recalculates. Trades arrive during the session too, pending until
             confirmed; the blotter toggle puts pending tickets into the totals.
           </p>
-          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             The performance behind real-time VaR and PV01 comes from collapsing the
             book&apos;s cashflow schedules to curve-level coefficients. The{' '}
             <Link to="/learn/curve-data-model#collapse" style={{ color: 'var(--accent-warm)' }}>
@@ -111,15 +111,15 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
       {tab === 'eod' && em && <EodMarkingTab em={em} />}
       {tab === 'eod' && !em && (
-        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading.</p>
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
 
       {tab === 'why' && (
-        <div className="max-w-3xl">
+        <div className="max-w-4xl">
           <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             Why not just recalculate everything on a timer
           </h3>
-          <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
             Most curve systems rebuild everything on a timer. Set the interval long and
             a trader can be looking at a stale curve while the market moves; set it
             short and all fourteen curves rebuild whether or not anything happened.
@@ -143,7 +143,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             <div style={{ color: 'var(--text-dim)' }}>SONIA (nothing is built on it)</div>
           </div>
 
-          <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
             If SOFR and ESTR prices arrive together and each triggers its own rebuild,
             the cross currency curve builds twice, the first time against an ESTR
             curve about to be replaced, a market state that never existed. So the work
@@ -158,7 +158,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             What one price forces to rebuild
           </h3>
-          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             Pick a curve to see what a change to it forces. The dependencies come from
             the same registry the batch engine reads, so the two cannot drift apart.
           </p>
@@ -197,7 +197,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
               );
             })}
           </div>
-          <p className="text-xs max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             {rebuilds.size === 1
               ? 'Nothing else depends on this one, so the work stops here.'
               : `${rebuilds.size} curves rebuild, in the order shown, each one at most once even when several of its inputs moved together.`}
@@ -210,7 +210,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             {tab === 'engine' ? 'A run of the engine' : 'The same run, from a trading view'}
           </h3>
-          <p className="text-xs mb-4 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             {tab === 'engine'
               ? 'A replayed stream of price changes, with repeats and out-of-order arrivals. A solver fails and the last good curve is served; a burst of 120 prices collapses into one rebuild while two readers check nothing is half updated.'
               : 'The same engine from the desk side. It shows position values and risk per curve bucket, and what a sell off in ESTR does to each. Profit and loss is split between market moves and carry. A hypothetical trade is priced without disturbing anything published.'}
@@ -222,7 +222,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             }}>
             {tab === 'engine' ? demo.engineDemo : demo.traderDemo}
           </pre>
-          <p className="text-xs mt-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             This is the program&apos;s own output, not a recording. The curve solver
             and the pricing kernel are stubbed behind the same interfaces the
             batch engine implements, so the timings here measure the plumbing
@@ -232,7 +232,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       )}
 
       {!g && !demo && !tl && (
-        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading.</p>
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
     </div>
   );

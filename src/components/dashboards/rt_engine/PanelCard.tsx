@@ -13,7 +13,7 @@ export function Group({ title, note, children }: {
         {title}
       </h3>
       {note && (
-        <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>{note}</p>
+        <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>{note}</p>
       )}
       <div className="space-y-4">{children}</div>
     </div>
@@ -30,7 +30,7 @@ export function PanelCard({ title, intro, children }: {
       <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
         {title}
       </div>
-      <p className="text-xs mb-3 max-w-3xl" style={{ color: 'var(--text-dim)' }}>{intro}</p>
+      <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>{intro}</p>
       {children}
     </div>
   );

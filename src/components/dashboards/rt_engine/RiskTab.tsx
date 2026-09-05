@@ -108,7 +108,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
               );
             })}
           </div>
-          <p className="text-[11px] max-w-3xl" style={dimText}>
+          <p className="text-sm max-w-4xl" style={dimText}>
             {breaches.length
               ? `${breaches.map(b => LABEL[b.key] ?? b.key).join(' and ')} ${breaches.length === 1 ? 'is' : 'are'} over the line on this set: the book runs a structural short in EUR discount DV01 against a limit set below it, and the ESTR sell-off pushes it further. The mark past the end of each bar is 100%.`
               : 'Every line is inside its limit on this set. The mark past the end of each bar is 100%.'}
@@ -155,7 +155,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
               </tbody>
             </table>
           </div>
-          <p className="text-[11px] mb-3 max-w-3xl" style={dimText}>
+          <p className="text-sm mb-3 max-w-4xl" style={dimText}>
             Each measure uses exactly {v.window} scenarios. Ordinary VaR: the{' '}
             {v.window} most recent days, {v.trailing.from} to {v.trailing.to}{' '}
             (1-day 95% {millions(v.var95)}). Stressed VaR: the worst continuous{' '}
@@ -230,7 +230,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
               </ResponsiveContainer>
             </div>
           </div>
-          <p className="text-[11px] mt-2 max-w-3xl" style={dimText}>
+          <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             Amber bands are the generated history's calibrated stress regimes
             ({v.regimes.map(r => `${r.name} ${r.volMult}x`).join(', ')}), darker
             where the multiple is higher. The dashed box is the identified stressed
@@ -309,7 +309,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
               </tbody>
             </table>
           </div>
-          <p className="text-[11px] mt-2 max-w-3xl" style={dimText}>
+          <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             Hover a row for the shock definition. The AUD row is measured at zero
             because nothing in this book prices on the AUD curves; the shock reaches
             every curve it names and finds no position there.
@@ -318,7 +318,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
       </Group>}
 
       {/* ---- footnote ---- */}
-      <p className="text-[11px] max-w-3xl" style={dimText}>
+      <p className="text-sm max-w-4xl" style={dimText}>
         Every figure on this panel was computed by the engine on the closing book
         ({rv.meta.trades.toLocaleString()} trades, {(rv.meta.cashflows / 1e6).toFixed(1)}m
         cashflows collapsed to {rv.meta.terms.toLocaleString()} terms) against set{' '}

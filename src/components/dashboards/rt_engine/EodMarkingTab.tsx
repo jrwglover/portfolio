@@ -130,22 +130,29 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
       <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
         Independent Price Verification
       </h3>
-      <p className="text-xs mb-2 max-w-3xl" style={dimText}>
+      <p className="text-sm mb-2 max-w-4xl" style={dimText}>
         Intraday the desk trades on the meeting-dated model. At the close it marks a
         separate official EOD family: standard-tenor par instruments at each
         market&apos;s conventions, the shape a Totem-style consensus run quotes, and
         marks are verified against consensus per Art. 105 CRR.
       </p>
-      <p className="text-xs mb-3 max-w-3xl" style={dimText}>
-        Default levels are the last trading snapshot expressed in EOD conventions:
-        the engine implies each standard-tenor par rate off the trading curves,
-        instrument by instrument, then bootstraps the EOD family from them. Edit a
-        mark to override it; overrides live in this page only and persist nowhere.
-        The P&amp;L of an override is applied first order, (mark - default) x dNPV/dbp
-        from the engine&apos;s bump-and-resolve Jacobian; against a full re-solve that
-        approximation is off by at most {money(worstFo)} at 1bp and{' '}
-        {(worstFo5Rel * 100).toFixed(2)}% at 5bp on the checks in the file.
-      </p>
+      <ul className="text-sm mb-3 max-w-4xl space-y-1 list-disc pl-5" style={dimText}>
+        <li>
+          Default levels are the last trading snapshot expressed in EOD conventions:
+          each standard-tenor par rate implied off the trading curves, then the EOD
+          family bootstrapped from them.
+        </li>
+        <li>
+          Edit a mark to override it. Overrides live in this page only and persist
+          nowhere.
+        </li>
+        <li>
+          Override P&amp;L is first order: (mark - default) x dNPV/dbp from the
+          engine&apos;s bump-and-resolve Jacobian. Against a full re-solve that is off
+          by at most {money(worstFo)} at 1bp and {(worstFo5Rel * 100).toFixed(2)}% at
+          5bp on the checks in the file.
+        </li>
+      </ul>
 
       {/* ---- header strip ---- */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-2 mb-3 font-mono text-[11px]">
@@ -265,7 +272,7 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
           </tbody>
         </table>
       </div>
-      <p className="text-[11px] mb-4 max-w-3xl" style={dimText}>
+      <p className="text-sm mb-4 max-w-4xl" style={dimText}>
         Outrights are par rates in percent, basis rows in basis points. Consensus
         mid, dispersion, half bid-offer (read as 2 SD of the consensus range) and
         contributor count are a GENERATED Totem-style return, seed {em.ipv.seed},
@@ -280,7 +287,7 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
       <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
         The two families, and the measured basis between them
       </h4>
-      <p className="text-xs mb-2 max-w-3xl" style={dimText}>
+      <p className="text-sm mb-2 max-w-4xl" style={dimText}>
         Each EOD curve replaces one trading curve at the close. Swapping one curve
         at a time attributes the basis; single-curve swaps do not sum exactly to
         the joint swap, and the remainder is shown as the cross term, not hidden.
@@ -331,7 +338,7 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
           </tbody>
         </table>
       </div>
-      <p className="text-[11px] max-w-3xl" style={dimText}>
+      <p className="text-sm max-w-4xl" style={dimText}>
         Verification, all engine-measured: the EOD bootstrap round-trips its default
         quotes to {em.meta.worstRoundTripBp.toExponential(1)}bp at worst (gate{' '}
         {em.meta.roundTripGateBp}bp, BBSW pair converged in {em.meta.pairIterations}{' '}

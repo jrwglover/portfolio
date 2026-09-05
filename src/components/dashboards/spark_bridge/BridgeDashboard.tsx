@@ -49,7 +49,7 @@ function Stage({ n, title, body }: { n: string; title: string; body: string }) {
     <div className="rounded p-5" style={{ background: '#12121a', border: '1px solid var(--border-subtle)' }}>
       <div className="font-mono text-xs mb-2" style={{ color: '#5b8fc9' }}>{n}</div>
       <div className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>{title}</div>
-      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{body}</p>
+      <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{body}</p>
     </div>
   );
 }
@@ -85,7 +85,7 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
             <Stat v="0.19 MB/s" l="rate the old export moved at" accent="#c86e6e" />
             <Stat v="25,000" l="trades in the book, shipped as 1,010,762 rows" />
           </div>
-          <div className="max-w-3xl text-sm leading-relaxed space-y-4" style={{ color: 'var(--text-secondary)' }}>
+          <div className="max-w-4xl text-sm leading-relaxed space-y-4" style={{ color: 'var(--text-secondary)' }}>
             <p>
               The purpose of this project was to find the fastest way to load
               trades from trade capture into the risk database. The end-of-day
@@ -128,7 +128,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
     periods:   array<struct{num, start, end, pay, notional, strike, fixing, fixed}>
     exercises: array<struct{num, exercise_date, settle_date, fee}>`}
           </pre>
-          <p className="text-xs mt-4" style={{ color: 'var(--text-dim)' }}>
+          <p className="text-sm mt-4" style={{ color: 'var(--text-dim)' }}>
             Reconciled on every run: 25,000 = 25,000 trades · 1,004,652 = 1,004,652 periods ·
             6,110 = 6,110 exercises · notional diff 0.0000
           </p>
@@ -141,7 +141,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
             <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
               Moving the file at the production rate
             </h3>
-            <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
               The transfer leg was measured by copying both payloads through a
               token-bucket throttle set to the 0.19 MB/s production rate. The 255 MB
               legacy file moved as a single stream in 22.4 minutes. The 16 MB
@@ -162,7 +162,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
               </BarChart>
             </ResponsiveContainer>
             <p className="font-mono text-xs" style={{ color: '#5cb87a' }}>127x on the transfer leg, measured at the actual file sizes</p>
-            <p className="text-xs mt-2" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
               Adding the measured transfer and file-to-database legs puts the whole
               hand-off at 30.6 minutes on the legacy path and 33.5 seconds on the bridge.
               Those totals are derived by summing legs measured separately; the
@@ -174,7 +174,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
             <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
               Writing 1,035,762 rows to SQL Server
             </h3>
-            <p className="text-xs mb-3" style={{ color: 'var(--text-dim)' }}>
+            <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
               Both lanes load the same file into the same three tables and reconcile
               exactly. A single connection is bounded by per-batch round trips and log
               flushes, so adding connections is what raises the rate.

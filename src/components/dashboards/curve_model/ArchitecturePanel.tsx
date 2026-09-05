@@ -40,7 +40,7 @@ function Layer({ kicker, title, children, accent }:
         <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: DIM }}>{kicker}</span>
         <span className="text-sm font-semibold" style={{ color: PRI }}>{title}</span>
       </div>
-      <div className="text-xs leading-relaxed" style={{ color: SEC }}>{children}</div>
+      <div className="text-sm leading-relaxed" style={{ color: SEC }}>{children}</div>
     </div>
   );
 }
@@ -75,7 +75,7 @@ function Figure({ src, source, alt, caption, minWidth }:
           <img src={src} alt={alt} style={{ width: '100%', minWidth: minWidth ?? 520, display: 'block' }} />
         </div>
       )}
-      {caption && <figcaption className="px-3 py-2 text-[11px]"
+      {caption && <figcaption className="px-3 py-2 text-xs"
                               style={{ color: DIM, borderTop: `1px solid ${EDGE}` }}>{caption}</figcaption>}
     </figure>
   );
@@ -84,41 +84,41 @@ function Figure({ src, source, alt, caption, minWidth }:
 export default function ArchitecturePanel() {
   return (
     <div>
-      <p className="text-sm mb-6 max-w-3xl" style={{ color: SEC }}>
+      <p className="text-sm mb-6 max-w-4xl" style={{ color: SEC }}>
         How the engine is put together. Everything priced is worked out twice, once
         through QuantLib and once on the GPU, and every run subtracts one answer from
         the other. A difference bigger than rounding fails the run.
       </p>
 
-      <p className="text-xs mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+      <p className="text-sm mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 Level 1 · System Context
       </p>
       <Figure src="/diagrams/c4-context.svg" source={ctxSrc}
               alt="C4 system context: a quant reads marks and risk from the portfolio site; the rates engine takes instrument-typed quotes from market data, builds curves using QuantLib, and publishes frozen JSON to the site."
               caption="Who uses it and what it touches. C4 notation throughout, so every element carries a name, its [type] and a description, and every relationship states what it is for and what it runs on." />
 
-      <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+      <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 Level 2 · Containers
       </p>
       <Figure src="/diagrams/c4-container.svg" source={contSrc}
               alt="C4 container diagram: inside the host process, curve construction writes fourteen term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
               caption="Each container names its technology. The host/device split is a real boundary. One cudaMemcpy crosses it, and that copy is the only place the two paths can diverge, which is why reconciliation sits downstream of both." />
 
-      <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+      <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 supplementary · Dynamic view of one valuation run
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
               alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; curves are built in dependency order, with dual-curve and cross-currency builds attaching an already-built foreign curve; all pillars are solved simultaneously; per-interval coefficients are copied to the device; CPU and GPU paths are then differenced over 348 instruments."
               caption="Watch the build order and the simultaneous pillar solve. The device is sent the coefficients the curve is already made of, so the upload is exact, which is what lets the two paths reconcile." />
 
-      <p className="text-xs mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+      <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         How one curve gets built
       </p>
       <Figure src="/diagrams/construction.svg" source={buildSrc}
               alt="Flowchart of curve construction: each quote maps to a rate helper chosen by its instrument type, including a float versus float basis swap helper for the 3s6s strip, and all of the helpers for a curve go into one global bootstrap that produces the calibrated term structure and its pillar dates, times and zeros."
               caption="Each instrument type gets its own helper, and one solve takes all of them together." />
 
-      <div className="flex flex-col items-center max-w-3xl">
+      <div className="flex flex-col items-center max-w-4xl">
         <Layer kicker="1" title="Prices come in">
           Deposits, OIS, futures, FRAs, swaps, tenor basis swaps, FX swap points and
           cross currency basis, one file per valuation date. Each quote states its instrument type, so the
@@ -178,10 +178,10 @@ export default function ArchitecturePanel() {
         </Layer>
       </div>
 
-      <p className="text-xs mt-8 mb-3 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+      <p className="text-sm mt-8 mb-3 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         Decisions that cost the most to get wrong
       </p>
-      <div className="rounded-lg overflow-hidden max-w-3xl" style={{ border: `1px solid ${EDGE}` }}>
+      <div className="rounded-lg overflow-hidden max-w-4xl" style={{ border: `1px solid ${EDGE}` }}>
         {[
           ['Solve every pillar at once',
            'Pinning the pillars down one after another silently failed to converge on the long end. Solving them together fixed it.'],
