@@ -84,7 +84,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       {tab === 'desk' && tl && (
         <div>
           <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-            The desk
+            Trading session replay
           </h3>
           <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             A recording of the engine, played back. The book comes to{' '}
