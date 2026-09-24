@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Workstation, { type Timeline } from './Workstation';
 import EodMarkingTab, { type EodMarking } from './EodMarkingTab';
-// The Risk and Valuations panels (RiskTab, ValuationsTab, PanelCard) are
-// built and working but unwired from the nav for now: the desk view carries
-// the per-set VaR tile and the Limits section instead (both read the
-// timeline file), and the full panels come back when they are ready.
+import ValAdjustmentsTab, { type ValAdjustments } from './ValAdjustmentsTab';
+import RiskTab from './RiskTab';
+import { type RiskVal } from './riskval';
+// Of the parked panels (RiskTab, ValuationsTab, PanelCard), the RiskTab
+// limits panel is wired back in as the Trading group's Limits tab; the
+// rest stay parked until they are ready.
 
 declare const __BUILD_ID__: string;
 const BUILD_ID = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
@@ -44,6 +46,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
   const [demo, setDemo] = useState<DemoFile | null>(null);
   const [tl, setTl] = useState<Timeline | null>(null);
   const [em, setEm] = useState<EodMarking | null>(null);
+  const [va, setVa] = useState<ValAdjustments | null>(null);
+  const [rv, setRv] = useState<RiskVal | null>(null);
   const [probe, setProbe] = useState('EUR_ESTR_ECB');
 
   useEffect(() => {
@@ -56,6 +60,10 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       .then(r => r.json()).then(setTl).catch(() => {});
     fetch(`/data/rt_engine/eod_marking.json${v}`, { cache: 'no-store' })
       .then(r => r.json()).then(setEm).catch(() => {});
+    fetch(`/data/rt_engine/val_adjustments.json${v}`, { cache: 'no-store' })
+      .then(r => r.json()).then(setVa).catch(() => {});
+    fetch(`/data/rt_engine/risk_val.json${v}`, { cache: 'no-store' })
+      .then(r => r.json()).then(setRv).catch(() => {});
   }, []);
 
   const rebuilds = useMemo(() => {
@@ -63,21 +71,42 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
     return new Set(hit?.rebuilds ?? []);
   }, [g, probe]);
 
-  const TABS: [string, string][] = [
-    ['desk', 'Desk view'],
-    ['eod', 'Independent Price Verification'],
-    ['why', 'Why events'],
-    ['graph', 'What one price touches'],
-    ['engine', 'Engine output'],
-    ['trader', 'Trader output'],
+  // Group headings are labels only; the sub-heading chips open the panels.
+  const GROUPS: { label: string; tabs: [string, string][] }[] = [
+    {
+      label: 'Trading',
+      tabs: [['desk', 'Trading session replay'], ['limits', 'Limits']],
+    },
+    {
+      label: 'Valuations',
+      tabs: [
+        ['eod', 'Independent Price Verification'],
+        ['va', 'Close-out Cost and Mid-Price Uncertainty'],
+      ],
+    },
+    {
+      label: 'Design',
+      tabs: [['why', 'Why events'], ['graph', 'What one price touches']],
+    },
+    {
+      label: 'System Outputs',
+      tabs: [['engine', 'Engine output'], ['trader', 'Trader output']],
+    },
   ];
 
   return (
     <div>
-      <div className="flex gap-2 mb-6 font-mono text-[11px] flex-wrap">
-        {TABS.map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
-            style={chip(tab === k, '#5b8fc9')}>{label}</button>
+      <div className="flex gap-x-6 gap-y-3 mb-6 font-mono text-[11px] flex-wrap">
+        {GROUPS.map(g => (
+          <div key={g.label} className="flex gap-2 items-center flex-wrap">
+            <span className="text-[10px] uppercase" style={{ color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
+              {g.label}
+            </span>
+            {g.tabs.map(([k, label]) => (
+              <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
+                style={chip(tab === k, '#5b8fc9')}>{label}</button>
+            ))}
+          </div>
         ))}
       </div>
 
@@ -109,8 +138,18 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
         </div>
       )}
 
+      {tab === 'limits' && rv && <RiskTab rv={rv} panel="limits" />}
+      {tab === 'limits' && !rv && (
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading.</p>
+      )}
+
       {tab === 'eod' && em && <EodMarkingTab em={em} />}
       {tab === 'eod' && !em && (
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading.</p>
+      )}
+
+      {tab === 'va' && va && <ValAdjustmentsTab va={va} />}
+      {tab === 'va' && !va && (
         <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
 
