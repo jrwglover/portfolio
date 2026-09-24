@@ -96,16 +96,18 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
   return (
     <div>
-      <div className="flex gap-x-6 gap-y-3 mb-6 font-mono text-[11px] flex-wrap">
+      <div className="flex gap-x-8 gap-y-3 mb-6 font-mono text-[11px] flex-wrap items-start">
         {GROUPS.map(g => (
-          <div key={g.label} className="flex gap-2 items-center flex-wrap">
-            <span className="text-[10px] uppercase" style={{ color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
+          <div key={g.label}>
+            <div className="text-[10px] uppercase mb-1.5" style={{ color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
               {g.label}
-            </span>
-            {g.tabs.map(([k, label]) => (
-              <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
-                style={chip(tab === k, '#5b8fc9')}>{label}</button>
-            ))}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {g.tabs.map(([k, label]) => (
+                <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
+                  style={chip(tab === k, '#5b8fc9')}>{label}</button>
+              ))}
+            </div>
           </div>
         ))}
       </div>
