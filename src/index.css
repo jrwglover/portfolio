@@ -29,6 +29,18 @@ body {
   color: var(--text-primary);
 }
 
+/* Nav/selector chips: light up on hover. Inline styles carry the resting
+   and active colours, so the hover override needs !important; it is only
+   attached to non-active chips, so the active colour is never clobbered. */
+.navchip {
+  transition: border-color .15s, color .15s, background-color .15s;
+}
+.navchip:hover {
+  border-color: var(--text-secondary) !important;
+  color: var(--text-primary) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
 .font-mono {
   font-family: 'JetBrains Mono', 'Consolas', monospace;
 }

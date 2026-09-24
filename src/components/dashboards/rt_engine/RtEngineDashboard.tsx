@@ -104,7 +104,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             </div>
             <div className="flex gap-2 flex-wrap">
               {g.tabs.map(([k, label]) => (
-                <button key={k} onClick={() => setTab(k)} className="px-3 py-1.5 rounded"
+                <button key={k} onClick={() => setTab(k)}
+                  className={'px-3 py-1.5 rounded' + (tab === k ? '' : ' navchip')}
                   style={chip(tab === k, '#5b8fc9')}>{label}</button>
               ))}
             </div>
