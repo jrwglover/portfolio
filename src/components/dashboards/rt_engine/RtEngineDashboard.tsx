@@ -41,7 +41,10 @@ const chip = (on: boolean, colour: string) => ({
 });
 
 export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string }) {
-  const [tab, setTab] = useState(defaultTab ?? 'desk');
+  const [tab, setTab] = useState(() => {
+    const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+    return q && ['desk', 'limits', 'eod', 'va', 'why', 'graph', 'engine', 'trader'].includes(q) ? q : (defaultTab ?? 'desk');
+  });
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
   const [tl, setTl] = useState<Timeline | null>(null);
