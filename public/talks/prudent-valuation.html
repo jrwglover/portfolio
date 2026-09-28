@@ -83,7 +83,7 @@
 
 <!-- 1 -->
 <section class="slide" data-title="Title" data-min="0.6"
-  data-notes="In the next ten minutes I will go from a handful of market quotes to a capital number. First, how quotes become curves and how curves value a book. Then the part that changed with regulation: a bank now has to hold a second, prudent value, set at a stated confidence level, and deduct the gap from capital. I will use my own engine throughout. The numbers you will see are real outputs of that engine; the consensus data behind them is generated, and I will say so each time it appears.">
+  data-notes="Over the next ten minutes I'm going to take a handful of market quotes and turn them into a capital number. I'll start with how quotes become curves and how the curves value a book. After that comes the part regulation changed. A bank now has to hold a second, prudent value at a stated confidence level, and the gap between that and fair value comes off its capital. Everything I show comes out of my own engine. The consensus data feeding it is generated, and I'll flag that each time it comes up.">
   <div style="margin-top:120px">
     <div class="kicker">Prudent valuation</div>
     <h1>From quotes to prudent value</h1>
@@ -94,7 +94,7 @@
 
 <!-- 2 -->
 <section class="slide" data-title="The pipeline" data-min="0.8"
-  data-notes="Here is the whole talk on one line. Market quotes go in. A bootstrap turns them into curves. The curves value the book: that gives fair value, a single number. Then consensus data from other banks tells us the market is really a range around that number. Regulation asks where in that range a cautious exit would land, and the distance from fair value is the additional valuation adjustment, the AVA. The AVA comes straight off common equity tier one capital. Each box is computed, not approximated, and I will walk through them left to right.">
+  data-notes="This is the whole talk on one line. Market quotes go in on the left, and a bootstrap turns them into curves. The curves value the book, and that gives us fair value as a single number. Consensus data from other banks then tells us the market is really a range around that number. Regulation asks where in that range a cautious exit would land, and the distance from fair value to that point is the additional valuation adjustment, or AVA. The AVA comes straight off common equity tier one capital. I'll go through the boxes from left to right.">
   <div class="kicker">Overview</div>
   <h2>The pipeline</h2>
   <div class="pipe">
@@ -110,7 +110,7 @@
 
 <!-- 3 -->
 <section class="slide" data-title="Curve inputs" data-min="0.9" data-cue="Optional: open Market Data Model and show the instrument list for one curve."
-  data-notes="Everything starts with quotes. The end of day set has 149 of them across nine curves. Overnight index swaps for ESTR, SOFR, SONIA and the Australian AONIA, twenty one tenors each. EURIBOR six month swaps. The Australian bank bill pair, which is tied together by a three versus six month basis. And cross currency basis for euro and Australian dollar against the US dollar. The point to hold on to: every one of these quotes is a price the curves must reproduce exactly, and every one is a place where risk can sit. That will matter when we get to the AVA.">
+  data-notes="The inputs are market quotes. The end of day set has 149 of them across nine curves. There are overnight index swaps for ESTR, SOFR, SONIA and the Australian AONIA, twenty one tenors each, and there are EURIBOR six month swaps. Then there's the Australian bank bill pair, tied together by a three versus six month basis, and cross currency basis for the euro and the Australian dollar against the US dollar. What I'd like you to hold on to is that every one of these quotes is a price the curves have to reproduce exactly. Each one is also a place where risk can sit, and that matters once we get to the AVA.">
   <div class="kicker">Step 1</div>
   <h2>Curve inputs</h2>
   <a class="panel-link" href="/learn/curve-data-model">Open panel: Market Data Model</a>
@@ -133,7 +133,7 @@
 
 <!-- 4 -->
 <section class="slide" data-title="Curves" data-min="0.9" data-cue="Optional: open Bootstrapped Curves, add EURIBOR 6M, toggle forwards."
-  data-notes="The bootstrap turns those quotes into curves. It is a global solve: every curve reprices every one of its own quotes, not approximately but to machine precision. The discount curves are log cubic splines. EURIBOR is projected off its own swaps but discounted on ESTR, which is the dual curve set up every desk uses. Here are three of them: ESTR, EURIBOR six month and SOFR, as zero rates out to thirty years. Once we have curves, valuing the book is mechanical. Every trade's cash flows are projected and discounted, and we get fair value. One number.">
+  data-notes="The bootstrap turns those quotes into curves. I use a global solve, so each curve reprices every one of its own quotes to machine precision. The discount curves are log cubic splines. EURIBOR is projected off its own swaps but discounted on ESTR, the standard dual curve set up on a rates desk. The chart shows three of them, ESTR, EURIBOR six month and SOFR, as zero rates out to thirty years. Once the curves exist, valuing the book is mechanical. We project and discount every trade's cash flows, and the result is fair value, one number for the whole book.">
   <div class="kicker">Step 2</div>
   <h2>Curves</h2>
   <a class="panel-link" href="/learn/meeting-dated-curves">Open panel: Bootstrapped Curves</a>
@@ -152,7 +152,7 @@
 
 <!-- 5 -->
 <section class="slide" data-title="Fair value is a range" data-min="1.0" data-cue="Open EOD marking: show consensus mid, SD and percentiles next to our marks."
-  data-notes="Fair value is our best estimate, but other banks mark the same instrument slightly differently. Consensus services such as Totem collect those marks: each contributor submits a mid, and the service sends back the consensus mean, the spread of submissions and percentiles. Here is the ten year euro swap. Twelve contributors, mid 216.91 basis points, a standard deviation of about a quarter of a basis point, and a bid offer of about half a basis point either side. So the honest statement is not the swap rate is 216.91. It is: the market sits in this band. This consensus data is generated, in the structure the real service uses.">
+  data-notes="Fair value is our best estimate, but other banks mark the same instrument slightly differently. Consensus services such as Totem collect those marks. Each contributor submits a mid, and the service sends back the consensus mean, the spread of the submissions and a set of percentiles. This is the ten year euro swap, with twelve contributors and a mid of 216.91 basis points. The standard deviation is about a quarter of a basis point, and the bid offer is about half a basis point either side. So what I can really say is that the market sits somewhere in this band around 216.91. The consensus data here is generated, in the same structure the real service uses.">
   <div class="kicker">Step 3</div>
   <h2>Fair value is a range</h2>
   <a class="panel-link" href="/learn/rt-engine?tab=eod">Open panel: EOD marking</a>
@@ -179,7 +179,7 @@
 
 <!-- 6 -->
 <section class="slide" data-title="Then and now" data-min="1.3"
-  data-notes="This is the change I want to highlight. Prudent valuation is not new. Before the current rules, the Capital Adequacy Directive already required banks to value the trading book prudently, with independent price verification, and to formally consider adjustments such as close out costs and model risk. What it did not do was say how cautious to be. There was no confidence level, so each bank chose its own method and its own size, and supervisors found the results were hard to compare. The Capital Requirements Regulation and the EBA's technical standard, Delegated Regulation 2016/101, changed that. Prudent valuation now covers every fair valued position. There are nine defined AVA categories. Market price uncertainty and close out cost are set at a ninety percent confidence level. And the total is deducted from common equity tier one.">
+  data-notes="This slide is the regulatory change the talk is really about. Prudent valuation itself isn't new. Before the current rules, the Capital Adequacy Directive already required banks to value the trading book prudently, with independent price verification, and to formally consider adjustments such as close out costs and model risk. What it never said was how cautious to be. With no confidence level, each bank chose its own method and its own size, and supervisors found the results hard to compare. The Capital Requirements Regulation and the EBA's technical standard, Delegated Regulation 2016/101, changed that. Prudent valuation now covers every fair valued position, with nine defined AVA categories. Market price uncertainty and close out cost are set at a ninety percent confidence level, and the total is deducted from common equity tier one.">
   <div class="kicker">The regulatory change</div>
   <h2>Then and now</h2>
   <div class="row tn">
@@ -208,7 +208,7 @@
 
 <!-- 7 -->
 <section class="slide" data-title="MPU and CoC" data-min="1.2"
-  data-notes="Two of the nine categories do most of the work for a rates book. Market price uncertainty: where in the consensus range would I be ninety percent confident of exiting? For each quote, that is the distance from mid to the tenth or ninetieth percentile, on whichever side hurts, times the book's sensitivity to that quote. Close out cost: even at a certain mid, I pay the bid offer to exit, so it is half the bid offer times the same sensitivity. The regulation's own words are on the slide. Because these are summed quote by quote, the rules allow a fifty percent diversification factor when aggregating. It was raised to sixty six percent for 2020 only, during the Covid volatility, and is back at fifty.">
+  data-notes="For a rates book, two of the nine categories do most of the work. Market price uncertainty asks where in the consensus range I'd be ninety percent confident of exiting. For each quote that's the distance from mid to the tenth or ninetieth percentile, on whichever side hurts, times the book's sensitivity to that quote. Close out cost covers the fact that even at a known mid I still pay the bid offer to get out, so it's half the bid offer times the same sensitivity. The regulation's own wording is on the slide. Because both are summed quote by quote, the rules allow a fifty percent diversification factor when aggregating. That was raised to sixty six percent for 2020 only, during the Covid volatility, and it's back at fifty now.">
   <div class="kicker">The two AVAs</div>
   <h2>MPU and CoC</h2>
   <div class="row">
@@ -228,7 +228,7 @@
 
 <!-- 8 -->
 <section class="slide" data-title="Two routes, same answer" data-min="1.0"
-  data-notes="There are two ways to compute this. The quick way multiplies sensitivities by the consensus ranges. The thorough way moves every quote to its prudent level, rebootstraps the curves for real and revalues the whole book. I built both. That is 449 genuine curve rebuilds on the same machinery as the trading curves, and every rebuilt curve reprices its shifted quote to within about five times ten to the minus ten basis points. The two routes agree to about a tenth of a percent on market price uncertainty and three hundredths of a percent on close out cost. So the shortcut is safe on this book, and the full revaluation is the evidence that it is.">
+  data-notes="There are two ways to compute this. The quick way multiplies sensitivities by the consensus ranges. The thorough way moves every quote to its prudent level, rebootstraps the curves and revalues the whole book, and I built both so the two could be compared. The full route comes to 449 curve rebuilds on the same machinery as the trading curves, and every rebuilt curve reprices its shifted quote to within about five times ten to the minus ten basis points. The two routes agree to about a tenth of a percent on market price uncertainty and three hundredths of a percent on close out cost. On this book, then, the sensitivity route is safe, and the full revaluation is what shows it.">
   <div class="kicker">Computing it</div>
   <h2>Two routes, same answer</h2>
   <table class="n mono">
@@ -242,7 +242,7 @@
 
 <!-- 9 -->
 <section class="slide" data-title="The capital number" data-min="0.8" data-cue="Open Close-out Cost and Mid-Price Uncertainty: show the per-quote table and the totals."
-  data-notes="After the fifty percent aggregation, market price uncertainty contributes about 769 thousand and close out cost about 1.26 million, so 2.03 million comes off common equity tier one. That is capital the bank cannot use, purely because the market for its positions is a range and not a point. Two things drive it: how uncertain the consensus is for each quote, and how much of the book's risk sits on that quote. Close out cost is the bigger of the two here, because bid offer is wider than the consensus spread for liquid swaps.">
+  data-notes="After the fifty percent aggregation, market price uncertainty contributes about 769 thousand and close out cost about 1.26 million, so 2.03 million comes off common equity tier one. The bank can't use that capital, and the only reason is that the market for its positions is a range. How big the deduction gets depends on how uncertain the consensus is for each quote and on how much of the book's risk sits on that quote. Close out cost is the larger of the two here because, for liquid swaps, the bid offer is wider than the consensus spread.">
   <div class="kicker">Result</div>
   <h2>The capital number</h2>
   <a class="panel-link" href="/learn/rt-engine?tab=va">Open panel: Valuation Adjustments</a>
@@ -257,7 +257,7 @@
 
 <!-- 10 -->
 <section class="slide" data-title="Representation matters" data-min="0.9"
-  data-notes="One question I looked at: what if we express the euro swap risk differently, as ESTR swaps plus a EURIBOR versus ESTR basis, instead of outright EURIBOR swaps? The intuition is that it nets and lowers the AVA. On this book it does the opposite. With the basis given the same uncertainty as the outright swap, the AVA goes up twelve percent, because the book is directional in EURIBOR at seven, twenty and thirty years, and those exposures now pick up both OIS and basis uncertainty. It only comes out lower if the basis consensus is less than about two thirds as uncertain as the swap. So the representation is a real modelling choice, and it has to be justified, not picked because it gives the smaller number.">
+  data-notes="One question I looked at was what happens if the euro swap risk is expressed as ESTR swaps plus a EURIBOR versus ESTR basis, in place of outright EURIBOR swaps. The usual intuition is that it nets off and lowers the AVA. On this book it does the opposite. If the basis gets the same uncertainty as the outright swap, the AVA goes up twelve percent, because the book is directional in EURIBOR at seven, twenty and thirty years and those exposures now pick up both OIS and basis uncertainty. It only comes out lower when the basis consensus is less than about two thirds as uncertain as the swap. So the representation is a real modelling choice, and it needs a justification of its own. Giving the smaller number isn't one.">
   <div class="kicker">A modelling choice</div>
   <h2>Representation matters</h2>
   <p class="lead">EUR swaps re-expressed as ESTR OIS plus EURIBOR/ESTR basis</p>
@@ -274,14 +274,14 @@
 
 <!-- 11 -->
 <section class="slide" data-title="Takeaways" data-min="0.6"
-  data-notes="To close. Quotes become curves, and curves give one fair value. The market is a range, and regulation now fixes how far into that range you must go: ninety percent confidence for market price uncertainty and close out cost, with the result deducted from capital. And because the number depends on how you represent the risk, the method has to be computed carefully and defended. Thank you, happy to take questions or open any of the panels.">
+  data-notes="To sum up, quotes become curves and curves give one fair value. The market is a range, and regulation now fixes how far into it you have to go, ninety percent confidence for market price uncertainty and close out cost, with the result deducted from capital. Because the number moves with how you represent the risk, the method has to be computed carefully and then defended. Thank you, and I'm happy to take questions or open any of the panels.">
   <div class="kicker">Summary</div>
   <h2>Takeaways</h2>
   <ul class="b" style="margin-top:10px">
-    <li>Quotes make curves; curves make one fair value</li>
-    <li>The market is a range; regulation now sets 90% confidence</li>
+    <li>Quotes make curves, and curves make one fair value</li>
+    <li>The market is a range, and regulation now sets 90% confidence</li>
     <li>MPU and CoC come straight off CET1</li>
-    <li>Representation changes the number; defend the choice</li>
+    <li>Representation changes the number, so defend the choice</li>
   </ul>
   <div class="foot"><span>Johnathon Glover</span><a href="/" style="color:var(--t3)">Portfolio</a></div>
 </section>

@@ -85,9 +85,9 @@ export default function ArchitecturePanel() {
   return (
     <div>
       <p className="text-sm mb-6 max-w-4xl" style={{ color: SEC }}>
-        How the engine is put together. Everything priced is worked out twice, once
-        through QuantLib and once on the GPU, and every run subtracts one answer from
-        the other. A difference bigger than rounding fails the run.
+        This is how the engine is put together. Everything priced is worked out twice,
+        once through QuantLib and once on the GPU, and every run subtracts one answer
+        from the other and fails if the difference is bigger than rounding.
       </p>
 
       <p className="text-sm mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
@@ -95,21 +95,21 @@ export default function ArchitecturePanel() {
       </p>
       <Figure src="/diagrams/c4-context.svg" source={ctxSrc}
               alt="C4 system context: a quant reads marks and risk from the portfolio site; the rates engine takes instrument-typed quotes from market data, builds curves using QuantLib, and publishes frozen JSON to the site."
-              caption="Who uses it and what it touches. C4 notation throughout, so every element carries a name, its [type] and a description, and every relationship states what it is for and what it runs on." />
+              caption="This shows who uses the engine and what it touches. The diagrams use C4 notation, so every element carries a name, its [type] and a description, and every relationship says what it is for and what it runs on." />
 
       <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 Level 2 · Containers
       </p>
       <Figure src="/diagrams/c4-container.svg" source={contSrc}
               alt="C4 container diagram: inside the host process, curve construction writes fourteen term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
-              caption="Each container names its technology. The host/device split is a real boundary. One cudaMemcpy crosses it, and that copy is the only place the two paths can diverge, which is why reconciliation sits downstream of both." />
+              caption="Each container names its technology. The host/device split is a real boundary crossed by one cudaMemcpy, and because that copy is the only place the two paths can diverge, reconciliation sits downstream of both." />
 
       <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         C4 supplementary · Dynamic view of one valuation run
       </p>
       <Figure src="/diagrams/valuation-run.svg" source={runSrc}
               alt="Sequence diagram of a valuation run: quotes are mapped to rate helpers; curves are built in dependency order, with dual-curve and cross-currency builds attaching an already-built foreign curve; all pillars are solved simultaneously; per-interval coefficients are copied to the device; CPU and GPU paths are then differenced over 348 instruments."
-              caption="Watch the build order and the simultaneous pillar solve. The device is sent the coefficients the curve is already made of, so the upload is exact, which is what lets the two paths reconcile." />
+              caption="Watch the build order and the simultaneous pillar solve. The device is sent the coefficients the curve is already made of, so the upload is exact and the two paths can reconcile." />
 
       <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         How one curve gets built
@@ -121,59 +121,61 @@ export default function ArchitecturePanel() {
       <div className="flex flex-col items-center max-w-4xl">
         <Layer kicker="1" title="Prices come in">
           Deposits, OIS, futures, FRAs, swaps, tenor basis swaps, FX swap points and
-          cross currency basis, one file per valuation date. Each quote states its instrument type, so the
-          builder never guesses from the tenor.
+          cross currency basis arrive in one file per valuation date. Each quote states
+          its instrument type, so the builder never has to guess from the tenor.
         </Layer>
         <Arrow />
 
         <Layer kicker="2" title="Curves are solved from them">
           Every pillar is solved at once, so a quote is repriced by the same finished
-          curve it helped build. An earlier pillar-by-pillar version stopped converging
-          on the long end, which is what put the global solve in.
+          curve it helped build. I moved to the global solve after an earlier
+          pillar-by-pillar version stopped converging on the long end.
         </Layer>
         <Arrow />
 
         <Layer kicker="3" title="Some curves are built on others">
           <Figure src="/diagrams/curve-graph.svg" source={curveSrc} minWidth={1000}
-                  alt="Curve dependency graph: four pricing curves build independently, one per currency; EURIBOR 6M and the two BBSW curves are discounted on their currency's meeting-dated curve; the two BBSW curves are additionally linked by the 3s6s tenor basis strip and solve as a staged pair; each cross-currency curve takes SOFR as its USD leg and its own currency's meeting-dated curve as the other; the derived cheapest-to-deliver curve takes SOFR and both cross-currency curves as parents; the four comparison builds carry nothing; and the FX outright forwards are derived in the browser." />
+                  alt="Curve dependency graph: four pricing curves build independently, one per currency; EURIBOR 6M and the two BBSW curves are discounted on their currency's meeting-dated curve; the two BBSW curves are also linked by the 3s6s tenor basis strip and solve as a staged pair; each cross-currency curve takes SOFR as its USD leg and its own currency's meeting-dated curve as the other; the derived cheapest-to-deliver curve takes SOFR and both cross-currency curves as parents; the four comparison builds carry nothing; and the FX outright forwards are derived in the browser." />
           <div className="mt-2">
-            EURIBOR discounts on the meeting-dated ESTR curve, and each cross currency
-            curve is implied against SOFR, so those curves must exist first. Get the
-            order wrong and the build fails or, worse, quietly runs on a stale curve.
-            Two structures go further. The BBSW pair is a curve level cycle: each
-            side's 3s6s basis swaps read the other curve, so the engine stages the
-            pair and iterates the joint solve to a fixed point. The CTD curve is
-            derived after everything: the pointwise max of its three parents'
-            instantaneous forwards, zero volatility, no switch option value.
+            EURIBOR discounts on the meeting-dated ESTR curve and each cross currency
+            curve is implied against SOFR, so those curves have to exist first. A wrong
+            order usually just breaks the build. The case I guard against is the one
+            where it doesn&apos;t, and a curve quietly builds on a stale parent. The
+            BBSW pair needs more than ordering, because
+            each side&apos;s 3s6s basis swaps read the other curve. The engine stages
+            that pair and iterates the joint solve to a fixed point. The CTD curve is
+            derived last, as the pointwise max of its three parents&apos;
+            instantaneous forwards with zero volatility and no value for the switch
+            option.
           </div>
         </Layer>
         <Arrow label="the same curve object, two ways" />
 
         <div className="grid gap-3 w-full" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
           <Layer kicker="4a" title="Valued on the processor" accent={CPU}>
-            Values and risk read straight off the curves as the library built them.
-            For the hedging view, one quoted price is moved, the curve rebuilt, the
-            trade revalued.
+            Values and risk are read straight off the curves as the library built
+            them. For the hedging view one quoted price is moved, the curve rebuilt and
+            the trade revalued.
           </Layer>
           <Layer kicker="4b" title="Valued on the GPU" accent={GPU}>
-            The GPU never rebuilds a curve. It receives the numbers the curve is
-            already made of and evaluates them directly; nothing is approximated on
-            the way across.
+            The GPU never rebuilds a curve. It&apos;s handed the numbers the curve is
+            already made of and evaluates those directly.
           </Layer>
         </div>
         <Arrow />
 
         <Layer kicker="5" title="The two are checked against each other">
-          All 348 calibration instruments repriced down both paths and differenced;
-          worst agreement 5.4 × 10⁻¹⁴. A separate check re-derives every input quote
-          from the finished curve; the worst residual is 0.04 of a basis point.
+          All 348 calibration instruments are repriced down both paths and
+          differenced, and the worst agreement is 5.4 × 10⁻¹⁴. A separate check
+          re-derives every input quote from the finished curve, and its worst
+          residual is 0.04 of a basis point.
         </Layer>
         <Arrow />
 
         <Layer kicker="6" title="Results published to this site">
           Curves, trades, risk ladders and benchmarks are written as static JSON and
-          served with the page. The browser prices nothing: it renders what the engine
-          produced. The one exception is the FX forward chart, a two-line identity off
+          served with the page, and the browser only renders them. The one exception is
+          the FX forward chart, which the browser computes with a two-line identity off
           curves already published.
         </Layer>
       </div>
@@ -187,8 +189,8 @@ export default function ArchitecturePanel() {
            'Pinning the pillars down one after another silently failed to converge on the long end. Solving them together fixed it.'],
           ['Pin the short end with instruments',
            'A region with no instrument in it leaves the curve free to take whatever shape it likes there. Synthetic deposits derived from OIS plus basis removed a 7.4bp kink at the deposit/FRA join.'],
-          ['Ship coefficients to the GPU, not a curve',
-           'The device evaluates numbers it did not produce, which keeps the kernel branch-free and makes CPU/GPU agreement something to verify rather than a tolerance to argue about.'],
+          ['Ship the coefficients to the GPU',
+           'The device evaluates numbers it did not produce. That keeps the kernel branch-free and lets me check CPU/GPU agreement exactly.'],
         ].map(([h, b], i) => (
           <div key={h} className="px-4 py-3"
                style={{ borderTop: i ? `1px solid ${EDGE}` : undefined, background: CARD }}>

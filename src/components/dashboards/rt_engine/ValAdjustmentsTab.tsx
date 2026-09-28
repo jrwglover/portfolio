@@ -116,30 +116,28 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         Valuation Adjustments
       </h3>
       <p className="text-sm mb-2 max-w-4xl" style={dimText}>
-        Prudent valuation under CDR (EU) 2016/101 as amended by 2020/866: the
-        market price uncertainty (Art. 9) and close-out cost (Art. 10) AVAs over
-        the EOD marking universe, computed both ways Art. 9(5)(c) allows and
-        shown against each other. Fair value is the EOD family valuation; the
-        consensus inputs are the same GENERATED Totem-style run the IPV sheet
-        reads, seed {va.meta.seed}.
+        I compute the market price uncertainty (Art. 9) and close-out cost (Art. 10)
+        AVAs for the EOD marking universe under CDR (EU) 2016/101, as amended by
+        2020/866, using both of the methods Art. 9(5)(c) allows. Fair value is the EOD family
+        valuation, and the consensus inputs are the same GENERATED Totem-style run the
+        IPV sheet reads, seed {va.meta.seed}.
       </p>
       <ul className="text-sm mb-3 max-w-4xl space-y-1 list-disc pl-5" style={dimText}>
         <li>
-          Sensitivity route, Art. 9(5)(c)(i): the bump-and-resolve Jacobian times
-          the prudent shift, the market-standard approximation.
+          The sensitivity route, Art. 9(5)(c)(i), multiplies the bump-and-resolve
+          Jacobian by the prudent shift. It&apos;s the market-standard
+          approximation.
         </li>
         <li>
-          Full-revaluation route, Art. 9(5)(c)(ii), the authoritative one here:
-          for every one of the {va.meta.quotes} instruments the EOD family is
-          genuinely re-bootstrapped at the prudent, expected-value and exit
-          quote, and the whole book revalues on the rebuilt curves through the
-          collapsed lane. Same interpolation, same staged BBSW fixed point,
-          same dependency order as the trading curves; the receipt below
-          proves it.
+          The full-revaluation route, Art. 9(5)(c)(ii), is the one I treat as
+          authoritative. It re-bootstraps the EOD family for each of the{' '}
+          {va.meta.quotes} instruments at the prudent, expected-value and exit
+          quote, then revalues the whole book on the rebuilt curves through the
+          collapsed lane.
         </li>
         <li>
-          The difference between the routes is the linearity error of the
-          sensitivity route, printed per instrument, not hidden.
+          The gap between the two routes is the sensitivity route&apos;s linearity
+          error, and it&apos;s printed for every instrument.
         </li>
       </ul>
 
@@ -152,10 +150,10 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         {tile('Sensitivity route', millions(t.mpu.sensi) + ' / ' + millions(t.coc.sensi),
           'MPU / CoC via the Jacobian, Art. 9(5)(c)(i)')}
         {tile('Linearity gap', signed(t.mpu.gap) + ' (' + pct(t.mpu.gapPct) + ')',
-          `MPU full minus sensi; CoC ${signed(t.coc.gap)} (${pct(t.coc.gapPct)}); worst single row ${pct(t.worstRowLinErrPctMpu)} of its own AVA`,
+          `MPU full minus sensi · CoC ${signed(t.coc.gap)} (${pct(t.coc.gapPct)}) · worst single row ${pct(t.worstRowLinErrPctMpu)} of its own AVA`,
           gapMaterial ? AMBER : undefined)}
         {tile('Diversified AVA, the CET1 deduction', millions(t.apva.headline),
-          'Method 2, alpha 50%; MPU + CoC, full-reval route', TEAL)}
+          'Method 2, alpha 50%, MPU + CoC on the full-reval route', TEAL)}
       </div>
 
       {/* ---- B: curve filter ---- */}
@@ -251,7 +249,7 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
             })}
             <tr style={{ borderTop: '1px solid var(--border-hover)' }}>
               <td className="px-2 py-1" colSpan={8} style={dimText}>
-                Total, all curves (engine-exported)
+                Total, all curves
               </td>
               <td className="px-2 py-1 text-right" style={dimText}>{money(t.mpu.sensi)}</td>
               <td className="px-2 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{money(t.mpu.full)}</td>
@@ -263,13 +261,13 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         </table>
       </div>
       <p className="text-sm mb-4 max-w-4xl" style={dimText}>
-        Outrights in percent, basis rows in basis points; adjustment columns in
-        currency units. Consensus mid, half bid-offer and contributor count are
-        the GENERATED Totem-style run, seed {va.meta.seed}. P10/P90 are mid
-        minus and plus the 90% confidence half-width (1.2816 x SD). dNPV/bp is
+        Outrights are in percent, basis rows in basis points and adjustment columns
+        in currency units. Consensus mid, half bid-offer and contributor count come
+        from the GENERATED Totem-style run, seed {va.meta.seed}. P10/P90 are mid
+        minus and plus the 90% confidence half-width (1.2816 x SD), and dNPV/bp is
         the engine&apos;s bump-and-resolve Jacobian ({va.meta.quotes} quotes,{' '}
-        {va.meta.rebuilds.jacobianReference} curve re-solves). Lin err is MPU
-        full reval minus sensitivity route. Every column is engine-exported.
+        {va.meta.rebuilds.jacobianReference} curve re-solves). Lin err is MPU full
+        reval minus the sensitivity route.
         {flooredCount > 0 && ` ${flooredCount} instrument${flooredCount > 1 ? 's' : ''} floored at zero per Art. 8(4).`}
       </p>
 
@@ -307,33 +305,35 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         border: `1px solid ${TEAL}55`, background: `${TEAL}0d`, color: 'var(--text-secondary)',
       }}>
         <div className="text-[10px] uppercase mb-1" style={{ color: TEAL }}>
-          The no-shortcut receipt, all engine-measured
+          Full-revaluation build checks, measured by the engine
         </div>
         <ul className="space-y-1 list-disc pl-5">
           <li>
             {n.perInstrumentBuilds} per-instrument prudent bootstraps (three
             full passes over {va.meta.quotes} instruments) plus{' '}
-            {n.jointBuilds} joint builds. Curve re-solves per pass:{' '}
+            {n.jointBuilds} joint builds, with{' '}
             {va.meta.rebuilds.passPrudent} / {va.meta.rebuilds.passEv} /{' '}
-            {va.meta.rebuilds.passExit} against the Jacobian&apos;s{' '}
-            {va.meta.rebuilds.jacobianReference}; each shift re-solves exactly
-            its dependency closure, and the small difference is the staged
-            BBSW pair converging in fewer iterations on the smallest shifts,
-            two builds per saved iteration.
+            {va.meta.rebuilds.passExit} curve re-solves per pass against the
+            Jacobian&apos;s {va.meta.rebuilds.jacobianReference}. Each shift
+            re-solves exactly its dependency closure, and the small shortfall is
+            the staged BBSW pair converging in fewer iterations on the smallest
+            shifts, two builds per saved iteration.
           </li>
           <li>
-            Interpolation: {n.interpolation}.
+            Interpolation: LogCubicDiscount, a natural cubic spline on log discount
+            factors, as on the RT trading curves.
           </li>
           <li>
-            Staged BBSW 3s6s fixed point on every build that touches the AUD
-            pair: up to {n.bbswMaxPairIterations} iterations to tolerance{' '}
+            The staged BBSW 3s6s fixed point runs on every build that touches the
+            AUD pair, up to {n.bbswMaxPairIterations} iterations to tolerance{' '}
             {n.bbswTol}.
           </li>
           <li>
-            Worst bootstrap round trip across all {n.perInstrumentBuilds + n.jointBuilds}{' '}
-            builds: {n.worstRoundTripBp.toExponential(2)}bp against the{' '}
-            {n.roundTripGateBp}bp gate; every rebuilt curve re-implies its own
-            shifted target quotes.
+            The worst bootstrap round trip across all{' '}
+            {n.perInstrumentBuilds + n.jointBuilds} builds is{' '}
+            {n.worstRoundTripBp.toExponential(2)}bp against the{' '}
+            {n.roundTripGateBp}bp gate, with every rebuilt curve re-implying its
+            own shifted target quotes.
           </li>
           <li>
             NPV lane: {n.npvLane}. Wall time {ms(va.meta.timing.totalUs)} on{' '}
@@ -372,11 +372,11 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         </table>
       </div>
       <p className="text-sm mb-4 max-w-4xl" style={dimText}>
-        The joint rows are the zero-diversification joint prudent scenario: one
-        more full family bootstrap with every quote shifted at once. The cross
-        residual is the cross-gamma the bootstrap coupling carries, measured
-        and shown. It is NOT the Art. 9(6) aggregate; the regulation aggregates
-        the individual AVAs above.
+        The joint rows are the zero-diversification prudent scenario, one more
+        full family bootstrap with every quote shifted at once. Their cross
+        residual is the cross-gamma carried by the bootstrap coupling. This is NOT
+        the Art. 9(6) aggregate, because the regulation aggregates the individual
+        AVAs above.
       </p>
 
       {/* ---- E: the nine categories ---- */}
@@ -425,11 +425,11 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         </table>
       </div>
       <p className="text-sm mb-4 max-w-4xl" style={dimText}>
-        Hover a row for its basis. Method 1 comparators, engine-exported: 50%
-        of the category totals would give {money(t.apva.method1Mpu)} (MPU) and{' '}
-        {money(t.apva.method1Coc)} (CoC); the Method 2 MPU aggregate is lower
-        because expected value sits between fair value and the prudent level
-        instrument by instrument.
+        Hover a row for its basis. Under Method 1, 50% of the category totals
+        would give {money(t.apva.method1Mpu)} (MPU) and{' '}
+        {money(t.apva.method1Coc)} (CoC). The Method 2 MPU aggregate comes out
+        lower because expected value sits between fair value and the prudent
+        level, instrument by instrument.
       </p>
 
       {/* ---- F: methodology ---- */}
@@ -438,54 +438,53 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
       </h4>
       <ul className="text-sm mb-3 max-w-4xl space-y-1 list-disc pl-5" style={dimText}>
         <li>
-          Consensus inputs are GENERATED (seed {va.meta.seed}), the same run the
-          IPV sheet reads; real consensus data cannot ship with a portfolio
-          site.
+          Consensus inputs are GENERATED (seed {va.meta.seed}) because real
+          consensus data can&apos;t be published on a portfolio site.
         </li>
         <li>
           Scope: {va.meta.scope}.
         </li>
         <li>
           MPU is mid-based per Art. 9(5)(a)(ii), so close-out cost is a
-          separate nonzero AVA per Art. 10(2). The consensus half bid-offer is
-          taken as the 90%-confident half-spread (Art. 10(6) assumption); the
-          exit shift crosses 50% of it.
+          separate nonzero AVA per Art. 10(2). I take the consensus half
+          bid-offer as the 90%-confident half-spread (the Art. 10(6)
+          assumption), and the exit shift crosses 50% of it.
         </li>
         <li>
-          The 90% confidence half-width is 1.2816 x contributor SD; P10 = mid
-          minus that width, P90 = mid plus it. The adverse side per instrument
-          is chosen by the sign of the book&apos;s net sensitivity.
+          The 90% confidence half-width is 1.2816 x contributor SD, with P10 at
+          mid minus that width and P90 at mid plus it. The sign of the
+          book&apos;s net sensitivity picks the adverse side for each instrument.
         </li>
         <li>
-          Both routes are Art. 9(5)(c)(i) and (ii) verbatim; the gap between
-          them is the linearity error of the sensitivity route. On
-          low-net-sensitivity long-end quotes it reaches{' '}
-          {pct(t.worstRowLinErrPctMpu)} of the instrument&apos;s own AVA while
-          the category totals agree to {pct(Math.abs(t.mpu.gapPct))}, which is
-          why the full-revaluation route is the authoritative one.
+          Both routes follow Art. 9(5)(c)(i) and (ii) verbatim. On
+          low-net-sensitivity long-end quotes the sensitivity route&apos;s
+          linearity error reaches {pct(t.worstRowLinErrPctMpu)} of the
+          instrument&apos;s own AVA, even though the category totals agree to{' '}
+          {pct(Math.abs(t.mpu.gapPct))}. That per-instrument error is why I treat
+          the full-revaluation route as authoritative.
         </li>
         <li>
-          The full-revaluation route re-bootstraps with identical construction
-          to the trading curves: GlobalBootstrap over log-cubic discount
-          splines, the staged BBSW 3s6s fixed point, the xccy dependency
-          chain. No additive curve shifts, no overlay revaluation, no
-          interpolation substitutes; the receipt above is measured on every
-          export and the export aborts if any of it fails.
+          The full-revaluation route re-bootstraps with the trading curves&apos;
+          own construction (GlobalBootstrap over log-cubic discount splines, the
+          staged BBSW 3s6s fixed point and the xccy dependency chain), with no
+          additive curve shifts, overlay revaluation or substitute interpolation.
+          The build checks above are measured on every export, and the export
+          aborts if any of them fails.
         </li>
         <li>
-          No fair-value reserves are held (Art. 8(3)); every AVA is floored at
-          zero (Art. 8(4)); granularity is per instrument, all{' '}
+          No fair-value reserves are held (Art. 8(3)) and every AVA is floored at
+          zero (Art. 8(4)). Granularity is per instrument across all{' '}
           {va.meta.quotes}, with no parameter reduction.
         </li>
         <li>
           The fair-value frame is the EOD family ({millions(va.meta.baseNpv)}{' '}
-          book NPV); the trading-vs-EOD model basis is measured separately on
-          the IPV tab.
+          book NPV). The model basis between the trading and EOD curves is
+          measured separately on the IPV tab.
         </li>
       </ul>
       <p className="text-sm max-w-4xl" style={dimText}>
         Every figure on this panel was computed by the engine and exported as
-        JSON. The browser draws it and adds nothing.
+        JSON for the browser to draw.
       </p>
     </div>
   );

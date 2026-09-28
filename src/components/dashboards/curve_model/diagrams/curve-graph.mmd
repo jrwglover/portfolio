@@ -36,7 +36,7 @@ flowchart TB
   E6 ~~~ XC
   B6 ~~~ AXC
 
-  FWD["FX outright forwards<br/><small>spot × DF_ccy / DF_USD</small><br/><small>derived in the browser, not by the engine</small>"]
+  FWD["FX outright forwards<br/><small>spot × DF_ccy / DF_USD</small><br/><small>the only output derived in the browser</small>"]
   XC -- "EUR leg" --> FWD
   AXC -- "AUD leg" --> FWD
   SOFR -- "USD leg" --> FWD

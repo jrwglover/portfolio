@@ -87,19 +87,19 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
           </div>
           <div className="max-w-4xl text-sm leading-relaxed space-y-4" style={{ color: 'var(--text-secondary)' }}>
             <p>
-              The purpose of this project was to find the fastest way to load
-              trades from trade capture into the risk database. The end-of-day
-              load took a long time for a book of this size. The trades
-              themselves are structured, with long schedules. Each one carries
-              per-period detail, and some carry optional exercise dates.
+              I wanted the fastest way to load trades from trade capture into the
+              risk database, because the end-of-day load took a long time for a
+              book of this size. The trades themselves are structured, with long
+              schedules, per-period detail on every one and optional exercise
+              dates on some.
             </p>
             <p>
               The time went on the file format. The old export wrote one row per
-              period and one row per exercise date, repeating the whole trade
-              header every time. A 25,000-trade book became a million-row file,
-              and a faster network would not have fixed that. The feed needed a
-              format that stores each header once, and enough parallel
-              connections at the far end to write the rows.
+              period and one per exercise date, repeating the whole trade header
+              each time, so a 25,000-trade book became a million-row file that a
+              faster network would not have fixed. The feed needed a format that
+              stores each header once, plus enough parallel connections at the far
+              end to write the rows.
             </p>
           </div>
         </div>
@@ -109,11 +109,11 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
         <div>
           <div className="grid md:grid-cols-3 gap-4 mb-8">
             <Stage n="01 · PICK UP" title="Typed parallel ingest"
-              body="Spark reads the flat pipe-delimited export with an explicit schema, so there is no inference pass over the file. Malformed rows are quarantined for review rather than dropped." />
+              body="Spark reads the flat pipe-delimited export with an explicit schema, so there is no inference pass over the file. Malformed rows are held in quarantine for review and never dropped." />
             <Stage n="02 · PREPARE" title="Re-nest + pricing-readiness gate"
               body="Trades are re-nested to one record each, with period and exercise schedules held as array<struct> columns and the header stored once. A readiness gate quarantines any trade that is missing a field the pricing step requires." />
             <Stage n="03 · WRITE" title="Parallel batched MSSQL load"
-              body="Parent/child tables (trades, periods, exercises) over 8 parallel JDBC connections with 10k-row batches. Delta days stage into a MERGE by trade id and version. Counts and notional totals reconcile after every load, and id-hashes catch any row changed in flight." />
+              body="Parent/child tables (trades, periods, exercises) load over 8 parallel JDBC connections in 10k-row batches, and delta days stage into a MERGE by trade id and version. Counts and notional totals reconcile after every load, with id-hashes to catch any row changed in flight." />
           </div>
           <pre className="rounded p-4 font-mono text-[11px] overflow-x-auto"
             style={{ background: '#0d0d14', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
@@ -142,10 +142,10 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
               Moving the file at the production rate
             </h3>
             <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
-              The transfer leg was measured by copying both payloads through a
+              I measured the transfer leg by copying both payloads through a
               token-bucket throttle set to the 0.19 MB/s production rate. The 255 MB
-              legacy file moved as a single stream in 22.4 minutes. The 16 MB
-              partitioned Parquet moved over 8 parallel streams in 10.6 seconds.
+              legacy file took 22.4 minutes as a single stream, and the 16 MB
+              partitioned Parquet took 10.6 seconds over 8 parallel streams.
             </p>
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={XFER} layout="vertical" margin={{ left: 10, right: 60 }}>
@@ -165,8 +165,8 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
             <p className="text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
               Adding the measured transfer and file-to-database legs puts the whole
               hand-off at 30.6 minutes on the legacy path and 33.5 seconds on the bridge.
-              Those totals are derived by summing legs measured separately; the
-              hand-off was not timed as one run.
+              I didn&apos;t time the hand-off as one run, so those two totals are sums
+              of legs measured separately.
             </p>
           </div>
 

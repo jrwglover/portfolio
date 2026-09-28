@@ -7,7 +7,7 @@ const TARGETS = [
   {
     n: '02',
     goal: 'Speed up a slow trade feed',
-    how: 'the end-of-day feed from trade capture to risk, rebuilt in Spark, with the file-to-database load measured 21.5× faster',
+    how: 'the end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark, with the file-to-database load measured 21.5× faster',
   },
   {
     n: '03',
@@ -35,21 +35,21 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            I&apos;ve spent about twelve years in markets technology: front-office quant work,
-            quant risk, and product ownership of a pricing engine. Most of it comes back to
-            the same two questions. Is the number right, and does it stay right once it has
-            moved between systems.
+            I&apos;ve spent about twelve years in markets technology, across front-office
+            quant work, quant risk and product ownership of a pricing engine. Most of that
+            work comes back to whether a number is right, and whether it stays right once
+            it has moved between systems.
           </p>
 
           <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            Outside work I swim and spend time with my dog Charlie. I write code because I
-            enjoy it. That&apos;s how this site started.
+            Outside work I swim and spend time with my dog Charlie. I also write code for
+            the fun of it, and that&apos;s how this site started.
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Below are three systems I built. They run, the curves use real market
-            conventions, and every benchmark was timed on this machine. Where something
-            is wrong or half finished, the page says so.
+            Below are three working systems I built. The curves follow real market
+            conventions, and I timed every benchmark on this machine. Where something
+            is still wrong or unfinished, I say so on the page.
           </p>
 
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
@@ -70,7 +70,7 @@ export default function Hero() {
           </ul>
 
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-            Nothing on this site is quoted that the systems did not produce.
+            Every result quoted on the site was produced by these systems.
           </p>
 
           <div className="flex gap-3 mt-9">

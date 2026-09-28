@@ -41,9 +41,9 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
     <div className="space-y-8">
       {/* ================= IPV ================= */}
       {panel === 'ipv' && <Group title="Independent price verification"
-        note="The engine's marks held against prices it did not produce, and against its own second route.">
+        note="The engine's marks are checked against outside prices and against its own second route.">
         <PanelCard title="Consensus IPV"
-          intro="The marks checked against a consensus service in the Totem style: a monthly run over the quoted instrument universe, each quote carrying a consensus mid, contributor count, dispersion and a half bid-offer read off the consensus range. The consensus set is generated off the fitted curves with dispersion by instrument type and maturity, because real consensus data cannot ship with this site.">
+          intro="The marks are checked against a Totem-style consensus service, a monthly run over the quoted instrument universe in which each quote carries a consensus mid, contributor count, dispersion and a half bid-offer read off the consensus range. Real consensus data can't ship with this site, so the consensus set is generated off the fitted curves with dispersion by instrument type and maturity.">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-3 font-mono text-[11px]">
             {([
               ['Quotes checked', String(s.quotes), 'every quoted instrument the book prices on'],
@@ -106,9 +106,10 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
             </table>
           </div>
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
-            The ten widest of the {s.quotes} checks, marks and mids in basis points of
-            each quote's own units. The tolerance is expressed in units of the
-            consensus half bid-offer: inside 0.5x verifies, past 1x is flagged.
+            These are the ten widest of the {s.quotes} checks, with marks and mids in
+            basis points of each quote&apos;s own units. The tolerance is set in units
+            of the consensus half bid-offer, so a mark inside 0.5x verifies and one
+            past 1x is flagged.
           </p>
 
           <div className="text-[10px] uppercase mt-4 mb-2" style={dimText}>
@@ -139,19 +140,19 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
             The first lane prices the whole book two independent ways, trade by trade
             against the collapsed aggregation, and agrees to under a cent on a{' '}
             {millions(rv.meta.baseNpv)} book. The construction rows reprice the book
-            with an alternative build of the same market as the discount source; that
-            spread feeds the model-risk AVA below. The AUD row is zero because nothing
-            prices on the AUD curves.
+            with an alternative build of the same market as the discount source, and
+            that spread feeds the model-risk AVA below. The AUD row is zero because
+            nothing prices on the AUD curves.
           </p>
         </PanelCard>
       </Group>}
 
       {/* ================= EXIT COSTS AND PRUDENT VALUATION ================= */}
       {panel === 'exit' && <Group title="Exit costs and prudent valuation"
-        note="Two readings of the same consensus data: what leaving the book would cost, and what the regulation deducts for the uncertainty of staying.">
+        note="The same consensus data read two ways, as what leaving the book would cost and as what the regulation deducts for the uncertainty of staying.">
         <div className="grid lg:grid-cols-[2fr_3fr] gap-4 items-start">
           <PanelCard title="Close-out cost"
-            intro="The cost of exiting at bid or offer instead of mid: the consensus half bid-offer per quote times the book's absolute market PV01 on that quote, summed. The spread input is the generated consensus set above; the PV01 ladder is the engine's own market-quote run on the final set.">
+            intro="Exiting at bid or offer costs the consensus half bid-offer per quote times the book's absolute market PV01 on that quote, summed over quotes. The spread input is the generated consensus set above, and the PV01 ladder is the engine's own market-quote run on the final set.">
             <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
               <table className="w-full font-mono text-[11px]">
                 <thead>
@@ -183,14 +184,14 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
               </table>
             </div>
             <p className="text-sm mt-2" style={dimText}>
-              The MPU column is the same arithmetic at the 90% confidence width of
-              the consensus dispersion instead of the half bid-offer; both feed the
-              prudent valuation table beside this one.
+              The MPU column runs the same arithmetic on the 90% confidence width of
+              the consensus dispersion. Both columns feed the prudent valuation table
+              beside this one.
             </p>
           </PanelCard>
 
           <PanelCard title="Prudent valuation, AVA"
-            intro="Additional valuation adjustments in the EBA core approach, Commission Delegated Regulation (EU) 2016/101: nine categories at 90% confidence. Three are computed from this system's own data; the rest are listed with the reason they are not, so the table reads whole rather than cherry-picked.">
+            intro="Additional valuation adjustments in the EBA core approach under Commission Delegated Regulation (EU) 2016/101 cover nine categories at 90% confidence. Three are computed from this system's own data, and the other six are listed with the reason they are not.">
             <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
               <table className="w-full font-mono text-[10.5px]">
                 <thead>
@@ -232,10 +233,10 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
             </div>
             <p className="text-sm mt-2" style={dimText}>
               Hover a row for its basis. Market price uncertainty reads the consensus
-              dispersion, close-out costs the consensus half bid-offer, model risk
-              the spread between the live meeting-dated EUR discount construction and
-              its alternatives; each is aggregated at the 50% weighting of the RTS.
-              The consensus inputs are generated and say so above.
+              dispersion and close-out costs the consensus half bid-offer, while model
+              risk reads the spread between the live meeting-dated EUR discount
+              construction and its alternatives. Each is aggregated at the 50%
+              weighting of the RTS, and the consensus inputs are generated.
             </p>
           </PanelCard>
         </div>
@@ -243,9 +244,9 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
 
       {/* ================= MODEL GOVERNANCE ================= */}
       {panel === 'inventory' && <Group title="Model governance"
-        note="What is on the books methodologically, and what checks stand behind it.">
+        note="Which models are in use, and the checks behind each one.">
         <PanelCard title="Model inventory"
-          intro="Every curve in the registry, its construction derived from the spec and the instruments actually quoted on it, and the verification checks the engine ran against the final set with their measured values. Nothing in this table is hand-typed where the registry can derive it.">
+          intro="Each curve in the registry is listed with its construction, derived from the spec and the instruments actually quoted on it, and with the verification checks the engine ran against the final set. Where the registry can derive a field, the table takes it from there.">
           <div className="space-y-2">
             {rv.inventory.map(e => (
               <div key={e.id} className="rounded px-3 py-2.5" style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}>
@@ -287,12 +288,11 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
             ))}
           </div>
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
-            Hover a check for its unit and note. Checks marked not run are honest
-            gaps: the comparison and AUD curves carry no positions, so there is no
-            ladder to reconcile and no reason to bump their quotes. A FLAG is a
-            measurement, not an apology: the BBSW 3M table gap is where the staged
-            basis solve and the published spline disagree most, and it is printed
-            rather than hidden.
+            Hover a check for its unit and note. Checks marked not run are on the
+            comparison and AUD curves, which carry no positions, so there is no
+            ladder to reconcile and no reason to bump their quotes. The BBSW 3M FLAG
+            marks the table gap where the staged basis solve and the published
+            spline disagree most.
           </p>
         </PanelCard>
       </Group>}

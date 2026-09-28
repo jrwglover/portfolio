@@ -122,19 +122,17 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             Trading session replay
           </h3>
           <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            A recording of the engine, played back. The book comes to{' '}
-            {tl.trades.toLocaleString()} trades at the open; each currency discounts on
-            one meeting-dated curve, with projection and cross currency curves built on
-            those. The AUD curves are published on every set with nothing priced on them.
-          </p>
-          <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            When a price arrives, the curves built on it are re-solved and everything
-            below recalculates. Trades arrive during the session too, pending until
-            confirmed; the blotter toggle puts pending tickets into the totals.
+            I recorded a trading session on the engine so it can be replayed here. It starts
+            with a book of {tl.trades.toLocaleString()} trades, and whenever a price arrives
+            the engine re-solves just the curves that depend on it before repricing
+            everything downstream.
           </p>
           <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            The performance behind real-time VaR and PV01 comes from collapsing the
-            book&apos;s cashflow schedules to curve-level coefficients. The{' '}
+            Each currency discounts on one meeting-dated curve, with the projection and
+            cross currency curves built on those. The AUD curves are published on every
+            set, although nothing in the book prices on them. VaR and PV01 keep up in real
+            time because the book&apos;s cashflow schedules are collapsed to curve-level
+            coefficients, and the{' '}
             <Link to="/learn/curve-data-model#collapse" style={{ color: 'var(--accent-warm)' }}>
               collapse analysis
             </Link>{' '}
@@ -162,14 +160,14 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
       {tab === 'why' && (
         <div className="max-w-4xl">
           <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-            Why not just recalculate everything on a timer
+            Why rebuild on events
           </h3>
           <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
-            Most curve systems rebuild everything on a timer. Set the interval long and
-            a trader can be looking at a stale curve while the market moves; set it
-            short and all fourteen curves rebuild whether or not anything happened.
-            Rebuilding on the event removes that choice. The hard part is that the
-            curves are built on each other.
+            Many curve systems rebuild everything on a timer. With a long interval a
+            trader can be looking at a stale curve while the market moves, and with a
+            short one all fourteen curves rebuild whether or not anything happened.
+            Rebuilding when a price changes avoids having to choose. What makes it hard
+            is that the curves are built on each other.
           </p>
 
           <div className="rounded p-4 my-4 font-mono text-[11px]" style={{
@@ -190,10 +188,10 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
             If SOFR and ESTR prices arrive together and each triggers its own rebuild,
-            the cross currency curve builds twice, the first time against an ESTR
-            curve about to be replaced, a market state that never existed. So the work
-            is collected first: everything affected, ordered by dependency, built once,
-            published as one set.
+            the cross currency curve builds twice, the first time against an ESTR curve
+            that is about to be replaced, a market state that never existed. So the
+            engine collects the work first and orders everything affected by
+            dependency, then builds each curve once and publishes one set.
           </p>
         </div>
       )}
@@ -204,8 +202,9 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             What one price forces to rebuild
           </h3>
           <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            Pick a curve to see what a change to it forces. The dependencies come from
-            the same registry the batch engine reads, so the two cannot drift apart.
+            Pick a curve to see what a change to it forces to rebuild. The dependencies
+            come from the same registry the batch engine reads, so the two can&apos;t
+            drift apart.
           </p>
 
           <div className="flex gap-2 mb-4 font-mono text-[11px] flex-wrap">
@@ -257,8 +256,8 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
           </h3>
           <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             {tab === 'engine'
-              ? 'A replayed stream of price changes, with repeats and out-of-order arrivals. A solver fails and the last good curve is served; a burst of 120 prices collapses into one rebuild while two readers check nothing is half updated.'
-              : 'The same engine from the desk side. It shows position values and risk per curve bucket, and what a sell off in ESTR does to each. Profit and loss is split between market moves and carry. A hypothetical trade is priced without disturbing anything published.'}
+              ? 'The engine is fed a replayed stream of price changes with repeats and out-of-order arrivals. One solver fails and the last good curve is served, and a burst of 120 prices collapses into one rebuild while two readers check that nothing is half updated.'
+              : 'The same engine from the desk side shows position values and risk per curve bucket and what an ESTR sell off does to each. It splits profit and loss into market moves and carry, and prices a hypothetical trade without disturbing anything published.'}
           </p>
           <pre className="rounded p-4 overflow-x-auto font-mono"
             style={{
@@ -268,10 +267,9 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             {tab === 'engine' ? demo.engineDemo : demo.traderDemo}
           </pre>
           <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            This is the program&apos;s own output, not a recording. The curve solver
-            and the pricing kernel are stubbed behind the same interfaces the
-            batch engine implements, so the timings here measure the plumbing
-            alone.
+            The listing above is the demo program&apos;s own output. Its curve solver
+            and pricing kernel are stubbed behind the same interfaces the batch
+            engine implements, so these timings measure the plumbing alone.
           </p>
         </div>
       )}

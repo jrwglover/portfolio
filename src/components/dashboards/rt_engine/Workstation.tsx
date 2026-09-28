@@ -669,7 +669,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             f.varRt ? 'full reval, 250 scenarios' : 'not in this recording'],
           ['Market PV01', f.mkt ? ms(f.mktUs) : '-',
             f.mkt ? mktTotals.quotes + ' quotes bumped, ' + f.mktRebuilds + ' curve solves'
-              : 'not run, a curve is stale']]
+              : 'not run while a curve is stale']]
         ).map(([k, v, note]) => (
           <div key={k} className="rounded px-3 py-2" style={{ border: '1px solid var(--border-subtle)' }}>
             <div className="text-[10px] uppercase" style={{ color: 'var(--text-dim)' }}>{k}</div>
@@ -679,10 +679,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         ))}
       </div>
       <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-        VaR runs on every published set: a full revaluation of the book under the
-        250 most recent days of the generated scenario history, through the
-        collapsed book, wall clock measured per set including the rebind to the
-        new curves.
+        VaR runs on every published set as a full revaluation of the collapsed book
+        under the 250 most recent days of the generated scenario history. Its wall
+        clock is measured per set and includes rebinding to the new curves.
       </p>
 
       <div className="rounded px-4 py-3 mb-4" style={{ border: '1px solid #d4a85355', background: '#d4a8530a' }}>
@@ -811,9 +810,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             </table>
           </div>
           <p className="text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
-            On this move is against the previous published set. Since open is against the
-            first one, which is the mark the session starts from.
-            {withPending && ' Pending tickets are in these totals, because the blotter toggle below is on.'}
+            On this move compares each book with the previous published set. Since open
+            compares it with the first set, the mark the session starts from.
+            {withPending && ' Pending tickets are in these totals because the blotter toggle below is on.'}
             {f.books.some(b => b.degraded) && ' A book marked * holds trades priced on a curve that failed to rebuild and is serving its last good version.'}
           </p>
 
@@ -853,9 +852,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </div>
           {detail && (
             <p className="text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
-              These eight are from the book the desk opened with. The trades dealt
-              during the session arrive on the blotter further down. Pick a row in
-              either to put its own ladder on screen, below.
+              These eight come from the book the desk opened with, and trades dealt
+              during the session land on the blotter further down. Click a row in
+              either table to bring up its own ladder below.
             </p>
           )}
         </div>
@@ -867,9 +866,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         {!bl ? (
           <div className="rounded px-4 py-4" style={{ border: '1px dashed var(--border-subtle)' }}>
             <p className="text-sm max-w-2xl" style={{ color: 'var(--text-dim)' }}>
-              Not evaluated on this set. Limits key off the market PV01 ladder and
-              nothing else, and that run was skipped while a curve is served
-              stale; the last evaluated state stands, and a crossing lands on the
+              Limits weren&apos;t evaluated on this set. They key off the market PV01
+              ladder alone, and that run is skipped while a curve is served stale,
+              so the last evaluated state stands and any crossing shows up on the
               next set that measures.
             </p>
           </div>
@@ -954,12 +953,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               </div>
             </div>
             <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-              Limits are set and monitored in the quote space the desk deals in:
-              a curve's net figure is the sum of its market PV01 ladder and the
-              bucket caps sit on that same ladder. Levels are illustrative
-              calibration; utilization is measured on every evaluated set. Click
-              a curve for its bucket ladder; the mark past the end of each bar
-              is 100%.
+              Limits are set and monitored in the quote space the desk deals in.
+              A curve&apos;s net figure is the sum of its market PV01 ladder, and the
+              bucket caps sit on that same ladder. The levels are illustrative, but
+              utilization is measured on every evaluated set. The
+              mark past the end of each bar is 100%, and clicking a curve opens its
+              bucket ladder.
               {limitBreaches.length > 0 && <>
                 {' '}<span style={{ color: '#c86e6e' }}>
                   {limitBreaches.map(b => b.key === 'TOTAL' ? 'Desk total' : (LABEL[b.key] ?? b.key)).join(' and ')}{' '}
@@ -975,9 +974,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       <div className="mt-6">
         <div className="text-[10px] uppercase mb-2" style={{ color: 'var(--text-dim)' }}>Risk</div>
         <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-          Three ladders, all run on every published set. Market PV01 buckets by quoted
-          instrument, the ones a desk deals. Zero and forward PV01 bucket by curve
-          node and interval.
+          All three ladders run on every published set. Market PV01 buckets by the
+          quoted instruments a desk deals, while Zero PV01 and Forward PV01 bucket by
+          curve node and by interval.
         </p>
         <div className="flex gap-1.5 mb-2 flex-wrap font-mono text-[10px] items-center">
           {([['mkt', 'Market PV01'], ['zero', 'Zero PV01'],
@@ -996,9 +995,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
               Market PV01 was not run on set {epochAt(i)}.{' '}
               {LABEL[f.mktStale ?? ''] ?? f.mktStale} is being served stale, so the
-              published curve is not the solve of the quotes behind it, and a bump
-              would measure the gap between two market states. The other{' '}
-              {tl.frames.filter(x => x.mkt).length} sets carry this ladder.
+              published curve no longer solves the quotes behind it, and a bump would
+              only measure the gap between two market states. This ladder is on the
+              other {tl.frames.filter(x => x.mkt).length} sets.
             </p>
           </div>
         ) : (
@@ -1114,28 +1113,27 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             )}
             <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
               {riskMode === 'mkt' ? <>
-                Each bar is one quoted instrument of {LABEL[curveOn] ?? curveOn}: the
-                quote moves a basis point, the curves re-solve in dependency order, the
-                book reprices. The totals above sit side by side because a basis point
-                on every quote and on every forward interval are two routes to the same
-                move.
+                For {LABEL[curveOn] ?? curveOn}, each bar is one quoted instrument. Its
+                quote moves a basis point, the curves re-solve in dependency order and
+                the book is repriced. The totals above sit side by side because a basis
+                point on every quote and on every forward interval are two routes to the
+                same move.
                 {f.bl && <>
-                  {' '}The dashed envelope is the bucket cap, drawn at plus and minus
-                  its level because the cap is absolute and the ladder is signed:
-                  illustrative levels, measured utilization, a bar past its cap turns
-                  red. On a set where the market run is skipped the envelope goes with
-                  the rest of the ladder.
+                  {' '}The dashed envelope is the bucket cap, drawn at plus and minus its
+                  level because the cap is absolute and the ladder signed, and a bar past
+                  its cap turns red. On a set where the market run is skipped, the
+                  envelope goes with the ladder.
                 </>}
               </> : <>
-                What the book gains or loses for one basis point at each{' '}
+                Each bar is what the book gains or loses for one basis point at a single{' '}
                 {riskMode === 'zero' ? 'node' : 'interval'} of{' '}
-                {LABEL[curveOn] ?? curveOn}, applied as an overlay on the published
-                curve: the bump moves one bucket and leaves the rest alone.
+                {LABEL[curveOn] ?? curveOn}. The bump is an overlay on the published
+                curve, so it moves that bucket and leaves the rest alone.
               </>}
             </p>
             <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-              The blotter toggle below adds pending tickets to the desk totals and
-              every ladder together.
+              The blotter toggle below adds pending tickets to the desk totals and to
+              every ladder at once.
             </p>
           </>
         )}
@@ -1189,11 +1187,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           </ResponsiveContainer>
         </div>
         <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-          The engine evaluates each published curve itself; nothing on screen is
-          derived in the browser. Two shapes are real, not artifacts: the EURIBOR 6M
-          bump between 13 and 16 months sits where its quote spacing changes, and the
-          ~25bp drop in the EUR/USD instantaneous forward across year end is the
-          year-end turn.
+          Every point plotted here was evaluated by the engine from the published
+          curve. Two shapes that look like artifacts are real. The EURIBOR 6M bump between 13 and
+          16 months sits where its quote spacing changes, and the ~25bp drop in the
+          EUR/USD instantaneous forward across year end is the year-end turn.
         </p>
       </div>
 
@@ -1209,31 +1206,31 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             <p>
               The desk opened with {tl.trades.toLocaleString()} trades and{' '}
               {tl.cashflows.toLocaleString()} cashflow rows, and that book is already
-              here. It came over as nested Parquet on {BRIDGE_CONNECTIONS} parallel
-              connections, one record a trade with its schedule held as an array
-              underneath it. The trade bridge on this site measured{' '}
-              {BRIDGE_RPS.toLocaleString()} rows a second writing that shape, which puts
-              this book at about {Math.round((tl.trades + tl.cashflows) / BRIDGE_RPS)}{' '}
+              loaded. It came over as nested Parquet on {BRIDGE_CONNECTIONS} parallel
+              connections, one record per trade with its schedule held as an array
+              underneath. The trade bridge on this site measured{' '}
+              {BRIDGE_RPS.toLocaleString()} rows a second writing that shape, so the
+              whole book takes about {Math.round((tl.trades + tl.cashflows) / BRIDGE_RPS)}{' '}
               seconds.
             </p>
             <p>
-              Trades arrive during the session the way prices do. The tickets dealt on
-              a set come across with it and land here.{' '}
+              Trades arrive during the session the same way prices do, and the tickets
+              dealt on a set come across with it and land here.{' '}
               {arrivals[i].length > 0 && <>
                 {f.published ? `Set ${f.epoch}` : `The cycle after set ${epochAt(i)}`}{' '}
-                carries {arrivals[i].length}, which is{' '}
+                carries {arrivals[i].length} of them,{' '}
                 {arrivals[i].reduce((s, k) => s + (feedDefs[k].rows ?? 0), 0)
-                  .toLocaleString()} rows.{' '}
+                  .toLocaleString()} rows in all.{' '}
               </>}
               The same bridge staged and merged a{' '}
               {DELTA_TRADES.toLocaleString()}-trade delta in {DELTA_SECS} seconds, so
               an arrival this size costs a round trip.
             </p>
             <p>
-              A ticket stays on the blotter once it has arrived, and its status moves
-              as later sets come in: pending until the confirmation comes back, then
-              executed or pulled. An executed ticket is in the totals and the ladders
-              above; a cancelled one never enters them.
+              A ticket stays on the blotter once it has arrived. It shows as pending
+              until the confirmation comes back on a later set, then as executed or
+              pulled. Executed tickets count in the totals and ladders above, while a
+              cancelled one never enters them.
             </p>
           </div>
 
@@ -1360,11 +1357,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                     The ticket came in on {posDef.venue} against set{' '}
                     {epochAt(posDef.arrive)}
                     {posDef.outcome === EXECUTED
-                      ? <>, and the confirmation came back on set{' '}
-                          {epochAt(posDef.resolve)}. It has been in the book
-                          since then.</>
-                      : <>. It is still open, so it stays out of the totals above until
-                          the blotter toggle is on.</>}
+                      ? <> and has been in the book since the confirmation came back
+                          on set {epochAt(posDef.resolve)}.</>
+                      : <> and is still open, so it stays out of the totals above
+                          until the blotter toggle is on.</>}
                   </>
                 : position.note}
             </div>
@@ -1395,7 +1391,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             <div className="rounded px-4 py-6 text-center"
               style={{ border: '1px dashed var(--border-subtle)' }}>
               <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                Nothing built on this domain for this position.
+                Nothing was built in this domain for this position.
               </p>
             </div>
           ) : (
@@ -1439,46 +1435,47 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             {posDomain === 'mkt' ? (
               <>
-                One bar per quoted instrument on {LABEL[curveShown] ?? curveShown}. The
-                quote is moved a basis point, the curve and everything built on it are
-                solved again, and this position is repriced against the result. The
-                buckets are denominated in the instruments a hedge is executed in.
+                For {LABEL[curveShown] ?? curveShown}, each bar is one quoted
+                instrument. Its quote moves a basis point, the curve and everything built
+                on it are solved again, and this position is repriced against the
+                result. That puts the buckets in the instruments a hedge would be
+                executed in.
               </>
             ) : posDomain === 'zero' ? (
               <>
-                One bar per node of {LABEL[curveShown] ?? curveShown}. The published
-                curve is lifted a basis point around one node, tapering away to its
-                neighbours, and this position is repriced. The curve is overlaid, with
-                no bootstrap anywhere in the loop, so the bump moves the node asked for
+                For {LABEL[curveShown] ?? curveShown}, each bar is one node. The
+                published curve is lifted a basis point around that node, tapering away
+                to its neighbours, and the position is repriced. Because the bump is an
+                overlay with no bootstrap in the loop, it moves only the node asked for
                 and leaves the rest of the curve where it was.
               </>
             ) : (
               <>
-                One bar per interval of {LABEL[curveShown] ?? curveShown}. The forward
-                rate is lifted a basis point flat across the interval and this position
-                is repriced. The bump is the same overlay in a different shape, and it
-                localises the move to the period the cashflows accrue over.
+                For {LABEL[curveShown] ?? curveShown}, each bar is one interval. The
+                forward rate is lifted a basis point flat across it and the position is
+                repriced. It&apos;s the same overlay in a different shape, and it puts
+                the move on the period the cashflows accrue over.
               </>
             )}
           </p>
 
           <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            Zero and forward overlays cost {ms(detail.ladderUs)} for the{' '}
+            The zero and forward overlays cost {ms(detail.ladderUs)} for the{' '}
             {detail.positions.length} positions here. The market run re-solves the
-            curve per quote ({detail.mktRebuilds.toLocaleString()} solves,{' '}
-            {ms(detail.mktUs)}), however many positions are watched. The curve list is
-            wider in the market domain because a bump reaches through the bootstrap: an
-            FX forward carries a ladder on the ESTR curve it never reads directly.
+            curve for every quote ({detail.mktRebuilds.toLocaleString()} solves,{' '}
+            {ms(detail.mktUs)}) however many positions are watched, and its curve list
+            is longer because a bump reaches through the bootstrap. An FX forward, for
+            example, carries a ladder on the ESTR curve it never reads directly.
           </p>
 
           {position.type === 'FX forward' && (
             <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-              The three domains disagree on this one, so it is worth toggling between
-              them. The zero ladder on the cross-currency curve is matched by an equal
-              and opposite one on SOFR, which is why the parallel DV01 above comes out
-              near zero. The market ladder puts the whole position on a single bar, the
-              FX swap at its own maturity, which is the instrument you would hedge it
-              with.
+              The three domains disagree on this trade, so it&apos;s worth toggling
+              between them. Because the zero ladder on the cross-currency curve is
+              matched by an equal and opposite one on SOFR, the parallel DV01 above
+              comes out near zero. The market ladder puts the whole position on one
+              bar, the FX swap at its own maturity, and that swap is what you&apos;d
+              hedge it with.
             </p>
           )}
         </>)}
@@ -1536,8 +1533,8 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             <div className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>waiting for curves</div>
           )}
           <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            A payer swap against the same published curves the books above are using, so
-            the numbers move with the session as it plays. Annual fixed against six month
+            This prices a payer swap on the same published curves as the books above, so
+            the numbers move as the session plays. It pays annual fixed against six month
             floating, projected on EURIBOR and discounted on the meeting-dated ESTR curve.
           </p>
         </div>

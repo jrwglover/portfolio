@@ -71,9 +71,9 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
     <div className="space-y-8">
       {/* ================= LIMITS ================= */}
       {panel === 'limits' && <Group title="Limits"
-        note="What the desk is allowed to run, against what it is running.">
+        note="This compares what the desk is allowed to run with what it is running.">
         <PanelCard title="PV01 limits"
-          intro="Net market PV01 per curve on each evaluated set, the sum of that curve's market PV01 ladder, against a desk limit structure configured in the engine. Limits are set and monitored in the quote space the desk deals in; a set whose market run was skipped is not evaluated. The limit levels are illustrative calibration; the utilization under them is measured.">
+          intro="Each bar is a curve's net market PV01 on the chosen set, the sum of its market PV01 ladder, against a desk limit structure configured in the engine. Limits live in the quote space the desk deals in, so a set whose market run was skipped isn't evaluated. The levels are illustrative, but the utilization under them is measured.">
           <div className="flex gap-1.5 mb-3 flex-wrap font-mono text-[10px]">
             {rv.limits.frames.map((f, k) => (
               <button key={k} onClick={() => setFrameIdx(k)}
@@ -110,7 +110,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
           </div>
           <p className="text-sm max-w-4xl" style={dimText}>
             {breaches.length
-              ? `${breaches.map(b => LABEL[b.key] ?? b.key).join(' and ')} ${breaches.length === 1 ? 'is' : 'are'} over the line on this set: the book runs a structural short in EUR discount DV01 against a limit set below it, and the ESTR sell-off pushes it further. The mark past the end of each bar is 100%.`
+              ? `${breaches.map(b => LABEL[b.key] ?? b.key).join(' and ')} ${breaches.length === 1 ? 'is' : 'are'} over the line on this set. The book runs a structural short in EUR discount DV01 against a limit set below it, and the ESTR sell-off pushes it further. The mark past the end of each bar is 100%.`
               : 'Every line is inside its limit on this set. The mark past the end of each bar is 100%.'}
           </p>
         </PanelCard>
@@ -118,16 +118,17 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
 
       {/* ================= VALUE AT RISK ================= */}
       {panel === 'var' && <Group title="Value at Risk"
-        note="Full revaluation through the collapsed book: the measure and its stressed counterpart.">
+        note="Ordinary and stressed VaR both fully revalue the collapsed book.">
         <PanelCard title="Portfolio VaR, full revaluation"
           intro={<>
-            Historical-simulation VaR in the CRR Art. 365 shape, fully revaluing the
-            whole book under a dated business-day history of curve moves, {v.from} to{' '}
-            {v.to}. The history is generated (factor model, correlated across curves
-            and tenors, Student-t tails) with volatility regimes calibrated to the
-            actual stress chronology: 2008-09 at 3.5x with fatter tails, March 2020
-            at 2.5x, the 2022-23 hiking cycle at 1.8x; real market history cannot
-            ship with this site. The revaluation under it is real and measured.
+            Historical-simulation VaR in the CRR Art. 365 shape fully revalues the
+            whole book under a dated business-day history of curve moves from{' '}
+            {v.from} to{' '}
+            {v.to}. Real market history can&apos;t ship with this site, so the history
+            is generated from a factor model correlated across curves and tenors with
+            Student-t tails, its volatility regimes calibrated to the actual stress
+            chronology (2008-09 at 3.5x with fatter tails, March 2020 at 2.5x, the
+            2022-23 hiking cycle at 1.8x). The revaluation under it is measured.
           </>}>
 
           {/* strictly matched horizons: one row, one horizon */}
@@ -156,17 +157,17 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
             </table>
           </div>
           <p className="text-sm mb-3 max-w-4xl" style={dimText}>
-            Each measure uses exactly {v.window} scenarios. Ordinary VaR: the{' '}
-            {v.window} most recent days, {v.trailing.from} to {v.trailing.to}{' '}
-            (1-day 95% {millions(v.var95)}). Stressed VaR: the worst continuous{' '}
+            Each measure uses exactly {v.window} scenarios, with ordinary VaR taking
+            the {v.window} most recent days, {v.trailing.from} to {v.trailing.to}{' '}
+            (1-day 95% {millions(v.var95)}). Stressed VaR takes the worst continuous{' '}
             {v.window}-day window for this portfolio, <span style={{ color: 'var(--text-secondary)' }}>
             {v.stressed.start} to {v.stressed.end}</span>, identified per Art.
             365(2) as the continuous period of significant stress relevant to the
-            portfolio; it lands on the 2008-09 crisis and runs{' '}
-            {v.svarRatio.toFixed(1)}x ordinary VaR. The 10-day row is the 1-day row
-            at sqrt-of-10, the internal-models convention. Same estimator both
-            sides: linear interpolation between order statistics on the window's
-            own 250 P&Ls.
+            portfolio. It lands on the 2008-09 crisis and runs{' '}
+            {v.svarRatio.toFixed(1)}x ordinary VaR. The 10-day row scales the 1-day
+            row by sqrt-of-10, the internal-models convention, and both sides use the
+            same estimator, linear interpolation between order statistics on the
+            window&apos;s own 250 P&Ls.
           </p>
 
           <div className="rounded px-3 py-2 mb-3 font-mono text-[11px]"
@@ -176,8 +177,8 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
             <span style={dimText}>
               {' '}&middot; {Math.round(v.timing.perScenarioUs)} µs a scenario through{' '}
               {rv.meta.terms.toLocaleString()} collapsed terms &middot; the whole
-              history runs so the window search and backtest can; trade by trade the
-              same fan-out measures {ms(v.timing.tradeLevelPerScenarioUs)} a
+              history is run for the window search and the backtest &middot; trade by
+              trade the same fan-out measures {ms(v.timing.tradeLevelPerScenarioUs)} a
               scenario, {ms(v.timing.equivalentTradeLevelMs * 1000)} for the set
             </span>
           </div>
@@ -231,11 +232,11 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
             </div>
           </div>
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
-            Amber bands are the generated history's calibrated stress regimes
+            Amber bands mark the generated history&apos;s calibrated stress regimes
             ({v.regimes.map(r => `${r.name} ${r.volMult}x`).join(', ')}), darker
-            where the multiple is higher. The dashed box is the identified stressed
-            period, {v.stressed.start} to {v.stressed.end}. The full history exists
-            to search for that window and to run the backtest; neither VaR figure is
+            where the multiple is higher, and the dashed box is the identified
+            stressed period, {v.stressed.start} to {v.stressed.end}. The full history
+            is there to find that window and run the backtest. Neither VaR figure is
             computed over it.
           </p>
 
@@ -249,9 +250,9 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
                 &middot; <span style={{ color: zoneColour }}>{v.backtest.zone} zone</span>
               </div>
               <div className="text-[10px] mt-1" style={dimText}>
-                Basel traffic light on the last 250 tested days: green to 4, amber 5
-                to 9, red from 10. Exceptions cluster where a regime starts and the
-                rolling window has not seen it yet.
+                The Basel traffic light uses the last 250 tested days, green up to 4
+                exceptions, amber 5 to 9 and red from 10. Exceptions cluster where a
+                regime starts, before the rolling window has seen it.
               </div>
             </div>
             <div className="rounded px-3 py-2 font-mono text-[11px]" style={{ border: '1px solid var(--border-subtle)' }}>
@@ -266,9 +267,9 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
                 </span>
               </div>
               <div className="text-[10px] mt-1" style={dimText}>
-                Sampled: {v.recon.map(r => r.date).join(', ')}. The worst loss, the
-                best gain, the median, one stressed day, the last. Same P&L both
-                routes, to fractions of a cent on moves of millions.
+                Sampled on {v.recon.map(r => r.date).join(', ')}: the worst loss, the
+                best gain, the median, one stressed day and the last. Both routes give
+                the same P&L to fractions of a cent on moves of millions.
               </div>
             </div>
           </div>
@@ -277,9 +278,9 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
 
       {/* ================= STRESS ================= */}
       {panel === 'stress' && <Group title="Stress scenarios"
-        note="The shocks a committee asks about, through the same collapsed lane.">
+        note="These are the shocks a committee asks about, run through the same collapsed lane.">
         <PanelCard title="Stress scenarios"
-          intro="Named deterministic shocks, revalued through the same collapsed lane, whole book and per book. The shock definitions are stated in each row; nothing else is assumed.">
+          intro="Each named deterministic shock is revalued through the collapsed lane for the whole book and for each book, and its row states the shock in full.">
           <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
             <table className="w-full font-mono text-[11px]">
               <thead>
@@ -310,9 +311,9 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
             </table>
           </div>
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
-            Hover a row for the shock definition. The AUD row is measured at zero
-            because nothing in this book prices on the AUD curves; the shock reaches
-            every curve it names and finds no position there.
+            Hover a row for the shock definition. The AUD row is measured at zero.
+            The shock does reach every curve it names, but nothing in this book prices
+            on the AUD curves.
           </p>
         </PanelCard>
       </Group>}
@@ -322,7 +323,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
         Every figure on this panel was computed by the engine on the closing book
         ({rv.meta.trades.toLocaleString()} trades, {(rv.meta.cashflows / 1e6).toFixed(1)}m
         cashflows collapsed to {rv.meta.terms.toLocaleString()} terms) against set{' '}
-        {rv.meta.epoch}, and exported as JSON. The browser draws it and adds nothing.
+        {rv.meta.epoch} and exported as JSON for the browser to draw.
       </p>
     </div>
   );

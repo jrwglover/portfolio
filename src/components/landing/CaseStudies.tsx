@@ -20,7 +20,7 @@ const CASES: Case[] = [
     how: [
       'Build the curves in the order their dependencies require, from the instruments a rates desk quotes.',
       'Solve every pillar on a curve at once, so each quote is repriced by the same finished curve it helped build.',
-      'Value the book on the GPU from the curve the processor built, not an approximation of it. Then reprice every instrument both ways and compare.',
+      'Value the book on the GPU from the coefficients of the curve the processor built, then reprice every instrument both ways and compare.',
     ],
     results: [
       'GPU marks match QuantLib to 10⁻¹⁴ on all fourteen curves',
@@ -36,7 +36,7 @@ const CASES: Case[] = [
     n: '02',
     title: 'Front-to-Back Trade Feed',
     target:
-      'The end-of-day feed shipped a 25,000-trade book from trade capture to the risk platform as a 255 MB extract, and the load took a long time. Find the fastest way to move it, with no trade lost or altered.',
+      'The end-of-day trade feed shipped a 25,000-trade book from trade capture to the risk platform as a 255 MB extract, and the load took a long time. Find the fastest way to move it without losing or altering a single trade.',
     how: [
       'Find where the time goes. The extract wrote each trade once per schedule period, so 25,000 structured trades became a million rows moving over a 0.19 MB/s link.',
       'Re-normalize in flight with Spark, so each trade holds its own schedule and exercise dates as nested columns. Written as compressed Parquet, the file is 15.9× smaller.',
@@ -56,17 +56,17 @@ const CASES: Case[] = [
     n: '03',
     title: 'Real-time curve engine',
     target:
-      'Rebuild curves when prices arrive, not on a timer, and rebuild no more than the change requires. No trader should ever see a screen where half the numbers are from one moment and half from another.',
+      'Rebuild curves as prices arrive, and only as much as each change requires. No trader should ever see a screen where half the numbers are from one moment and half from another.',
     how: [
       'Derive the dependency graph from the curve registry the batch engine already uses, so the two cannot disagree about which curve is built on which.',
       'On a price change, work out which curves need rebuilding and do them in dependency order, each at most once even when several of its inputs moved together.',
       'Publish each set of curves as one immutable version, so whatever reads it gets a single coherent moment.',
     ],
     results: [
-      'A SONIA change rebuilds SONIA alone; a SOFR change carries into both cross currency curves and the CTD discount curve built on them',
-      '120 prices arriving at once collapse into a single rebuild rather than 120',
+      'A SONIA change rebuilds SONIA alone, while a SOFR change carries into both cross currency curves and the CTD discount curve built on them',
+      '120 prices arriving at once collapse into a single rebuild',
       'Two readers checking continuously while curves rebuilt underneath them found no inconsistent set',
-      'A failed solve keeps the last good curve, marks it stale, and lets the rest carry on',
+      'A failed solve keeps serving the last good curve, marked stale, while the rest carry on',
     ],
     stack: ['C++17', 'Lock-free publication', 'OpenMP', 'Make'],
     link: '/learn/rt-engine',

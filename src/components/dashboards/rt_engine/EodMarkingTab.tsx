@@ -131,26 +131,26 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
         Independent Price Verification
       </h3>
       <p className="text-sm mb-2 max-w-4xl" style={dimText}>
-        Intraday the desk trades on the meeting-dated model. At the close it marks a
-        separate official EOD family: standard-tenor par instruments at each
-        market&apos;s conventions, the shape a Totem-style consensus run quotes, and
-        marks are verified against consensus per Art. 105 CRR.
+        During the day the desk trades on the meeting-dated model. At the close it
+        marks a separate official EOD family of standard-tenor par instruments at each
+        market&apos;s conventions, the shape a Totem-style consensus run quotes, so the
+        marks can be verified against consensus per Art. 105 CRR.
       </p>
       <ul className="text-sm mb-3 max-w-4xl space-y-1 list-disc pl-5" style={dimText}>
         <li>
-          Default levels are the last trading snapshot expressed in EOD conventions:
-          each standard-tenor par rate implied off the trading curves, then the EOD
-          family bootstrapped from them.
+          The default levels restate the last trading snapshot in EOD conventions.
+          Each standard-tenor par rate is implied off the trading curves, and the EOD
+          family is then bootstrapped from those rates.
         </li>
         <li>
-          Edit a mark to override it. Overrides live in this page only and persist
-          nowhere.
+          Edit a mark to override it. Overrides stay in this page and aren&apos;t
+          saved anywhere.
         </li>
         <li>
-          Override P&amp;L is first order: (mark - default) x dNPV/dbp from the
-          engine&apos;s bump-and-resolve Jacobian. Against a full re-solve that is off
-          by at most {money(worstFo)} at 1bp and {(worstFo5Rel * 100).toFixed(2)}% at
-          5bp on the checks in the file.
+          Override P&amp;L is the first-order estimate (mark - default) x dNPV/dbp,
+          using the engine&apos;s bump-and-resolve Jacobian. On the checks in the file
+          it is off from a full re-solve by at most {money(worstFo)} at 1bp and{' '}
+          {(worstFo5Rel * 100).toFixed(2)}% at 5bp.
         </li>
       </ul>
 
@@ -276,21 +276,21 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
         Outrights are par rates in percent, basis rows in basis points. Consensus
         mid, dispersion, half bid-offer (read as 2 SD of the consensus range) and
         contributor count are a GENERATED Totem-style return, seed {em.ipv.seed},
-        because real consensus data cannot ship with a portfolio site. Deviation is
-        (mark - mid) in half bid-offer units; pass under {em.ipv.watch}, watch to{' '}
-        {em.ipv.flag}, flagged beyond, the shape of an EBA prudent-valuation IPV
-        test. dNPV/bp is the engine&apos;s bump-and-resolve Jacobian
+        because real consensus data can&apos;t ship with a portfolio site. Deviation
+        is (mark - mid) in half bid-offer units, and as in an EBA prudent-valuation
+        IPV test a mark passes under {em.ipv.watch}, is on watch up to {em.ipv.flag}{' '}
+        and is flagged beyond. dNPV/bp is the engine&apos;s bump-and-resolve Jacobian
         ({em.jacobian.rebuilds} curve re-solves).
       </p>
 
       {/* ---- the convention mapping and model basis ---- */}
       <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-        The two families, and the measured basis between them
+        Model basis between the two families
       </h4>
       <p className="text-sm mb-2 max-w-4xl" style={dimText}>
-        Each EOD curve replaces one trading curve at the close. Swapping one curve
-        at a time attributes the basis; single-curve swaps do not sum exactly to
-        the joint swap, and the remainder is shown as the cross term, not hidden.
+        Each EOD curve replaces one trading curve at the close, and swapping them in
+        one at a time attributes the basis curve by curve. The single swaps don&apos;t
+        add up exactly to the joint swap, so the remainder appears as the cross term.
       </p>
       <div className="rounded overflow-x-auto mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
         <table className="w-full font-mono text-[10.5px]">
@@ -339,12 +339,12 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
         </table>
       </div>
       <p className="text-sm max-w-4xl" style={dimText}>
-        Verification, all engine-measured: the EOD bootstrap round-trips its default
-        quotes to {em.meta.worstRoundTripBp.toExponential(1)}bp at worst (gate{' '}
-        {em.meta.roundTripGateBp}bp, BBSW pair converged in {em.meta.pairIterations}{' '}
-        staged iterations); the collapsed and trade-level lanes agree on the EOD
-        family to {em.npv.reconAbs.toFixed(2)} currency units; first-order vs full
-        re-solve: {em.firstOrder.map(f =>
+        In the engine&apos;s checks, the EOD bootstrap round-trips its default quotes
+        to {em.meta.worstRoundTripBp.toExponential(1)}bp at worst (gate{' '}
+        {em.meta.roundTripGateBp}bp) with the BBSW pair converging in{' '}
+        {em.meta.pairIterations} staged iterations. The collapsed and trade-level
+        lanes agree on the EOD family to {em.npv.reconAbs.toFixed(2)} currency units.
+        First-order against full re-solve: {em.firstOrder.map(f =>
           `${f.label} ${f.bumpBp}bp err ${money(f.absErr)}`).join(', ')}.
       </p>
     </div>

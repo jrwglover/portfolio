@@ -12,7 +12,7 @@ sequenceDiagram
 
   MD->>B: 14 curves of tagged quotes
 
-  Note over B: build order is forced, not arbitrary:<br/>ESTR ECB before EURIBOR, AONIA RBA before BBSW,<br/>SOFR before the two FX curves. The BBSW pair is a<br/>staged joint solve on the 3s6s basis, and the CTD<br/>curve is derived last from SOFR and both FX curves
+  Note over B: the dependencies fix the build order:<br/>ESTR ECB before EURIBOR, AONIA RBA before BBSW,<br/>SOFR before the two FX curves. The BBSW pair is a<br/>staged joint solve on the 3s6s basis, and the CTD<br/>curve is derived last from SOFR and both FX curves
 
   loop per curve, in dependency order
     B->>B: quote to RateHelper by type
@@ -32,7 +32,7 @@ sequenceDiagram
     SC->>SC: read the coefficients the curve holds
   end
   SC->>GPU: cudaMemcpy coefficient array
-  Note over SC,GPU: the device is sent what the curve<br/>is already made of, so nothing is<br/>approximated on the way across
+  Note over SC,GPU: the device is sent the numbers<br/>the curve is already made of
 
   par CPU reference path
     B->>V: prices, PV01 re-bootstrapped per bump
