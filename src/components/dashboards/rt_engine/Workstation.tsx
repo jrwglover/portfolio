@@ -323,7 +323,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   useEffect(() => {
     if (!playing) return;
     timer.current = window.setTimeout(
-      () => setI(x => (x + 1) % tl.frames.length), 3200);
+      () => setI(x => (x + 1) % tl.frames.length), 6000);
     return () => { if (timer.current) window.clearTimeout(timer.current); };
   }, [i, playing, tl.frames.length]);
 
