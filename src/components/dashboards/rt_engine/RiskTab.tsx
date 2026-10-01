@@ -110,7 +110,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
           </div>
           <p className="text-sm max-w-4xl" style={dimText}>
             {breaches.length
-              ? `${breaches.map(b => LABEL[b.key] ?? b.key).join(' and ')} ${breaches.length === 1 ? 'is' : 'are'} over the line on this set. The book runs a structural short in EUR discount DV01 against a limit set below it, and the ESTR sell-off pushes it further. The mark past the end of each bar is 100%.`
+              ? `${breaches.map(b => LABEL[b.key] ?? b.key).join(' and ')} ${breaches.length === 1 ? 'is' : 'are'} over the line on this set. The session's tickets run unhedged until the close, and the large EURIBOR receivers dealt on the gap set take that line through its limit. The mark past the end of each bar is 100%.`
               : 'Every line is inside its limit on this set. The mark past the end of each bar is 100%.'}
           </p>
         </PanelCard>
@@ -311,9 +311,8 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
             </table>
           </div>
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
-            Hover a row for the shock definition. The AUD row is measured at zero.
-            The shock does reach every curve it names, but nothing in this book prices
-            on the AUD curves.
+            Hover a row for the shock definition. Every row is a full revaluation of
+            the closing book, with the session&apos;s tickets hedged at the close.
           </p>
         </PanelCard>
       </Group>}

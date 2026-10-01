@@ -228,46 +228,46 @@
 
 <!-- 8 -->
 <section class="slide" data-title="Two routes, same answer" data-min="1.0"
-  data-notes="There are two ways to compute this. The quick way multiplies sensitivities by the consensus ranges. The thorough way moves every quote to its prudent level, rebootstraps the curves and revalues the whole book, and I built both so the two could be compared. The full route comes to 449 curve rebuilds on the same machinery as the trading curves, and every rebuilt curve reprices its shifted quote to within about five times ten to the minus ten basis points. The two routes agree to about a tenth of a percent on market price uncertainty and three hundredths of a percent on close out cost. On this book, then, the sensitivity route is safe, and the full revaluation is what shows it.">
+  data-notes="There are two ways to compute this. The quick way multiplies sensitivities by the consensus ranges. The thorough way moves every quote to its prudent level, rebootstraps the curves and revalues the whole book, and I built both so the two could be compared. The full route comes to 449 curve rebuilds on the same machinery as the trading curves, and every rebuilt curve reprices its shifted quote to within about five times ten to the minus ten basis points. The two routes agree to within a third of a percent on both market price uncertainty and close out cost. On this book, then, the sensitivity route is safe, and the full revaluation is what shows it.">
   <div class="kicker">Computing it</div>
   <h2>Two routes, same answer</h2>
   <table class="n mono">
     <tr><th>Before aggregation</th><th>Sensitivities</th><th>Full revaluation</th><th>Gap</th></tr>
-    <tr><td style="font-family:Inter,'Segoe UI',sans-serif">Market price uncertainty</td><td>1,561,260</td><td>1,563,080</td><td class="gap">0.12%</td></tr>
-    <tr><td style="font-family:Inter,'Segoe UI',sans-serif">Close-out cost</td><td>2,513,750</td><td>2,514,620</td><td class="gap">0.03%</td></tr>
+    <tr><td style="font-family:Inter,'Segoe UI',sans-serif">Market price uncertainty</td><td>1,244,080</td><td>1,246,600</td><td class="gap">0.20%</td></tr>
+    <tr><td style="font-family:Inter,'Segoe UI',sans-serif">Close-out cost</td><td>1,967,880</td><td>1,974,000</td><td class="gap">0.31%</td></tr>
   </table>
   <p class="lead" style="margin-top:46px">Full revaluation: 449 real curve rebuilds, worst quote round trip <span class="mono">5.3e-10</span> bp</p>
-  <div class="foot"><span>Book of 150,128 trades</span><span class="tag">Generated Totem-style consensus</span></div>
+  <div class="foot"><span>Book of 150,208 trades, session tickets hedged at the close</span><span class="tag">Generated Totem-style consensus</span></div>
 </section>
 
 <!-- 9 -->
 <section class="slide" data-title="The capital number" data-min="0.8" data-cue="Open Close-out Cost and Mid-Price Uncertainty: show the per-quote table and the totals."
-  data-notes="After the fifty percent aggregation, market price uncertainty contributes about 769 thousand and close out cost about 1.26 million, so 2.03 million comes off common equity tier one. The bank can't use that capital, and the only reason is that the market for its positions is a range. How big the deduction gets depends on how uncertain the consensus is for each quote and on how much of the book's risk sits on that quote. Close out cost is the larger of the two here because, for liquid swaps, the bid offer is wider than the consensus spread.">
+  data-notes="After the fifty percent aggregation, market price uncertainty contributes about 624 thousand and close out cost about 987 thousand, so 1.61 million comes off common equity tier one. The bank can't use that capital, and the only reason is that the market for its positions is a range. How big the deduction gets depends on how uncertain the consensus is for each quote and on how much of the book's risk sits on that quote. Close out cost is the larger of the two here because, for liquid swaps, the bid offer is wider than the consensus spread.">
   <div class="kicker">Result</div>
   <h2>The capital number</h2>
   <a class="panel-link" href="/rates/prudent-valuation">Open panel: Valuation Adjustments</a>
-  <div class="big mono" style="font-size:150px;margin-top:20px">2,026,610</div>
+  <div class="big mono" style="font-size:150px;margin-top:20px">1,611,240</div>
   <div class="cap" style="font-size:32px">deducted from CET1, full revaluation, after 50% aggregation</div>
   <div class="row" style="margin-top:60px;gap:80px">
-    <div><div class="mono" style="font-size:52px">769,298</div><div class="cap">market price uncertainty</div></div>
-    <div><div class="mono" style="font-size:52px">1,257,310</div><div class="cap">close-out cost</div></div>
+    <div><div class="mono" style="font-size:52px">624,245</div><div class="cap">market price uncertainty</div></div>
+    <div><div class="mono" style="font-size:52px">986,998</div><div class="cap">close-out cost</div></div>
   </div>
   <div class="foot"><span>Annex Method 2, alpha 50%</span><span class="tag">Generated Totem-style consensus</span></div>
 </section>
 
 <!-- 10 -->
 <section class="slide" data-title="Representation matters" data-min="0.9"
-  data-notes="One question I looked at was what happens if the euro swap risk is expressed as ESTR swaps plus a EURIBOR versus ESTR basis, in place of outright EURIBOR swaps. The usual intuition is that it nets off and lowers the AVA. On this book it does the opposite. If the basis gets the same uncertainty as the outright swap, the AVA goes up twelve percent, because the book is directional in EURIBOR at seven, twenty and thirty years and those exposures now pick up both OIS and basis uncertainty. It only comes out lower when the basis consensus is less than about two thirds as uncertain as the swap. So the representation is a real modelling choice, and it needs a justification of its own. Giving the smaller number isn't one.">
+  data-notes="One question I looked at was what happens if the euro swap risk is expressed as ESTR swaps plus a EURIBOR versus ESTR basis, in place of outright EURIBOR swaps. The usual intuition is that it nets off and lowers the AVA. On this book it barely moves. If the basis gets the same uncertainty as the outright swap, the AVA goes up about one percent. The tenors where ESTR and EURIBOR risk offset do net down, but the tenors where they point the same way pick up both OIS and basis uncertainty, and the two nearly cancel. It only comes out lower when the basis consensus is less than about seventy percent as uncertain as the swap. So the representation is a real modelling choice, and it needs a justification of its own. Giving the smaller number isn't one.">
   <div class="kicker">A modelling choice</div>
   <h2>Representation matters</h2>
   <p class="lead">EUR swaps re-expressed as ESTR OIS plus EURIBOR/ESTR basis</p>
   <div class="row" style="align-items:flex-end;gap:90px;margin-top:10px">
-    <div><div class="big mono" style="color:var(--red)">+12.0%</div><div class="cap">total AVA, basis as uncertain as the swap</div></div>
-    <div><div class="big mono">68%</div><div class="cap">break-even basis uncertainty vs the swap</div></div>
+    <div><div class="big mono" style="color:var(--red)">+1.3%</div><div class="cap">total AVA, basis as uncertain as the swap</div></div>
+    <div><div class="big mono">70%</div><div class="cap">break-even basis uncertainty vs the swap</div></div>
   </div>
   <ul class="b" style="margin-top:56px">
     <li>Lower only for offsetting OIS and EURIBOR risk</li>
-    <li>This book is directional at 7Y, 20Y, 30Y</li>
+    <li>On this hedged book the two effects nearly cancel</li>
   </ul>
   <div class="foot"><span>First-order, on the published per-quote sensitivities</span><span class="tag">Generated Totem-style consensus</span></div>
 </section>

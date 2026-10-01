@@ -141,8 +141,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
             against the collapsed aggregation, and agrees to under a cent on a{' '}
             {millions(rv.meta.baseNpv)} book. The construction rows reprice the book
             with an alternative build of the same market as the discount source, and
-            that spread feeds the model-risk AVA below. The AUD row is zero because
-            nothing prices on the AUD curves.
+            that spread feeds the model-risk AVA below.
           </p>
         </PanelCard>
       </Group>}
@@ -289,8 +288,8 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
           </div>
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             Hover a check for its unit and note. Checks marked not run are on the
-            comparison and AUD curves, which carry no positions, so there is no
-            ladder to reconcile and no reason to bump their quotes. The BBSW 3M FLAG
+            comparison curves, which carry no positions, so there is no ladder to
+            reconcile and no reason to bump their quotes. The BBSW 3M FLAG
             marks the table gap where the staged basis solve and the published
             spline disagree most.
           </p>

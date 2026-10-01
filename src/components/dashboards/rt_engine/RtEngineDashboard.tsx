@@ -139,9 +139,9 @@ export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?
           </p>
           <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             Each currency discounts on one meeting-dated curve, with the projection and
-            cross currency curves built on those. The AUD curves are published on every
-            set, although nothing in the book prices on them. VaR and PV01 keep up in real
-            time because the book&apos;s cashflow schedules are collapsed to curve-level
+            cross currency curves built on those. The book trades in all four currencies,
+            so every curve on the board except the comparison builds has positions on
+            it. VaR and PV01 keep up in real time because the book&apos;s cashflow schedules are collapsed to curve-level
             coefficients, and the{' '}
             <Link to="/rates/cost#collapse" style={{ color: 'var(--accent-warm)' }}>
               collapse analysis

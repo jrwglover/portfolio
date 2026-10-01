@@ -16,7 +16,7 @@ const HOW = [
 const RESULTS = [
   'GPU marks match QuantLib to 10⁻¹⁴ on all fourteen curves, 348 instruments repriced identically both ways',
   '120 prices arriving at once collapse into a single rebuild, and two readers checking continuously never saw a half-updated set',
-  'MPU and CoC AVAs by sensitivities and by full revaluation agree to 0.12% and 0.03%, with 449 real curve rebuilds behind the check',
+  'MPU and CoC AVAs by sensitivities and by full revaluation agree to within 0.3%, with 449 real curve rebuilds behind the check',
   'The end-of-day trade feed measured 127× faster at the production transfer rate, with zero breaks across 1,035,762 reconciled rows',
 ];
 
