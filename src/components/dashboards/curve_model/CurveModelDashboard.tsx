@@ -3,6 +3,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
+import type { Domain } from '../../../config/projects';
 import ArchitecturePanel from './ArchitecturePanel';
 
 /* ── Types ── */
@@ -202,16 +203,18 @@ function instAt(pts: Pt[], t: number): number {
 
 
 
-export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] }) {
+export interface CurveChapter { tab: string; curves?: string[]; domain?: Domain }
+
+export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }: { defaultTab?: string; breadcrumb?: string[]; chapter?: CurveChapter }) {
   // #collapse deep-links the RT engine page to the collapse analysis: open on
   // the perf tab and scroll once its data has arrived.
   const wantCollapse = typeof window !== 'undefined' && window.location.hash === '#collapse';
-  const [tab, setTab] = useState<Tab>(wantCollapse ? 'perf' : (defaultTab as Tab) ?? 'inputs');
+  const [tab, setTab] = useState<Tab>(chapter ? chapter.tab as Tab : wantCollapse ? 'perf' : (defaultTab as Tab) ?? 'inputs');
   const [inputs, setInputs] = useState<Inputs | null>(null);
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
-  const [shown, setShown] = useState<string[]>(['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
-  const [domain, setDomain] = useState<'fwd' | 'inst' | 'zero' | 'df' | 'fx'>('inst');
+  const [shown, setShown] = useState<string[]>(chapter?.curves ?? ['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
+  const [domain, setDomain] = useState<Domain>(chapter?.domain ?? 'inst');
   const [fwdTenor, setFwdTenor] = useState(0.25);
   const [tMax, setTMax] = useState(30);
   const [trades, setTrades] = useState<TradesFile | null>(null);
@@ -418,7 +421,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
+    <div className={chapter ? '' : 'max-w-6xl mx-auto px-6 py-10'}>
+      {!chapter && (<>
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
@@ -440,13 +444,14 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             style={chip(tab === t.key, '#5b8fc9')}>{t.label}</button>
         ))}
       </div>
+      </>)}
 
       {tab === 'inputs' && inputs && (
         <div>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
             Each of the {inputs.curves.length} curves is built from the quotes listed
             here. Every quote has to be repriced by its finished curve, and each one is a
-            risk bucket on the trade tab. IMM = third Wednesday of the quarter. MTG = the
+            risk bucket in the trade risk chapter. IMM = third Wednesday of the quarter. MTG = the
             day a policy decision takes effect.
           </p>
           <div className="flex gap-2 mb-5 flex-wrap">
@@ -888,7 +893,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb }: { defaul
             came from the code.
           </p>
           <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            Most of this tab compares trade-by-trade valuation on the processor and the
+            Most of this chapter compares trade-by-trade valuation on the processor and the
             GPU. Collapsing the book to curve level, measured at the end, changes the
             conclusion for book-level work.
           </p>

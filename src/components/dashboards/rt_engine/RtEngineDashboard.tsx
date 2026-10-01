@@ -40,8 +40,9 @@ const chip = (on: boolean, colour: string) => ({
   color: on ? colour : 'var(--text-secondary)',
 });
 
-export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string }) {
+export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?: string; chapter?: { tabs: string[] } }) {
   const [tab, setTab] = useState(() => {
+    if (chapter) return chapter.tabs[0];
     const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
     return q && ['desk', 'limits', 'eod', 'va', 'why', 'graph', 'engine', 'trader'].includes(q) ? q : (defaultTab ?? 'desk');
   });
@@ -99,7 +100,16 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
 
   return (
     <div>
-      <div className="flex gap-x-8 gap-y-3 mb-6 font-mono text-[11px] flex-wrap items-start">
+      {chapter && chapter.tabs.length > 1 && (
+        <div className="flex gap-2 mb-6 font-mono text-[11px] flex-wrap">
+          {GROUPS.flatMap(g => g.tabs).filter(([k]) => chapter.tabs.includes(k)).map(([k, label]) => (
+            <button key={k} onClick={() => setTab(k)}
+              className={'px-3 py-1.5 rounded' + (tab === k ? '' : ' navchip')}
+              style={chip(tab === k, '#5b8fc9')}>{label}</button>
+          ))}
+        </div>
+      )}
+      <div className={'flex gap-x-8 gap-y-3 mb-6 font-mono text-[11px] flex-wrap items-start' + (chapter ? ' hidden' : '')}>
         {GROUPS.map(g => (
           <div key={g.label}>
             <div className="text-[10px] uppercase mb-1.5" style={{ color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
@@ -133,7 +143,7 @@ export default function RtEngineDashboard({ defaultTab }: { defaultTab?: string 
             set, although nothing in the book prices on them. VaR and PV01 keep up in real
             time because the book&apos;s cashflow schedules are collapsed to curve-level
             coefficients, and the{' '}
-            <Link to="/learn/curve-data-model#collapse" style={{ color: 'var(--accent-warm)' }}>
+            <Link to="/rates/cost#collapse" style={{ color: 'var(--accent-warm)' }}>
               collapse analysis
             </Link>{' '}
             on the curve model page shows where the time goes.

@@ -1,15 +1,23 @@
 import { Link, useLocation } from 'react-router-dom';
-import { getLeafBySlug } from '../../config/topics';
+import type { MouseEvent } from 'react';
+import { findChapter } from '../../config/projects';
 
 export default function Header() {
   const location = useLocation();
   const isHome = location.pathname === '/';
-  const isLearn = location.pathname.startsWith('/learn/');
 
-  // Extract breadcrumb from topic config
-  const slug = isLearn ? location.pathname.split('/learn/')[1] : '';
-  const leaf = slug ? getLeafBySlug(slug) : undefined;
-  const breadcrumb = leaf?.breadcrumb;
+  // On a chapter page the nav shows where the reader is in the project.
+  const [, projectSlug, chapterSlug] = location.pathname.split('/');
+  const ref = !isHome && projectSlug && chapterSlug ? findChapter(projectSlug, chapterSlug) : undefined;
+
+  const navLink = (to: string, label: string, hash = false) => {
+    const style = { color: 'var(--text-secondary)' };
+    const over = (e: MouseEvent<HTMLElement>) => (e.currentTarget.style.color = 'var(--text-primary)');
+    const out = (e: MouseEvent<HTMLElement>) => (e.currentTarget.style.color = 'var(--text-secondary)');
+    return hash
+      ? <a href={to} className="text-sm transition-colors" style={style} onMouseEnter={over} onMouseLeave={out}>{label}</a>
+      : <Link to={to} className="text-sm transition-colors" style={style} onMouseEnter={over} onMouseLeave={out}>{label}</Link>;
+  };
 
   return (
     <header
@@ -41,57 +49,27 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-4">
           {isHome && (
             <>
-              <a href="#projects" className="text-sm transition-colors"
-                style={{ color: 'var(--text-secondary)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}>
-                Projects
-              </a>
-              <a href="#modules" className="text-sm transition-colors ml-4"
-                style={{ color: 'var(--text-secondary)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}>
-                Demos
-              </a>
+              {navLink('#project', 'Project', true)}
+              {navLink('#chapters', 'Chapters', true)}
             </>
           )}
-          {!isHome && breadcrumb && (
+          {ref && (
             <div className="flex items-center gap-1.5 text-sm">
-              <Link
-                to="/#modules"
-                className="transition-colors"
-                style={{ color: 'var(--text-dim)' }}
+              <Link to="/#chapters" className="transition-colors" style={{ color: 'var(--text-dim)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-dim)')}
-              >
-                Modules
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-dim)')}>
+                {ref.project.name}
               </Link>
-              {breadcrumb.map((segment, i) => (
-                <span key={i} className="flex items-center gap-1.5">
-                  <span style={{ color: 'var(--border-subtle)' }}>/</span>
-                  {i < breadcrumb.length - 1 ? (
-                    <span style={{ color: 'var(--text-dim)' }}>{segment}</span>
-                  ) : (
-                    <span style={{ color: 'var(--text-secondary)' }}>{segment}</span>
-                  )}
-                </span>
-              ))}
+              <span style={{ color: 'var(--border-subtle)' }}>/</span>
+              <span className="hidden md:inline" style={{ color: 'var(--text-dim)' }}>{ref.part.label}</span>
+              <span className="hidden md:inline" style={{ color: 'var(--border-subtle)' }}>/</span>
+              <span style={{ color: 'var(--text-secondary)' }}>{ref.chapter.title}</span>
             </div>
           )}
-          {!isHome && !breadcrumb && (
-            <Link
-              to="/"
-              className="text-sm transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
-            >
-              &larr; Modules
-            </Link>
-          )}
+          {!isHome && !ref && navLink('/', 'Home')}
         </nav>
       </div>
     </header>

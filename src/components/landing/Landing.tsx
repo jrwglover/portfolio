@@ -1,13 +1,13 @@
 import Hero from './Hero';
-import CaseStudies from './CaseStudies';
-import TopicTree from './TopicTree';
+import ProjectCard from './ProjectCard';
+import ChapterList from './ChapterList';
 
 export default function Landing() {
   return (
     <>
       <Hero />
-      <CaseStudies />
-      <TopicTree />
+      <ProjectCard />
+      <ChapterList />
     </>
   );
 }

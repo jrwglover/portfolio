@@ -47,13 +47,14 @@ export default function Hero() {
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Below are three working systems I built. The curves follow real market
-            conventions, and I timed every benchmark on this machine. Where something
-            is still wrong or unfinished, I say so on the page.
+            Below is the platform I built, a linear rates engine, written up as chapters
+            you can read in order. The curves follow real market conventions, and I timed
+            every benchmark on this machine. Where something is still wrong or unfinished,
+            I say so on the page.
           </p>
 
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
-            One problem each:
+            Three problems it set out to solve:
           </p>
 
           <ul className="space-y-4 mb-8">
@@ -74,13 +75,13 @@ export default function Hero() {
           </p>
 
           <div className="flex gap-3 mt-9">
-            <a href="#projects" className="font-mono text-xs px-5 py-2.5 rounded"
+            <a href="#project" className="font-mono text-xs px-5 py-2.5 rounded"
               style={{ background: 'var(--accent-warm)', color: '#0a0a0f' }}>
-              The projects &darr;
+              The project &darr;
             </a>
-            <a href="#modules" className="font-mono text-xs px-5 py-2.5 rounded"
+            <a href="#chapters" className="font-mono text-xs px-5 py-2.5 rounded"
               style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-              Interactive demos
+              Chapters
             </a>
           </div>
         </div>

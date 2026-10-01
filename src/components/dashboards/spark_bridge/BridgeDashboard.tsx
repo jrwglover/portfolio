@@ -54,7 +54,7 @@ function Stage({ n, title, body }: { n: string; title: string; body: string }) {
   );
 }
 
-export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab?: string; breadcrumb?: string[] }) {
+export default function BridgeDashboard({ defaultTab, breadcrumb, chapter }: { defaultTab?: string; breadcrumb?: string[]; chapter?: boolean }) {
   const [tab, setTab] = useState<Tab>((defaultTab as Tab) ?? 'problem');
   const chip = (active: boolean) => ({
     border: `1px solid ${active ? '#5b8fc9' : 'var(--border-subtle)'}`,
@@ -63,13 +63,15 @@ export default function BridgeDashboard({ defaultTab, breadcrumb }: { defaultTab
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
+    <div className={chapter ? '' : 'max-w-6xl mx-auto px-6 py-10'}>
+      {!chapter && (
       <DashboardHeader
         label={(breadcrumb ?? ['Data Engineering']).join(' / ')}
         title="Spark Trade Bridge"
         subtitle="Finding the fastest way to move an end-of-day trade file from capture into the risk database"
         techBadges={['PySpark', 'Parquet', 'SQL Server', 'Docker']}
       />
+      )}
       <div className="flex gap-2 mb-8 flex-wrap">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
