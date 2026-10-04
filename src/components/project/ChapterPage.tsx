@@ -5,6 +5,7 @@ import CurveModelDashboard from '../dashboards/curve_model/CurveModelDashboard';
 import RtEngineDashboard from '../dashboards/rt_engine/RtEngineDashboard';
 import BridgeDashboard from '../dashboards/spark_bridge/BridgeDashboard';
 import ChapterNav from './ChapterNav';
+import chapterText from '../../content/rates';
 
 function Figure({ cref }: { cref: ChapterRef }) {
   const c = cref.chapter;
@@ -81,6 +82,12 @@ export default function ChapterPage({ project }: { project: string }) {
           {ref.chapter.title}
         </h1>
         <p className="text-sm mb-8 max-w-4xl" style={{ color: 'var(--text-secondary)' }}>{ref.chapter.lede}</p>
+
+        {chapterText[ref.chapter.slug]}
+
+        <div className="font-mono text-[10px] uppercase tracking-widest mt-10 mb-4 pt-6" style={{ color: 'var(--text-dim)', borderTop: '1px solid var(--border-subtle)' }}>
+          The panel
+        </div>
 
         <div className="max-lg:overflow-x-auto">
           <Figure cref={ref} />

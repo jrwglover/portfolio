@@ -11,7 +11,9 @@
     "diagrams": "mmdc -i src/components/dashboards/curve_model/diagrams/c4-context.mmd -o public/diagrams/c4-context.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/c4-container.mmd -o public/diagrams/c4-container.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/valuation-run.mmd -o public/diagrams/valuation-run.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/construction.mmd -o public/diagrams/construction.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/curve-graph.mmd -o public/diagrams/curve-graph.svg -c .mermaidrc.json -p puppeteer.json -b transparent"
   },
   "dependencies": {
+    "@types/katex": "^0.16.8",
     "framer-motion": "^12.38.0",
+    "katex": "^0.19.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0",
