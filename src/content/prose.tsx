@@ -41,9 +41,9 @@ export function M({ tex }: { tex: string }) {
 // uses, with its alt text carrying the full description for a screen reader.
 export function Diagram({ src, alt, caption, minWidth }: { src: string; alt: string; caption: string; minWidth?: number }) {
   return (
-    <figure className="my-6 max-w-3xl rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
+    <figure className="my-6 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
       <div className="p-3" style={{ background: 'var(--bg-card)', overflowX: 'auto' }}>
-        <img src={src} alt={alt} style={{ width: '100%', minWidth: minWidth ?? 520, display: 'block' }} />
+        <img src={src} alt={alt} style={{ width: '100%', minWidth: minWidth ?? 900, display: 'block' }} />
       </div>
       <figcaption className="px-3 py-2 text-xs" style={{ color: 'var(--text-dim)', borderTop: '1px solid var(--border-subtle)' }}>
         {caption}
