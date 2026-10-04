@@ -4,6 +4,7 @@ import {
   dimText,
 } from './riskval';
 import { Group, PanelCard } from './PanelCard';
+import type { ValAdjustments } from './ValAdjustmentsTab';
 
 const STATUS = [
   { label: 'verified', colour: '#5cb87a' },
@@ -15,8 +16,29 @@ const bp = (v: number, dp = 2) => v.toFixed(dp);
 
 export type ValPanel = 'ipv' | 'exit' | 'inventory';
 
-export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPanel }) {
+export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: ValPanel; va?: ValAdjustments }) {
   const [ipvCurve, setIpvCurve] = useState<string | null>(null);
+
+  // When the prudent valuation results are supplied, the close-out table and
+  // the MPU and CoC rows of the AVA table read the end-of-day full-revaluation
+  // figures of the prudent valuation chapter, so the two chapters quote one
+  // set of numbers. Model risk and the six unmodelled rows stay as the engine
+  // wrote them.
+  const closeRows = useMemo(() => {
+    if (!va) return null;
+    const by = new Map<string, { quotes: number; closeOut: number; mpu: number }>();
+    for (const r of va.rows) {
+      const e = by.get(r.service) ?? { quotes: 0, closeOut: 0, mpu: 0 };
+      e.quotes += 1; e.closeOut += r.cocFull; e.mpu += r.mpuFull;
+      by.set(r.service, e);
+    }
+    return Array.from(by, ([curve, e]) => ({ curve, ...e }));
+  }, [va]);
+  const avaRows = useMemo(() => rv.ava.rows.map(r => {
+    const o = va?.ava.find(a => a.category === r.category && a.apva !== null && a.apva !== undefined);
+    return o ? { ...r, raw: o.raw ?? undefined, ava: o.apva ?? undefined } : r;
+  }), [rv.ava.rows, va]);
+  const avaTotal = avaRows.reduce((t, r) => t + (r.status === 'computed' && r.ava !== undefined ? Number(r.ava) : 0), 0);
 
   const ipvCurves = useMemo(() => {
     const seen: string[] = [];
@@ -151,7 +173,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
         note="The same consensus data read two ways, as what leaving the book would cost and as what the regulation deducts for the uncertainty of staying.">
         <div className="grid lg:grid-cols-[2fr_3fr] gap-4 items-start">
           <PanelCard title="Close-out cost"
-            intro="Exiting at bid or offer costs the consensus half bid-offer per quote times the book's absolute market PV01 on that quote, summed over quotes. The spread input is the generated consensus set above, and the PV01 ladder is the engine's own market-quote run on the final set.">
+            intro="Exiting at bid or offer costs the consensus half bid-offer per quote times the book's absolute market PV01 on that quote, summed over quotes. The spread input is the generated consensus set, and the sensitivities are the ones the prudent valuation chapter uses, so this table is that chapter's result grouped by curve.">
             <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
               <table className="w-full font-mono text-[11px]">
                 <thead>
@@ -163,7 +185,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
                   </tr>
                 </thead>
                 <tbody>
-                  {rv.closeout.byCurve.map(c => (
+                  {(closeRows ?? rv.closeout.byCurve).map(c => (
                     <tr key={c.curve} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td className="px-3 py-1.5" style={{ color: COLOUR[c.curve] ?? 'var(--text-secondary)' }}>
                         {LABEL[c.curve] ?? c.curve}
@@ -175,9 +197,9 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
                   ))}
                   <tr style={{ borderTop: '1px solid var(--border-hover)' }}>
                     <td className="px-3 py-1.5" style={dimText}>Total</td>
-                    <td className="px-3 py-1.5 text-right" style={dimText}>{rv.closeout.quotesCovered}</td>
-                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{money(rv.closeout.total)}</td>
-                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{money(rv.closeout.mpuTotal)}</td>
+                    <td className="px-3 py-1.5 text-right" style={dimText}>{va ? va.meta.quotes : rv.closeout.quotesCovered}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{money(va ? va.totals.coc.full : rv.closeout.total)}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{money(va ? va.totals.mpu.full : rv.closeout.mpuTotal)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -202,7 +224,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
                   </tr>
                 </thead>
                 <tbody>
-                  {rv.ava.rows.map(r => (
+                  {avaRows.map(r => (
                     <tr key={r.category} title={r.note}
                       style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td className="px-3 py-1.5" style={{
@@ -224,7 +246,7 @@ export default function ValuationsTab({ rv, panel }: { rv: RiskVal; panel: ValPa
                     <td className="px-3 py-1.5" style={dimText}>Art. 1</td>
                     <td className="px-3 py-1.5"></td>
                     <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>
-                      {money(rv.ava.total)}
+                      {money(va ? avaTotal : rv.ava.total)}
                     </td>
                   </tr>
                 </tbody>

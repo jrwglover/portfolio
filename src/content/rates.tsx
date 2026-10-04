@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { P, Eq, M, N } from './prose';
+import { P, Eq, M, N, Diagram } from './prose';
 
 // The explanation that opens each chapter of the Linear Rates Engine: what
 // the quantity is, the relation that defines it, and what the engine measured.
@@ -72,6 +72,9 @@ const text: Record<string, ReactNode> = {
         more than interpolation: a set of quotes that is not arbitrage-consistent forces any
         interpolator to oscillate, because the only way to hit all of them is to bend.
       </P>
+      <Diagram src="/diagrams/construction.svg"
+        alt="Flowchart of curve construction: each quote maps to a rate helper chosen by its instrument type, including a float versus float basis swap helper for the 3s6s strip, and all of the helpers for a curve go into one global bootstrap that produces the calibrated term structure and its pillar dates, times and zeros."
+        caption="How a curve is built. Each quote becomes a helper chosen by its instrument type, and one global solve takes every helper on the curve together." />
       <P>
         Projection and discounting are separate curves. A EURIBOR swap projects its floating leg
         off the EURIBOR 6M curve and discounts both legs on ESTR, so the EURIBOR curve can only be
@@ -279,6 +282,9 @@ const text: Record<string, ReactNode> = {
         SONIA and nothing else. A SOFR quote rebuilds SOFR, then both cross-currency curves that
         are implied against it, then the cheapest-to-deliver curve built on those.
       </P>
+      <Diagram src="/diagrams/curve-graph.svg" minWidth={1000}
+        alt="Curve dependency graph: four pricing curves build independently, one per currency; EURIBOR 6M and the two BBSW curves are discounted on their currency's meeting-dated curve; the two BBSW curves are linked by the 3s6s tenor basis strip and solve as one unit; the cross-currency curves are implied against SOFR, and the cheapest-to-deliver curve is derived from them."
+        caption="The dependency graph, derived from the registry. The curve at the head of an arrow is built on the one at its tail." />
       <P>
         One structure needs more than an order. The two BBSW curves read each other through the
         3s6s basis swaps, so they form a cycle. The engine stages that pair and iterates the
@@ -334,6 +340,64 @@ const text: Record<string, ReactNode> = {
     </>
   ),
 
+
+  'value-at-risk': (
+    <>
+      <P>
+        Value at risk is the loss the book should not exceed on 99 days in 100. It is the
+        1% quantile of the daily P&amp;L distribution with the sign flipped, and expected
+        shortfall is the average loss on the days beyond it,
+      </P>
+      <Eq tex={String.raw`\text{VaR}_{99} = -Q_{0.01}(\Delta V), \qquad \text{ES}_{99} = -\,\mathbb{E}\big[\Delta V \,\big|\, \Delta V \le Q_{0.01}(\Delta V)\big], \qquad \text{VaR}_{10d} = \sqrt{10}\,\text{VaR}_{1d}.`} />
+      <P>
+        The engine computes it by historical simulation in the shape CRR Art. 365 asks for:
+        the whole book is fully revalued under each of the 250 most recent business days of
+        curve moves, and again under a one-year window of stress. Real market history cannot
+        ship with this site, so the history is generated from a factor model correlated across
+        curves and tenors with Student-t tails, and its volatility regimes follow the actual
+        chronology: the 2008 crisis at 3.5 times normal with fatter tails, March 2020 at 2.5,
+        the 2022 to 2023 hiking cycle at 1.8. The revaluations under that history are measured,
+        and so is the cost of them.
+      </P>
+      <P>
+        On the closing book the one-day 99% VaR is <N>823,441</N> and the expected shortfall
+        <N>973,007</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
+        gives <N>3,153,890</N>, 3.8 times the trailing figure. The backtest counts the days the
+        loss exceeded the VaR predicted the day before: <N>63</N> exceptions in <N>4,603</N> days
+        since 2009 and <N>3</N> in the last 250, which is the green zone of the Basel traffic
+        light. The cost is the point of the collapsed lane: <N>5,126</N> full revaluations in
+        <N>762 ms</N>, 149 µs each, where a trade-by-trade revaluation takes 53.6 ms per
+        scenario.
+      </P>
+    </>
+  ),
+
+  'stress-scenarios': (
+    <>
+      <P>
+        A stress is a named deterministic shock, the kind a risk committee asks about. Each
+        one is a shift defined at twelve pillars from one month to thirty years, read
+        piecewise-linearly between them and flat beyond, and applied to every curve as an
+        overlay on the published discount factors,
+      </P>
+      <Eq tex={String.raw`P^{s}(t) = P(t)\,e^{-s(t)\,t}, \qquad \text{P\&L} = V\big(P^{s}\big) - V\big(P\big),`} />
+      <P>
+        with the book fully revalued under each, for the whole desk and for each book within
+        it. The six here are a parallel rise and fall of 100bp, a steepener and a flattener
+        of 20bp at the front against 40bp at thirty years, a basis widening, and an AUD-only
+        rise of 50bp.
+      </P>
+      <P>
+        On the closing book the parallel rise gains <N>8.75m</N> and the parallel fall loses
+        <N>10.74m</N>. The asymmetry is convexity: the hedged book is left net paid, and a paid
+        position gains less on a rise than it loses on an equal fall. The steepener and the
+        flattener come to <N>4.19m</N> and <N>-4.25m</N>, the basis widening to <N>5.84m</N>,
+        and the AUD shock to <N>3.65m</N>, which is the first time the AUD book has had a number
+        of its own on this page.
+      </P>
+    </>
+  ),
+
   'engine-output': (
     <>
       <P>
@@ -377,6 +441,12 @@ const text: Record<string, ReactNode> = {
         panel are revalued to first order off the engine&apos;s bump-and-resolve Jacobian, so the
         effect of a changed mark on the book shows immediately.
       </P>
+      <P>
+        The second tab turns the same test on the trading curves themselves: their{' '}
+        <N>242</N> quotes against a separate consensus run, and the internal lanes that price
+        the whole book two independent ways and compare the live construction with its
+        alternatives.
+      </P>
     </>
   ),
 
@@ -413,6 +483,33 @@ const text: Record<string, ReactNode> = {
     </>
   ),
 
+
+  'ava-table': (
+    <>
+      <P>
+        The prudent valuation chapter computed the two categories that dominate a rates
+        book. The technical standard has nine, Articles 9 to 17: market price uncertainty,
+        close-out costs, model risk, unearned credit spreads, investing and funding costs,
+        concentrated positions, future administrative costs, early termination and
+        operational risk. A deduction that lists only the two it can size is not a prudent
+        valuation, so this chapter shows the whole table.
+      </P>
+      <P>
+        The first two rows are the end-of-day full-revaluation figures from the previous
+        chapter, and the close-out table beside them is the same result grouped by curve.
+        Model risk, Article 11, is sized from this engine&apos;s own alternative
+        constructions: the live EUR discount curve is the meeting-dated build, and the worst
+        absolute spread of the book&apos;s value across the tenor and IMM builds of the same
+        market is <N>1,627,810</N>, or <N>813,904</N> after the 50% weighting. The six remaining
+        rows say why they are not modelled here, and each reason is a real gap: there is no
+        counterparty in this book, so no CVA; discounting at the collateral rate is assumed to
+        capture funding; there is no market-depth or exit-horizon data to size concentration
+        honestly. With model risk included the deduction comes to
+      </P>
+      <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 624{,}245 + 986{,}998 + 813{,}904 = 2{,}425{,}147, \qquad \alpha = 0.5.`} />
+    </>
+  ),
+
   'talk': (
     <>
       <P>
@@ -421,6 +518,29 @@ const text: Record<string, ReactNode> = {
         had no confidence level, and the 2016 technical standard put one at 90%. The slides use
         the numbers from the chapters before this one. I present from the full-screen version,
         with the speaker notes in a separate window.
+      </P>
+    </>
+  ),
+
+
+  'model-inventory': (
+    <>
+      <P>
+        A model validation function asks three things of a curve engine: which models are in
+        use, what each one is built from, and what evidence says it works. This is the
+        inventory. Every curve in the registry is listed with its construction (a par OIS
+        bootstrap, a dual-curve build, an implied cross-currency curve or a derived one), its
+        interpolation, the curves it depends on, and the checks the engine ran against the
+        final published set.
+      </P>
+      <P>
+        The checks are the ones the earlier chapters rely on: the collapsed lane reconciled
+        against trade-by-trade pricing, the risk ladder&apos;s sum compared with a flat
+        one-basis-point shift, and the round trip of the daily table back through the curve.
+        A check that did not run says so, and the reason on the comparison curves is that
+        nothing prices on them. One check is flagged on purpose. The BBSW 3M curve shows a
+        <N>2e-4</N> gap between the staged basis solve and its published table, and I have
+        left it visible because an inventory that hides its one flag is not worth much.
       </P>
     </>
   ),

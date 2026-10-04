@@ -119,6 +119,18 @@ export const rates: Project = {
           component: 'RtEngineDashboard', tabs: ['limits'],
         },
         {
+          slug: 'value-at-risk',
+          title: 'Value at risk',
+          lede: 'A full-revaluation historical VaR on every published set, with its stressed window and its backtest.',
+          component: 'RtEngineDashboard', tabs: ['var'],
+        },
+        {
+          slug: 'stress-scenarios',
+          title: 'Stress scenarios',
+          lede: 'Six named shocks revalued through the same collapsed lane, for the whole book and for each desk.',
+          component: 'RtEngineDashboard', tabs: ['stress'],
+        },
+        {
           slug: 'engine-output',
           title: 'Engine and trader output',
           lede: 'The same run, as the engine logs it and as a trader would see it.',
@@ -133,13 +145,19 @@ export const rates: Project = {
           slug: 'eod-marking',
           title: 'EOD marking and IPV',
           lede: 'End-of-day marks checked against generated Totem-style consensus, with the IPV result for each quote.',
-          component: 'RtEngineDashboard', tabs: ['eod'],
+          component: 'RtEngineDashboard', tabs: ['eod', 'ipv'],
         },
         {
           slug: 'prudent-valuation',
           title: 'Prudent valuation',
           lede: 'Market price uncertainty and close-out cost AVAs, by sensitivities and by full revaluation.',
           component: 'RtEngineDashboard', tabs: ['va'],
+        },
+        {
+          slug: 'ava-table',
+          title: 'The nine AVA categories',
+          lede: 'Close-out cost by curve, model risk from the construction lanes, and the six categories this book cannot size.',
+          component: 'RtEngineDashboard', tabs: ['exit'],
         },
         {
           slug: 'talk',
@@ -152,6 +170,12 @@ export const rates: Project = {
     {
       label: 'Appendix',
       chapters: [
+        {
+          slug: 'model-inventory',
+          title: 'Model inventory',
+          lede: 'Every curve in the registry with its construction and the checks the engine ran against the final set.',
+          component: 'RtEngineDashboard', tabs: ['inventory'],
+        },
         {
           slug: 'architecture',
           title: 'Architecture',

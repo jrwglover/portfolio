@@ -4,6 +4,7 @@ import Workstation, { type Timeline } from './Workstation';
 import EodMarkingTab, { type EodMarking } from './EodMarkingTab';
 import ValAdjustmentsTab, { type ValAdjustments } from './ValAdjustmentsTab';
 import RiskTab from './RiskTab';
+import ValuationsTab from './ValuationsTab';
 import { type RiskVal } from './riskval';
 // Of the parked panels (RiskTab, ValuationsTab, PanelCard), the RiskTab
 // limits panel is wired back in as the Trading group's Limits tab; the
@@ -44,7 +45,7 @@ export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?
   const [tab, setTab] = useState(() => {
     if (chapter) return chapter.tabs[0];
     const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
-    return q && ['desk', 'limits', 'eod', 'va', 'why', 'graph', 'engine', 'trader'].includes(q) ? q : (defaultTab ?? 'desk');
+    return q && ['desk', 'limits', 'eod', 'va', 'why', 'graph', 'engine', 'trader', 'var', 'stress', 'ipv', 'exit', 'inventory'].includes(q) ? q : (defaultTab ?? 'desk');
   });
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
@@ -95,6 +96,11 @@ export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?
     {
       label: 'System Outputs',
       tabs: [['engine', 'Engine output'], ['trader', 'Trader output']],
+    },
+    {
+      label: 'Risk and governance',
+      tabs: [['var', 'Value at risk'], ['stress', 'Stress scenarios'], ['ipv', 'Trading-curve IPV'],
+             ['exit', 'The nine AVA categories'], ['inventory', 'Model inventory']],
     },
   ];
 
@@ -153,6 +159,11 @@ export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?
       )}
 
       {tab === 'limits' && rv && <RiskTab rv={rv} panel="limits" />}
+      {tab === 'var' && rv && <RiskTab rv={rv} panel="var" />}
+      {tab === 'stress' && rv && <RiskTab rv={rv} panel="stress" />}
+      {tab === 'ipv' && rv && <ValuationsTab rv={rv} panel="ipv" />}
+      {tab === 'exit' && rv && <ValuationsTab rv={rv} panel="exit" va={va ?? undefined} />}
+      {tab === 'inventory' && rv && <ValuationsTab rv={rv} panel="inventory" />}
       {tab === 'limits' && !rv && (
         <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading.</p>
       )}
