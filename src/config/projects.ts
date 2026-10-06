@@ -64,7 +64,7 @@ export const rates: Project = {
           title: 'FX and cross-currency curves',
           lede: 'Curves implied from FX swap points and basis, and the cheapest-to-deliver curve under a multi-currency CSA.',
           component: 'CurveModelDashboard', tabs: ['curves'],
-          curves: ['EURUSD', 'AUDUSD', 'CSA_CTD', 'SOFR'], domain: 'fx',
+          curves: ['SOFR', 'EURUSD', 'AUDUSD', 'CSA_CTD'], domain: 'inst',
         },
       ],
     },
