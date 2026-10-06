@@ -72,15 +72,32 @@ export default function BridgeDashboard({ defaultTab, breadcrumb, chapter }: { d
         techBadges={['PySpark', 'Parquet', 'SQL Server', 'Docker']}
       />
       )}
+      {chapter && (
+        <div className="mb-8">
+          <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
+            Finding the fastest way to move an end-of-day trade file from capture into
+            the risk database. The three parts below were tabs on the old page: the
+            problem, the pipeline that fixes it, and what was measured.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {['PySpark', 'Parquet', 'SQL Server', 'Docker'].map(b => (
+              <span key={b} className="font-mono text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(94,170,181,0.08)', border: '1px solid rgba(94,170,181,0.15)', color: 'var(--accent-cool)' }}>{b}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {!chapter && (
       <div className="flex gap-2 mb-8 flex-wrap">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className="font-mono text-xs px-4 py-2 rounded" style={chip(tab === t.key)}>{t.label}</button>
         ))}
       </div>
+      )}
 
-      {tab === 'problem' && (
+      {(chapter || tab === 'problem') && (
         <div>
+          {chapter && <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>The problem</h3>}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
             <Stat v="255 MB" l="daily trade export of the full book" />
             <Stat v="40 rows" l="shipped per trade, the header repeated on every one" accent="#c86e6e" />
@@ -107,8 +124,9 @@ export default function BridgeDashboard({ defaultTab, breadcrumb, chapter }: { d
         </div>
       )}
 
-      {tab === 'pipeline' && (
-        <div>
+      {(chapter || tab === 'pipeline') && (
+        <div className={chapter ? 'mt-12' : ''}>
+          {chapter && <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>The pipeline</h3>}
           <div className="grid md:grid-cols-3 gap-4 mb-8">
             <Stage n="01 · PICK UP" title="Typed parallel ingest"
               body="Spark reads the flat pipe-delimited export with an explicit schema, so there is no inference pass over the file. Malformed rows are held in quarantine for review and never dropped." />
@@ -137,8 +155,9 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
         </div>
       )}
 
-      {tab === 'benchmarks' && (
-        <div className="space-y-10">
+      {(chapter || tab === 'benchmarks') && (
+        <div className={'space-y-10' + (chapter ? ' mt-12' : '')}>
+          {chapter && <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Measured benchmarks</h3>}
           <div>
             <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
               Moving the file at the production rate

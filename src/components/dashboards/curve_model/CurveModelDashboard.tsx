@@ -422,21 +422,30 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
 
   return (
     <div className={chapter ? '' : 'max-w-6xl mx-auto px-6 py-10'}>
-      {!chapter && (<>
+      {!chapter && (
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
         subtitle="The quotes each curve is built from, and each one repriced afterwards by the curve it went into"
         techBadges={['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap']}
       />
+      )}
+      {chapter && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap'].map(b => (
+            <span key={b} className="font-mono text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(94,170,181,0.08)', border: '1px solid rgba(94,170,181,0.15)', color: 'var(--accent-cool)' }}>{b}</span>
+          ))}
+        </div>
+      )}
 
-      <p className="text-sm mb-8 -mt-6 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
+      <p className={'text-sm mb-8 max-w-4xl' + (chapter ? '' : ' -mt-6')} style={{ color: 'var(--text-dim)' }}>
         I wrote the engine in C++17 on QuantLib, with CUDA for the GPU comparison. The
         book is priced and risked on one curve per currency dated to its central
         bank&apos;s meetings, ESTR (ECB), SOFR (FOMC), SONIA (MPC) and AONIA (RBA). The
         tenor and IMM builds are only for comparison.
       </p>
 
+      {!chapter && (
       <div className="flex gap-2 mb-8 flex-wrap">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -444,7 +453,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
             style={chip(tab === t.key, '#5b8fc9')}>{t.label}</button>
         ))}
       </div>
-      </>)}
+      )}
 
       {tab === 'inputs' && inputs && (
         <div>
