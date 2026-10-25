@@ -504,18 +504,6 @@ const text: Record<string, ReactNode> = {
     </>
   ),
 
-  'talk': (
-    <>
-      <P>
-        Ten minutes through the whole pipeline, from a market quote to the capital deduction,
-        with the regulatory change that created the need for it: the old prudent valuation rules
-        had no confidence level, and the 2016 technical standard put one at 90%. The slides use
-        the numbers from the pages before this one. I present from the full-screen version,
-        with the speaker notes in a separate window.
-      </P>
-    </>
-  ),
-
 
   'model-inventory': (
     <>

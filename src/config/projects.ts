@@ -141,12 +141,6 @@ export const rates: Project = {
           lede: 'Close-out cost by curve, model risk from the construction lanes, and the six categories this book cannot size.',
           component: 'RtEngineDashboard', tabs: ['exit'],
         },
-        {
-          slug: 'talk',
-          title: 'Talk: from quotes to prudent value',
-          lede: 'A ten-minute talk through the whole pipeline, and the regulation that changed it.',
-          component: 'Talk',
-        },
       ],
     },
     {
