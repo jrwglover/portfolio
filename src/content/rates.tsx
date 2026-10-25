@@ -27,9 +27,9 @@ const text: Record<string, ReactNode> = {
       </P>
       <P>
         Every quote carries conventions, and the model treats them as data, with the same care as the
-        quote itself. An ESTR OIS accrues ACT/360 and settles two days after trade, an
-        AONIA OIS accrues ACT/365F and settles the next Sydney business day, AUD swaps switch
-        from a quarterly 3M leg to a semi-annual 6M leg at three years. Get one convention
+        quote itself. An ESTR OIS accrues ACT/360 and settles two days after trade, a SONIA OIS
+        accrues ACT/365F and settles the same day, and a EURIBOR swap pays its fixed leg
+        annually against a semi-annual floating leg. Get one convention
         wrong and the curve reprices that quote at a slightly different rate, and every forward
         after that pillar inherits the error. So the model stores each quote with its calendar,
         day count, settlement lag and frequency, and the panel shows exactly that.
@@ -128,14 +128,13 @@ const text: Record<string, ReactNode> = {
       <P>
         so FX swap points out to two years and cross-currency basis swaps beyond give the curve
         directly, once SOFR is built. The basis is the premium for borrowing dollars against
-        euros, and it is why the implied curve sits apart from ESTR. The same construction gives
-        the AUD curve under USD collateral from AUD/USD points and basis.
+        euros, and it is why the implied curve sits apart from ESTR.
       </P>
       <P>
-        One more curve is derived from the others without a bootstrap of its own. Under a CSA that accepts USD, EUR or
-        AUD cash, whoever posts collateral delivers whichever is cheapest and can switch daily.
-        With no volatility assumed, the cheapest-to-deliver discount curve takes the highest
-        forward of the three collateral curves at every instant,
+        One more curve is derived from the others without a bootstrap of its own. Under a CSA that accepts more than one
+        currency as cash, whoever posts collateral delivers whichever is cheapest and can
+        switch daily. With no volatility assumed, the cheapest-to-deliver discount curve takes
+        the highest forward of the collateral curves at every instant,
       </P>
       <Eq tex={String.raw`f_{\text{ctd}}(t) = \max\big(f_{\text{SOFR}}(t),\, f_{\text{EUR/USD}}(t),\, f_{\text{AUD/USD}}(t)\big), \qquad P_{\text{ctd}}(T) = \exp\!\Big(-\int_0^T f_{\text{ctd}}\Big).`} />
       <P>
@@ -204,8 +203,8 @@ const text: Record<string, ReactNode> = {
       <Eq tex={String.raw`V = \sum_{j} c_j\, P_d(t_j) \;+\; \sum_{m} c_m\, \frac{P_p(s_m)}{P_p(e_m)}\, P_d(t_m).`} />
       <P>
         Two cashflows on the same curves and the same dates can add their coefficients before
-        any curve is read. Collapsing the book that way turns <N>4.0m</N> cashflows into{' '}
-        <N>159,146</N> terms, and a revaluation or a risk run walks the terms. The panel times a
+        any curve is read. Collapsing the book that way turns <N>3.8m</N> cashflows into{' '}
+        <N>104,725</N> terms, and a revaluation or a risk run walks the terms. The panel times a
         full risk run five ways as the book grows, and the collapse section shows where the time
         goes once the trades are out of the loop.
       </P>
@@ -303,7 +302,7 @@ const text: Record<string, ReactNode> = {
         epoch. It reprices the collapsed book on that set, and it runs the risk ladders and a
         full-revaluation VaR over the most recent 250 days of the generated scenario history.
         The replay records each of those clocks per step, and the steps come to a few hundred
-        milliseconds end to end on a book of <N>150,160</N> trades.
+        milliseconds end to end on a book of <N>150,103</N> trades.
       </P>
       <P>
         The session is a recording of the engine fed a scripted stream of prices with repeats
@@ -360,14 +359,14 @@ const text: Record<string, ReactNode> = {
         and so is the cost of them.
       </P>
       <P>
-        On the closing book the one-day 99% VaR is <N>823,441</N> and the expected shortfall
-        <N>973,007</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
-        gives <N>3,153,890</N>, 3.8 times the trailing figure. The backtest counts the days the
-        loss exceeded the VaR predicted the day before: <N>63</N> exceptions in <N>4,603</N> days
-        since 2009 and <N>3</N> in the last 250, which is the green zone of the Basel traffic
-        light. The cost is the point of the collapsed lane: <N>5,126</N> full revaluations in
-        <N>762 ms</N>, 149 µs each, where a trade-by-trade revaluation takes 53.6 ms per
-        scenario.
+        On the closing book the one-day 99% VaR is <N>840,709</N> and the expected shortfall{' '}
+        <N>891,998</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
+        gives <N>2,946,940</N>, 3.5 times the trailing figure. The backtest counts the days the
+        loss exceeded the VaR predicted the day before: <N>68</N> exceptions in <N>4,603</N> days
+        since 2009 and <N>6</N> in the last 250, which puts it in the amber zone of the Basel
+        traffic light, one over the green limit of four. The cost is the point of the collapsed
+        lane: <N>5,126</N> full revaluations in <N>303 ms</N>, 59 µs each, where a trade-by-trade
+        revaluation takes 42 ms per scenario.
       </P>
     </>
   ),
@@ -383,17 +382,14 @@ const text: Record<string, ReactNode> = {
       <Eq tex={String.raw`P^{s}(t) = P(t)\,e^{-s(t)\,t}, \qquad \text{P\&L} = V\big(P^{s}\big) - V\big(P\big),`} />
       <P>
         with the book fully revalued under each, for the whole desk and for each book within
-        it. The six here are a parallel rise and fall of 100bp, a steepener and a flattener
-        of 20bp at the front against 40bp at thirty years, a basis widening, and an AUD-only
-        rise of 50bp.
+        it. The five here are a parallel rise and fall of 100bp, a steepener and a flattener
+        of 20bp at the front against 40bp at thirty years, and a basis widening.
       </P>
       <P>
-        On the closing book the parallel rise gains <N>8.75m</N> and the parallel fall loses
-        <N>10.74m</N>. The asymmetry is convexity: the hedged book is left net paid, and a paid
+        On the closing book the parallel rise gains <N>6.07m</N> and the parallel fall loses{' '}
+        <N>7.21m</N>. The asymmetry is convexity: the hedged book is left net paid, and a paid
         position gains less on a rise than it loses on an equal fall. The steepener and the
-        flattener come to <N>4.19m</N> and <N>-4.25m</N>, the basis widening to <N>5.84m</N>,
-        and the AUD shock to <N>3.65m</N>, which is the first time the AUD book has had a number
-        of its own on this page.
+        flattener come to <N>1.45m</N> and <N>-1.49m</N>, and the basis widening to <N>3.77m</N>.
       </P>
     </>
   ),
@@ -431,7 +427,7 @@ const text: Record<string, ReactNode> = {
         machinery, and the end-of-day quotes are implied from the trading snapshot through each
         instrument&apos;s own helper, so the family reprices its inputs to a round trip of{' '}
         <N>3.4e-10 bp</N>. The valuation difference between the families, the model basis, is{' '}
-        <N>-110,130</N> on a book of about 444m, and it is attributed curve by curve.
+        <N>-223,874</N> on a book of about 454m, and it is attributed curve by curve.
       </P>
       <P>
         Consensus services such as Totem collect each contributor&apos;s mid for every
@@ -480,11 +476,11 @@ const text: Record<string, ReactNode> = {
         prudent shift. I built the full route as well: move each quote to its prudent level,
         re-bootstrap the end-of-day family and revalue the whole book, <N>449</N> real curve
         rebuilds, every one of which reprices its shifted quote to within <N>5.3e-10 bp</N>. The
-        two routes agree to <N>0.20%</N> on market price uncertainty and <N>0.31%</N> on
+        two routes agree to <N>0.49%</N> on market price uncertainty and <N>0.38%</N> on
         close-out cost. That gap is the sensitivity route&apos;s linearity error, and it is printed
-        per instrument. The result on this book is <N>1,246,600</N> of market price uncertainty and{' '}
-        <N>1,974,000</N> of close-out cost before aggregation, and a CET1 deduction of{' '}
-        <N>1,611,240</N> after it. The consensus behind these numbers is generated.
+        per instrument. The result on this book is <N>968,855</N> of market price uncertainty and{' '}
+        <N>1,575,170</N> of close-out cost before aggregation, and a CET1 deduction of{' '}
+        <N>1,267,790</N> after it. The consensus behind these numbers is generated.
       </P>
     </>
   ),
@@ -506,13 +502,13 @@ const text: Record<string, ReactNode> = {
         Model risk, Article 11, is sized from this engine&apos;s own alternative
         constructions: the live EUR discount curve is the meeting-dated build, and the worst
         absolute spread of the book&apos;s value across the tenor and IMM builds of the same
-        market is <N>1,627,810</N>, or <N>813,904</N> after the 50% weighting. The six remaining
+        market is <N>1,624,320</N>, or <N>812,160</N> after the 50% weighting. The six remaining
         rows say why they are not modelled here, and each reason is a real gap: there is no
         counterparty in this book, so no CVA; discounting at the collateral rate is assumed to
         capture funding; there is no market-depth or exit-horizon data to size concentration
         honestly. With model risk included the deduction comes to
       </P>
-      <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 624{,}245 + 986{,}998 + 813{,}904 = 2{,}425{,}147, \qquad \alpha = 0.5.`} />
+      <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 480{,}207 + 787{,}583 + 812{,}160 = 2{,}079{,}950, \qquad \alpha = 0.5.`} />
     </>
   ),
 
@@ -544,9 +540,8 @@ const text: Record<string, ReactNode> = {
         against trade-by-trade pricing, the risk ladder&apos;s sum compared with a flat
         one-basis-point shift, and the round trip of the daily table back through the curve.
         A check that did not run says so, and the reason on the comparison curves is that
-        nothing prices on them. One check is flagged on purpose. The BBSW 3M curve shows a
-        <N>2e-4</N> gap between the staged basis solve and its published table, and I have
-        left it visible because an inventory that hides its one flag is not worth much.
+        nothing prices on them. Where a check found a gap it is shown as a flag with its size, because an inventory
+        that hides its flags is not worth much.
       </P>
     </>
   ),

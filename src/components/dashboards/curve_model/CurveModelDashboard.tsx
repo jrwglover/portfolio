@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
 import type { Domain } from '../../../config/projects';
+import { SHOW_AUD, isAud, dropAudKeys } from '../../../config/aud';
 import ArchitecturePanel from './ArchitecturePanel';
 
 /* ── Types ── */
@@ -244,8 +245,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
     const get = (name: string, set: (x: any) => void) =>
       fetch(`${base}/${name}${v}`, { cache: 'no-store' })
         .then(r => r.json()).then(set).catch(() => {});
-    get('inputs.json', setInputs);
-    get('curves.json', setCurves);
+    get('inputs.json', (i: Inputs) => setInputs(SHOW_AUD ? i : { ...i, curves: i.curves.filter(c => !isAud(c.curve)) }));
+    get('curves.json', (c: Record<string, Pt[]>) => setCurves(dropAudKeys(c)));
     get('trades.json', setTrades);
     get('performance.json', setPerf);
   }, []);
@@ -441,8 +442,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
       <p className={'text-sm mb-8 max-w-4xl' + (chapter ? '' : ' -mt-6')} style={{ color: 'var(--text-dim)' }}>
         I wrote the engine in C++17 on QuantLib, with CUDA for the GPU comparison. The
         book is priced and risked on one curve per currency dated to its central
-        bank&apos;s meetings, ESTR (ECB), SOFR (FOMC), SONIA (MPC) and AONIA (RBA). The
-        tenor and IMM builds are only for comparison.
+        bank&apos;s meetings, ESTR (ECB), SOFR (FOMC) and SONIA (MPC). The tenor and IMM
+        builds are only for comparison, and the AUD curves are switched off for now.
       </p>
 
       {!chapter && (

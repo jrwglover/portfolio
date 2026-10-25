@@ -4,6 +4,7 @@ import Workstation, { type Timeline } from './Workstation';
 import EodMarkingTab, { type EodMarking } from './EodMarkingTab';
 import ValAdjustmentsTab, { type ValAdjustments } from './ValAdjustmentsTab';
 import RiskTab from './RiskTab';
+import { SHOW_AUD, isAud, dropAudKeys, dropAudRows } from '../../../config/aud';
 import ValuationsTab from './ValuationsTab';
 import { type RiskVal } from './riskval';
 // Of the parked panels (RiskTab, ValuationsTab, PanelCard), the RiskTab
@@ -58,17 +59,17 @@ export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?
   useEffect(() => {
     const v = `?v=${BUILD_ID}`;
     fetch(`/data/rt_engine/graph.json${v}`, { cache: 'no-store' })
-      .then(r => r.json()).then(setG).catch(() => {});
+      .then(r => r.json()).then((g: GraphFile) => setG(SHOW_AUD ? g : { ...g, graph: g.graph.filter(n => !isAud(n.id)).map(n => ({ ...n, dependsOn: n.dependsOn.filter(d => !isAud(d)), dependents: n.dependents.filter(d => !isAud(d)) })), curves: (g.curves ?? []).filter((c: string) => !isAud(c)), invalidation: (g.invalidation ?? []).filter(i => !isAud(i.tick)).map(i => ({ ...i, rebuilds: i.rebuilds.filter(c => !isAud(c)) })) })).catch(() => {});
     fetch(`/data/rt_engine/demo.json${v}`, { cache: 'no-store' })
       .then(r => r.json()).then(setDemo).catch(() => {});
     fetch(`/data/rt_engine/timeline.json${v}`, { cache: 'no-store' })
-      .then(r => r.json()).then(setTl).catch(() => {});
+      .then(r => r.json()).then((t: Timeline) => setTl(SHOW_AUD ? t : { ...t, curveIds: t.curveIds.filter(c => !isAud(c)), frames: t.frames.map(f => ({ ...f, status: dropAudKeys(f.status), rebuilt: f.rebuilt.filter((c: string) => !isAud(c)), curves: dropAudKeys(f.curves), risk: dropAudKeys(f.risk), mkt: f.mkt ? dropAudKeys(f.mkt) : f.mkt, mktBase: f.mktBase ? dropAudKeys(f.mktBase) : f.mktBase, mktPending: f.mktPending ? dropAudKeys(f.mktPending) : f.mktPending })) })).catch(() => {});
     fetch(`/data/rt_engine/eod_marking.json${v}`, { cache: 'no-store' })
-      .then(r => r.json()).then(setEm).catch(() => {});
+      .then(r => r.json()).then((e: EodMarking) => setEm(SHOW_AUD ? e : { ...e, rows: dropAudRows(e.rows), family: Array.isArray(e.family) ? e.family.filter((c: { id?: string }) => !isAud(c.id ?? '')) : e.family })).catch(() => {});
     fetch(`/data/rt_engine/val_adjustments.json${v}`, { cache: 'no-store' })
-      .then(r => r.json()).then(setVa).catch(() => {});
+      .then(r => r.json()).then((v: ValAdjustments) => setVa(SHOW_AUD ? v : { ...v, rows: dropAudRows(v.rows) })).catch(() => {});
     fetch(`/data/rt_engine/risk_val.json${v}`, { cache: 'no-store' })
-      .then(r => r.json()).then(setRv).catch(() => {});
+      .then(r => r.json()).then((x: RiskVal) => setRv(SHOW_AUD ? x : { ...x, closeout: { ...x.closeout, byCurve: dropAudRows(x.closeout.byCurve) }, inventory: x.inventory.filter(i => !isAud(i.id)), consensus: { ...x.consensus, rows: dropAudRows(x.consensus.rows) } })).catch(() => {});
   }, []);
 
   const rebuilds = useMemo(() => {
