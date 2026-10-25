@@ -85,21 +85,9 @@ export const rates: Project = {
         },
         {
           slug: 'session-replay',
-          title: 'Trading session replay',
-          lede: 'A recorded session played back. Curves rebuild as prices arrive, and the book, risk and VaR follow.',
-          component: 'RtEngineDashboard', tabs: ['desk'],
-        },
-        {
-          slug: 'trader-screen',
           title: 'Trader screen',
-          lede: 'The same run as a trader sees it: which curves moved, by how much, and what the book did.',
-          component: 'RtEngineDashboard', tabs: ['trader'],
-        },
-        {
-          slug: 'engine-log',
-          title: 'Engine log',
-          lede: 'The run as the process prints it: ticks applied, curves rebuilt, sets published, failures.',
-          component: 'RtEngineDashboard', tabs: ['engine'],
+          lede: 'The desk view of a recorded session: the curve board, the ticket feed, the book, its risk and VaR, as prices arrive.',
+          component: 'RtEngineDashboard', tabs: ['desk'],
         },
       ],
     },
@@ -177,6 +165,12 @@ export const rates: Project = {
           component: 'CurveModelDashboard', tabs: ['perf'],
         },
         {
+          slug: 'engine-output',
+          title: 'Engine and trader output',
+          lede: 'The same run printed two ways: as the engine logs it, and as a trading view of each set.',
+          component: 'RtEngineDashboard', tabs: ['engine', 'trader'],
+        },
+        {
           slug: 'model-inventory',
           title: 'Model inventory',
           lede: 'Every curve in the registry with its construction and the checks the engine ran against the final set.',
@@ -227,7 +221,7 @@ export function chapterPath(project: Project, chapter: Chapter): string {
 export function legacyPath(slug: string, tab: string | null): string {
   const rtTabs: Record<string, string> = {
     desk: 'session-replay', limits: 'limits', eod: 'eod-marking', va: 'prudent-valuation',
-    why: 'why-events', graph: 'what-one-price-touches', engine: 'engine-log', trader: 'trader-screen',
+    why: 'why-events', graph: 'what-one-price-touches', engine: 'engine-output', trader: 'engine-output',
   };
   const map: Record<string, string> = {
     'curve-data-model': 'market-data-model',
