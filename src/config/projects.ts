@@ -69,7 +69,7 @@ export const rates: Project = {
       ],
     },
     {
-      label: 'Front office',
+      label: 'Trading',
       chapters: [
         {
           slug: 'why-events',
