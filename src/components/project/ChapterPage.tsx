@@ -88,7 +88,7 @@ export default function ChapterPage({ project }: { project: string }) {
         <div className="mt-10 mb-6" style={{ borderTop: '1px solid var(--border-subtle)' }} />
 
         <div className="max-lg:overflow-x-auto">
-          <Figure cref={ref} />
+          <Figure key={ref.chapter.slug} cref={ref} />
         </div>
 
         <nav className="grid sm:grid-cols-2 gap-3 mt-14">
