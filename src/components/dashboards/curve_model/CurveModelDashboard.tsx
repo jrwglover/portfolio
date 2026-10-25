@@ -445,6 +445,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
         tenor and IMM builds are only for comparison.
       </p>
 
+      {!chapter && (
       <div className="flex gap-2 mb-8 flex-wrap">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -452,6 +453,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
             style={chip(tab === t.key, '#5b8fc9')}>{t.label}</button>
         ))}
       </div>
+      )}
 
       {tab === 'inputs' && inputs && (
         <div>

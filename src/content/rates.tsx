@@ -398,19 +398,25 @@ const text: Record<string, ReactNode> = {
     </>
   ),
 
-  'engine-output': (
+  'trader-screen': (
     <>
       <P>
-        The same run, written down twice. The engine output is what the process prints per
-        cycle: the ticks applied and dropped, the curves rebuilt and how long each took, the set
-        published, and anything that failed. It is the log you would read when something looks
-        wrong. The trader output is the same cycles as a desk would see them: which curves moved,
-        by how much at the tenors that matter, and what the book and its risk did as a result.
+        This is the run as a desk would see it: which curves moved on each set, by how much at
+        the tenors that matter, and what the book and its risk did as a result. It is written
+        from the same cycles as the engine log on the next page, and every number on it has to
+        be traceable to a line there. Reading one against the other is the check that the
+        replay shows what actually happened.
       </P>
+    </>
+  ),
+
+  'engine-log': (
+    <>
       <P>
-        Keeping both is deliberate. A number on the trader view has to be traceable to a line in
-        the engine log, and a pass of the one against the other is the check that the replay
-        shows what actually happened.
+        What the process prints per cycle: the ticks applied and dropped, the curves rebuilt
+        and how long each took, the set published, and anything that failed. It is the log you
+        would read when something on the trader screen looks wrong, and keeping it beside that
+        screen is deliberate.
       </P>
     </>
   ),

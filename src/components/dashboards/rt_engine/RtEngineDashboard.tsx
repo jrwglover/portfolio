@@ -106,7 +106,16 @@ export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?
 
   return (
     <div>
-      <div className="flex gap-x-8 gap-y-3 mb-6 font-mono text-[11px] flex-wrap items-start">
+      {chapter && chapter.tabs.length > 1 && (
+        <div className="flex gap-2 mb-6 font-mono text-[11px] flex-wrap">
+          {GROUPS.flatMap(g => g.tabs).filter(([k]) => chapter.tabs.includes(k)).map(([k, label]) => (
+            <button key={k} onClick={() => setTab(k)}
+              className={'px-3 py-1.5 rounded' + (tab === k ? '' : ' navchip')}
+              style={chip(tab === k, '#5b8fc9')}>{label}</button>
+          ))}
+        </div>
+      )}
+      <div className={'flex gap-x-8 gap-y-3 mb-6 font-mono text-[11px] flex-wrap items-start' + (chapter ? ' hidden' : '')}>
         {GROUPS.map(g => (
           <div key={g.label}>
             <div className="text-[10px] uppercase mb-1.5" style={{ color: 'var(--text-dim)', letterSpacing: '0.08em' }}>

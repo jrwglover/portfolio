@@ -37,7 +37,7 @@ export const rates: Project = {
   stack: ['C++17', 'QuantLib', 'CUDA', 'PySpark', 'React'],
   parts: [
     {
-      label: 'Inputs and construction',
+      label: 'Curves',
       chapters: [
         {
           slug: 'market-data-model',
@@ -69,30 +69,7 @@ export const rates: Project = {
       ],
     },
     {
-      label: 'Valuation and risk',
-      chapters: [
-        {
-          slug: 'trade-risk',
-          title: 'Trade risk and cashflows',
-          lede: 'Market, Zero and Forward PV01 for each trade, and the cashflows they come from.',
-          component: 'CurveModelDashboard', tabs: ['sensis'],
-        },
-        {
-          slug: 'cost',
-          title: 'Cost of a risk run',
-          lede: 'What a full revaluation and risk run costs as the book grows, on the processor and on the GPU.',
-          component: 'CurveModelDashboard', tabs: ['perf'],
-        },
-        {
-          slug: 'trade-feed',
-          title: 'Getting the book in',
-          lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark.',
-          component: 'BridgeDashboard',
-        },
-      ],
-    },
-    {
-      label: 'Real time',
+      label: 'Front office',
       chapters: [
         {
           slug: 'why-events',
@@ -113,6 +90,29 @@ export const rates: Project = {
           component: 'RtEngineDashboard', tabs: ['desk'],
         },
         {
+          slug: 'trader-screen',
+          title: 'Trader screen',
+          lede: 'The same run as a trader sees it: which curves moved, by how much, and what the book did.',
+          component: 'RtEngineDashboard', tabs: ['trader'],
+        },
+        {
+          slug: 'engine-log',
+          title: 'Engine log',
+          lede: 'The run as the process prints it: ticks applied, curves rebuilt, sets published, failures.',
+          component: 'RtEngineDashboard', tabs: ['engine'],
+        },
+      ],
+    },
+    {
+      label: 'Risk',
+      chapters: [
+        {
+          slug: 'trade-risk',
+          title: 'Trade risk and cashflows',
+          lede: 'Market, Zero and Forward PV01 for each trade, and the cashflows they come from.',
+          component: 'CurveModelDashboard', tabs: ['sensis'],
+        },
+        {
           slug: 'limits',
           title: 'Limits',
           lede: 'Net DV01 by curve against desk limits, on every published set.',
@@ -130,16 +130,10 @@ export const rates: Project = {
           lede: 'Six named shocks revalued through the same collapsed lane, for the whole book and for each desk.',
           component: 'RtEngineDashboard', tabs: ['stress'],
         },
-        {
-          slug: 'engine-output',
-          title: 'Engine and trader output',
-          lede: 'The same run, as the engine logs it and as a trader would see it.',
-          component: 'RtEngineDashboard', tabs: ['engine', 'trader'],
-        },
       ],
     },
     {
-      label: 'Marking and capital',
+      label: 'Valuation control',
       chapters: [
         {
           slug: 'eod-marking',
@@ -168,8 +162,20 @@ export const rates: Project = {
       ],
     },
     {
-      label: 'Appendix',
+      label: 'Engineering and governance',
       chapters: [
+        {
+          slug: 'trade-feed',
+          title: 'Getting the book in',
+          lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark.',
+          component: 'BridgeDashboard',
+        },
+        {
+          slug: 'cost',
+          title: 'Cost of a risk run',
+          lede: 'What a full revaluation and risk run costs as the book grows, on the processor and on the GPU.',
+          component: 'CurveModelDashboard', tabs: ['perf'],
+        },
         {
           slug: 'model-inventory',
           title: 'Model inventory',
@@ -221,7 +227,7 @@ export function chapterPath(project: Project, chapter: Chapter): string {
 export function legacyPath(slug: string, tab: string | null): string {
   const rtTabs: Record<string, string> = {
     desk: 'session-replay', limits: 'limits', eod: 'eod-marking', va: 'prudent-valuation',
-    why: 'why-events', graph: 'what-one-price-touches', engine: 'engine-output', trader: 'engine-output',
+    why: 'why-events', graph: 'what-one-price-touches', engine: 'engine-log', trader: 'trader-screen',
   };
   const map: Record<string, string> = {
     'curve-data-model': 'market-data-model',
