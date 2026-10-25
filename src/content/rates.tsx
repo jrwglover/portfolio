@@ -78,7 +78,7 @@ const text: Record<string, ReactNode> = {
       <P>
         Projection and discounting are separate curves. A EURIBOR swap projects its floating leg
         off the EURIBOR 6M curve and discounts both legs on ESTR, so the EURIBOR curve can only be
-        built after ESTR exists. That order comes from the dependency graph in chapter 9.
+        built after ESTR exists. That order comes from the dependency graph in What one price touches.
       </P>
     </>
   ),
@@ -310,8 +310,8 @@ const text: Record<string, ReactNode> = {
         and out-of-order arrivals, including one solver failure, so that the failure path gets
         exercised. Tickets arrive during the session and are dealt at the
         market on the set they land on. They run unhedged against the limits intraday, and that is
-        the story the Limits chapter tells. They are hedged at the close, before the end-of-day
-        marks in chapter 13.
+        the story the Limits page tells. They are hedged at the close, before the end-of-day
+        marks in EOD marking and IPV.
       </P>
     </>
   ),
@@ -320,7 +320,7 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         A limit here is a cap on the net market PV01 of one curve, the sum of that curve&apos;s
-        bars in chapter 5, with utilisation defined as
+        bars in Trade risk and cashflows, with utilisation defined as
       </P>
       <Eq tex={String.raw`u_c = \frac{\left|\sum_k \partial V/\partial q_{c,k}\right|}{L_c}.`} />
       <P>
@@ -334,7 +334,7 @@ const text: Record<string, ReactNode> = {
         session is built so that it tells a story the desk would recognise: everything inside at
         the open, then large EURIBOR receivers dealt late in the session that take the EURIBOR
         line through its limit on the gap set and keep it there to the close. The same tickets
-        are hedged at the close, so the end-of-day book in later chapters looks like a
+        are hedged at the close, so the end-of-day book in the later pages looks like a
         flow book again.
       </P>
     </>
@@ -487,16 +487,16 @@ const text: Record<string, ReactNode> = {
   'ava-table': (
     <>
       <P>
-        The prudent valuation chapter computed the two categories that dominate a rates
+        Prudent valuation computed the two categories that dominate a rates
         book. The technical standard has nine, Articles 9 to 17: market price uncertainty,
         close-out costs, model risk, unearned credit spreads, investing and funding costs,
         concentrated positions, future administrative costs, early termination and
         operational risk. A deduction that lists only the two it can size is not a prudent
-        valuation, so this chapter shows the whole table.
+        valuation, so this page shows the whole table.
       </P>
       <P>
-        The first two rows are the end-of-day full-revaluation figures from the previous
-        chapter, and the close-out table beside them is the same result grouped by curve.
+        The first two rows are the end-of-day full-revaluation figures from Prudent
+        valuation, and the close-out table beside them is the same result grouped by curve.
         Model risk, Article 11, is sized from this engine&apos;s own alternative
         constructions: the live EUR discount curve is the meeting-dated build, and the worst
         absolute spread of the book&apos;s value across the tenor and IMM builds of the same
@@ -516,7 +516,7 @@ const text: Record<string, ReactNode> = {
         Ten minutes through the whole pipeline, from a market quote to the capital deduction,
         with the regulatory change that created the need for it: the old prudent valuation rules
         had no confidence level, and the 2016 technical standard put one at 90%. The slides use
-        the numbers from the chapters before this one. I present from the full-screen version,
+        the numbers from the pages before this one. I present from the full-screen version,
         with the speaker notes in a separate window.
       </P>
     </>
@@ -534,7 +534,7 @@ const text: Record<string, ReactNode> = {
         final published set.
       </P>
       <P>
-        The checks are the ones the earlier chapters rely on: the collapsed lane reconciled
+        The checks are the ones the earlier pages rely on: the collapsed lane reconciled
         against trade-by-trade pricing, the risk ladder&apos;s sum compared with a flat
         one-basis-point shift, and the round trip of the daily table back through the curve.
         A check that did not run says so, and the reason on the comparison curves is that

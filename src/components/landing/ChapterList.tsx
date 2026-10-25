@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { rates, chapterPath } from '../../config/projects';
 
-// The reading order, so a visitor can go straight to the chapter they care
+// The reading order, so a visitor can go straight to the page they care
 // about rather than starting at the beginning.
 export default function ChapterList() {
   let n = 0;
@@ -9,13 +9,13 @@ export default function ChapterList() {
     <section id="chapters" className="max-w-[1320px] mx-auto px-8 py-20">
       <div className="mb-12">
         <p className="font-mono text-xs tracking-widest uppercase mb-3" style={{ color: 'var(--accent-warm)' }}>
-          Chapters
+          Contents
         </p>
         <h2 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
           The platform in reading order
         </h2>
         <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-secondary)' }}>
-          Each chapter is a short explanation with the live panel behind it. The parts
+          Each page is a short explanation with the live panel behind it. The parts
           follow the data: quotes in, curves built, the book valued and risked, then
           marked and taken through to capital.
         </p>

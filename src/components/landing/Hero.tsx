@@ -47,7 +47,7 @@ export default function Hero() {
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Below is the platform I built, a linear rates engine, written up as chapters
+            Below is the platform I built, a linear rates engine, written up as a set of notes
             you can read in order. The curves follow real market conventions, and I timed
             every benchmark on this machine. Where something is still wrong or unfinished,
             I say so on the page.
@@ -81,7 +81,7 @@ export default function Hero() {
             </a>
             <a href="#chapters" className="font-mono text-xs px-5 py-2.5 rounded"
               style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-              Chapters
+              Contents
             </a>
           </div>
         </div>

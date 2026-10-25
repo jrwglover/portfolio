@@ -66,14 +66,14 @@ export default function ProjectCard() {
           </div>
           <Link to={chapterPath(rates, first)} className="font-mono text-xs mt-auto self-start px-4 py-2 rounded transition-colors"
             style={{ border: '1px solid var(--accent-warm)', color: 'var(--accent-warm)' }}>
-            Start at chapter 1 &rarr;
+            Start from the beginning &rarr;
           </Link>
         </div>
       </div>
 
       <p className="text-sm mt-6 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
         A second project, a rates volatility engine covering vol surfaces, swaptions, CMS,
-        Bermudans and model risk, is in progress and will appear here chapter by chapter
+        Bermudans and model risk, is in progress and will appear here part by part
         as each part is built and checked.
       </p>
     </section>

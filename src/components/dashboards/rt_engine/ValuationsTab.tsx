@@ -173,7 +173,7 @@ export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: V
         note="The same consensus data read two ways, as what leaving the book would cost and as what the regulation deducts for the uncertainty of staying.">
         <div className="grid lg:grid-cols-[2fr_3fr] gap-4 items-start">
           <PanelCard title="Close-out cost"
-            intro="Exiting at bid or offer costs the consensus half bid-offer per quote times the book's absolute market PV01 on that quote, summed over quotes. The spread input is the generated consensus set, and the sensitivities are the ones the prudent valuation chapter uses, so this table is that chapter's result grouped by curve.">
+            intro="Exiting at bid or offer costs the consensus half bid-offer per quote times the book's absolute market PV01 on that quote, summed over quotes. The spread input is the generated consensus set, and the sensitivities are the ones the Prudent valuation page uses, so this table is that page's result grouped by curve.">
             <div className="rounded overflow-x-auto" style={{ border: '1px solid var(--border-subtle)' }}>
               <table className="w-full font-mono text-[11px]">
                 <thead>

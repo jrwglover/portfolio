@@ -47,11 +47,12 @@ export default function ChapterNav({ current }: { current: ChapterRef }) {
         {project.name}
       </Link>
       <p className="text-xs mb-5" style={{ color: 'var(--text-dim)' }}>{project.subtitle}</p>
+      <div className="hidden lg:block font-mono text-[10px] uppercase tracking-widest mb-3" style={{ color: 'var(--text-dim)' }}>Contents</div>
 
       <button onClick={() => setOpen(o => !o)}
         className="lg:hidden font-mono text-xs px-3 py-2 rounded mb-3 w-full text-left"
         style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-        {open ? 'Hide chapters' : `Chapter ${current.index} of ${project.parts.reduce((a, p) => a + p.chapters.length, 0)}. Show all chapters`}
+        {open ? 'Hide contents' : `Contents, ${current.index} of ${project.parts.reduce((a, p) => a + p.chapters.length, 0)}`}
       </button>
       <div className={open ? '' : 'hidden lg:block'}>{list}</div>
     </div>

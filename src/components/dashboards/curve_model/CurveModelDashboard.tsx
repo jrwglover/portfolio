@@ -445,7 +445,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
         tenor and IMM builds are only for comparison.
       </p>
 
-      {!chapter && (
       <div className="flex gap-2 mb-8 flex-wrap">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -453,7 +452,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
             style={chip(tab === t.key, '#5b8fc9')}>{t.label}</button>
         ))}
       </div>
-      )}
 
       {tab === 'inputs' && inputs && (
         <div>
@@ -902,7 +900,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
             came from the code.
           </p>
           <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            Most of this chapter compares trade-by-trade valuation on the processor and the
+            Most of this view compares trade-by-trade valuation on the processor and the
             GPU. Collapsing the book to curve level, measured at the end, changes the
             conclusion for book-level work.
           </p>

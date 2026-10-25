@@ -59,7 +59,7 @@ export default function ChapterPage({ project }: { project: string }) {
   useEffect(() => {
     if (!ref) return;
     document.title = `${ref.chapter.title} | ${ref.project.name}`;
-    // A new chapter starts at the top, unless the link carries an anchor.
+    // A new page starts at the top, unless the link carries an anchor.
     if (!window.location.hash) window.scrollTo(0, 0);
   }, [ref]);
 
@@ -85,9 +85,7 @@ export default function ChapterPage({ project }: { project: string }) {
 
         {chapterText[ref.chapter.slug]}
 
-        <div className="font-mono text-[10px] uppercase tracking-widest mt-10 mb-4 pt-6" style={{ color: 'var(--text-dim)', borderTop: '1px solid var(--border-subtle)' }}>
-          The panel
-        </div>
+        <div className="mt-10 mb-6" style={{ borderTop: '1px solid var(--border-subtle)' }} />
 
         <div className="max-lg:overflow-x-auto">
           <Figure cref={ref} />
