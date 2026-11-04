@@ -33,7 +33,7 @@ const text: Record<string, ReactNode> = {
         calendar, day count, settlement lag and frequency.
       </P>
       <P>
-        Nine curves are built from <N>224</N> instruments. After each build, every instrument
+        Nine curves are built from <N>232</N> instruments. After each build, every instrument
         is repriced off the finished curve and the difference from its quote reported. On the GPU
         path the marks match QuantLib to <N>10⁻¹⁴</N>, and at that level the only limit left is the
         arithmetic itself.
@@ -56,8 +56,9 @@ const text: Record<string, ReactNode> = {
       <P>
         So every pillar on a curve is solved at once, as one Newton problem in <M tex="n" />{' '}
         unknowns with <M tex="n" /> repricing conditions, and each quote is repriced by the same
-        finished curve it helped build. The interpolation is a cubic spline on{' '}
-        <M tex="\ln P(t)" />. That choice has a direct consequence for the forwards:
+        finished curve it helped build. EURIBOR 6M and the cross-currency curve are cubic
+        splines on <M tex="\ln P(t)" />, and that choice has a direct consequence for their
+        forwards:
       </P>
       <Eq tex={String.raw`\ln P(t)\ \text{piecewise cubic} \;\Longrightarrow\; f(t) = -\frac{d}{dt}\ln P(t)\ \text{piecewise quadratic and continuous.}`} />
       <P>
@@ -69,15 +70,15 @@ const text: Record<string, ReactNode> = {
         oscillate, because bending is the only way to hit all of them.
       </P>
       <P>
-        The dashed lines on the panel take the same quotes through a second interpolation, the
-        min-curve spline. It is a cubic in the zero rate whose slopes come from the natural spline
-        equations for evenly spaced pillars, applied as they stand to pillars that are not. Where
-        neighbouring gaps are equal the curvature is continuous. Where the gap changes only the
-        slope is, so the instantaneous forward kinks at 10Y, 13Y, 15Y and 20Y. Those kinks come to
-        2 to 5 bp against the generating curve, and zero rates move by less than half a basis
-        point. The tenor ESTR build also uses the standard OIS ladder, monthly to a year and
-        annual to twelve years, with an O/N deposit in front and the curve starting on the trade
-        date. On the meeting-dated curves the steps stay and only the spline beyond them changes.
+        The OIS curves use the min-curve spline on the zero rate. Its slopes come from the
+        natural spline equations for evenly spaced pillars, applied as they stand to pillars
+        that are not. Where neighbouring gaps are equal the curvature is continuous, and where
+        the gap changes only the slope is. The forward kinks at those pillars, at 2Y, 10Y, 13Y,
+        15Y and 20Y on the meeting-dated curves. On the tenor ESTR curve they fall at 2Y, 12Y,
+        15Y and 30Y. Against the generating curve the kinks come to 2 to 5 bp, and the zero rates
+        stay within half a basis point. The tenor ESTR curve is built on the standard OIS ladder,
+        monthly to a year and annual to twelve years, with an O/N deposit in front and the curve
+        starting on the trade date.
       </P>
       <Diagram src="/diagrams/construction.svg"
         alt="Flowchart of curve construction: each quote maps to a rate helper chosen by its instrument type, including a float versus float basis swap helper for the 3s6s strip, and all of the helpers for a curve go into one global bootstrap that produces the calibrated term structure and its pillar dates, times and zeros."
@@ -104,8 +105,8 @@ const text: Record<string, ReactNode> = {
       <Eq tex={String.raw`\bar f_k = \frac{1}{\tau_k}\left(\frac{P(t_k)}{P(t_{k+1})} - 1\right),`} />
       <P>
         and the forward is held flat at <M tex="\bar f_k" /> across that interval. The short end
-        is therefore a step function through the dated strip, and the cubic spline takes over
-        beyond the last dated quote. The two pieces are joined by pinning the spline to the
+        is therefore a step function through the dated strip, and the min-curve spline takes
+        over beyond the last dated quote. The two pieces are joined by pinning the spline to the
         step curve&apos;s zero rates at the strip pillars, so the discount factor is continuous
         across the join and the long instruments still reprice.
       </P>
@@ -358,12 +359,12 @@ const text: Record<string, ReactNode> = {
         hiking cycle at 1.8.
       </P>
       <P>
-        On the closing book the one-day 99% VaR is <N>840,709</N> and the expected shortfall{' '}
-        <N>891,998</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
-        gives <N>2,946,940</N>. The backtest counts the days the loss exceeded the VaR predicted
-        the day before, <N>68</N> exceptions in <N>4,603</N> days since 2009 and <N>6</N> in
+        On the closing book the one-day 99% VaR is <N>839,782</N> and the expected shortfall{' '}
+        <N>892,479</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
+        gives <N>2,942,780</N>. The backtest counts the days the loss exceeded the VaR predicted
+        the day before, <N>67</N> exceptions in <N>4,603</N> days since 2009 and <N>6</N> in
         the last 250, which is the amber zone of the Basel traffic light. The collapsed lane is
-        what makes this affordable, <N>5,126</N> full revaluations in <N>303 ms</N>.
+        what makes this affordable, <N>5,126</N> full revaluations in <N>370 ms</N>.
       </P>
     </>
   ),
@@ -383,8 +384,8 @@ const text: Record<string, ReactNode> = {
         of 20bp at the front against 40bp at thirty years, and a basis widening.
       </P>
       <P>
-        On the closing book the parallel rise gains <N>6.07m</N> and the parallel fall loses{' '}
-        <N>7.21m</N>. The asymmetry is convexity: the hedged book is left net paid, and a paid
+        On the closing book the parallel rise gains <N>6.05m</N> and the parallel fall loses{' '}
+        <N>7.18m</N>. The asymmetry is convexity: the hedged book is left net paid, and a paid
         position gains less on a rise than it loses on an equal fall. The steepener and the
         flattener come to <N>1.45m</N> and <N>-1.49m</N>, and the basis widening to <N>3.77m</N>.
       </P>
@@ -411,8 +412,8 @@ const text: Record<string, ReactNode> = {
         marked on a separate end-of-day family of <N>9</N> curves built from <N>149</N>{' '}
         instruments at standard tenors, the set an independent price verification compares
         against. The end-of-day quotes are implied from the trading snapshot through each
-        instrument&apos;s own helper, so the family reprices its inputs to <N>3.4e-10 bp</N>.
-        The valuation difference between the families, the model basis, is <N>-223,874</N> on a
+        instrument&apos;s own helper, so the family reprices its inputs to <N>3.5e-10 bp</N>.
+        The valuation difference between the families, the model basis, is <N>-241,623</N> on a
         book of about 454m, attributed curve by curve.
       </P>
       <P>
@@ -431,7 +432,7 @@ const text: Record<string, ReactNode> = {
       </P>
       <P>
         The second tab turns the same test on the trading curves themselves: their{' '}
-        <N>242</N> quotes against a separate consensus run, and the internal lanes that price
+        <N>144</N> quotes against a separate consensus run, and the internal lanes that price
         the whole book two independent ways and compare the live construction with its
         alternatives.
       </P>
@@ -463,8 +464,8 @@ const text: Record<string, ReactNode> = {
         level, re-bootstraps the end-of-day family and revalues the whole book, <N>449</N> curve
         rebuilds in all. The two routes agree to <N>0.49%</N> on market price uncertainty and{' '}
         <N>0.38%</N> on close-out cost, and the gap is printed per instrument. On this book that
-        is <N>968,855</N> of market price uncertainty, <N>1,575,170</N> of close-out cost, and a
-        CET1 deduction of <N>1,267,790</N> after aggregation. The consensus behind these numbers
+        is <N>968,791</N> of market price uncertainty, <N>1,575,150</N> of close-out cost, and a
+        CET1 deduction of <N>1,267,740</N> after aggregation. The consensus behind these numbers
         is generated.
       </P>
     </>
@@ -486,12 +487,12 @@ const text: Record<string, ReactNode> = {
         valuation panel, and the close-out table beside them is the same result grouped by
         curve. Model risk, Article 11, is sized from the engine&apos;s own alternative
         constructions. The worst spread of the book&apos;s value across the tenor and IMM builds
-        of the same market is <N>1,624,320</N>, or <N>812,160</N> after the 50% weighting. The
+        of the same market is <N>1.99m</N>, or <N>994,994</N> after the 50% weighting. The
         six remaining rows say why they are not modelled here. There is no counterparty in this
         book, discounting at the collateral rate is assumed to cover funding, and there is no
         market-depth data to size concentration. With model risk included the deduction comes to
       </P>
-      <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 480{,}207 + 787{,}583 + 812{,}160 = 2{,}079{,}950, \qquad \alpha = 0.5.`} />
+      <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 480{,}162 + 787{,}574 + 994{,}994 = 2{,}262{,}730, \qquad \alpha = 0.5.`} />
     </>
   ),
 

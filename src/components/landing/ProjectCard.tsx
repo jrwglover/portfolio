@@ -14,7 +14,7 @@ const HOW = [
 ];
 
 const RESULTS = [
-  'GPU marks match QuantLib to 1e-14 on every curve, 224 instruments repriced both ways',
+  'GPU marks match QuantLib to 1e-14 on every curve, 232 instruments repriced both ways',
   '120 prices arriving at once collapse into one rebuild, with no half-updated set ever published',
   'AVAs by sensitivities and by full revaluation agree within 0.5%',
   'Trade feed 127 times faster, zero breaks across 1,035,762 rows',

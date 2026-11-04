@@ -318,7 +318,9 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
           </li>
           <li>
             Interpolation: LogCubicDiscount, a natural cubic spline on log discount
-            factors, as on the RT trading curves.
+            factors. The trading OIS curves use the min-curve spline beyond their
+            meeting strip, so on those curves the model basis includes the
+            interpolation as well.
           </li>
           <li>
             The worst bootstrap round trip across all{' '}

@@ -109,20 +109,13 @@ const CURVE_COLORS: Record<string, string> = {
   // two parents (SOFR, EURUSD), so the envelope stays separable
   // from the curves it rides under both protan and deutan vision.
   CSA_CTD: '#e8963c',
-  // The min-curve builds take their published curve's colour and a dashed line.
-  ESTR_MC: '#d4a853', ESTR_ECB_MC: '#e07850', SOFR_MC: '#9a8bd8', SONIA_MC: '#c86e6e',
 };
-// The same generating curves through the engine's min-curve spline. Drawn
-// beside the published curves for comparison; nothing is priced on them.
-const MINCURVE = ['ESTR_MC', 'ESTR_ECB_MC', 'SOFR_MC', 'SONIA_MC'];
 const CURVE_LABELS: Record<string, string> = {
   ESTR: 'ESTR (tenor OIS, comparison)', ESTR_ECB: 'ESTR ECB meeting-dated',
   ESTR_IMM: 'ESTR IMM-only (comparison)', ESTR_IMMFUT: 'ESTR IMM + futures (comparison)',
   EURIBOR6M: 'EURIBOR 6M (dual-curve)', EURUSD: 'EUR under USD collateral (xccy)',
   SOFR: 'SOFR FOMC meeting-dated', SONIA: 'SONIA MPC meeting-dated',
   CSA_CTD: 'USD CSA cheapest-to-deliver (derived)',
-  ESTR_MC: 'ESTR, standard ladder (min-curve)', ESTR_ECB_MC: 'ESTR ECB (min-curve long end)',
-  SOFR_MC: 'SOFR (min-curve long end)', SONIA_MC: 'SONIA (min-curve long end)',
 };
 const INSTR_BADGE: Record<string, string> = {
   OIS: '#5eaab5', IMM_OIS: '#5cb87a', MTG_OIS: '#e07850', FUTURE: '#b8b04a',
@@ -546,27 +539,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
 
           <div className="flex gap-2 mb-3 flex-wrap items-center"
                style={{ opacity: domain === 'fx' ? 0.35 : 1 }}>
-            {curveKeys.filter(k => !MINCURVE.includes(k)).map(k => (
+            {curveKeys.map(k => (
               <button key={k}
                 onClick={() => setShown(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])}
                 className="font-mono text-[11px] px-2.5 py-1 rounded"
                 style={chip(shown.includes(k), CURVE_COLORS[k])}>{CURVE_LABELS[k]}</button>
             ))}
           </div>
-          {curveKeys.some(k => MINCURVE.includes(k)) && (
-            <div className="flex gap-2 mb-3 flex-wrap items-center"
-                 style={{ opacity: domain === 'fx' ? 0.35 : 1 }}>
-              <span className="font-mono text-[10px] uppercase tracking-widest mr-1" style={{ color: 'var(--text-dim)' }}>
-                Min-curve spline, dashed
-              </span>
-              {curveKeys.filter(k => MINCURVE.includes(k)).map(k => (
-                <button key={k}
-                  onClick={() => setShown(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])}
-                  className="font-mono text-[11px] px-2.5 py-1 rounded"
-                  style={{ ...chip(shown.includes(k), CURVE_COLORS[k]), borderStyle: 'dashed' }}>{CURVE_LABELS[k]}</button>
-              ))}
-            </div>
-          )}
 
           <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap items-center">
             {([['fwd', 'discrete forwards'], ['inst', 'instantaneous forward'], ['zero', 'zero rates'], ['df', 'discount factors'], ['fx', 'FX forwards']] as const)
@@ -606,8 +585,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                 labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
               <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{CURVE_LABELS[v] ?? v}</span>} />
               {(domain === 'fx' ? ['EURUSD'] : shown).map(k => (
-                <Line key={k} dataKey={k} stroke={CURVE_COLORS[k]} dot={false} strokeWidth={1.8} isAnimationActive={false}
-                  strokeDasharray={MINCURVE.includes(k) ? '6 4' : undefined} />
+                <Line key={k} dataKey={k} stroke={CURVE_COLORS[k]} dot={false} strokeWidth={1.8} isAnimationActive={false} />
               ))}
             </LineChart>
           </ResponsiveContainer>
