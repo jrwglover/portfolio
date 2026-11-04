@@ -17,22 +17,20 @@ const text: Record<string, ReactNode> = {
       </P>
       <Eq tex={String.raw`f(t) = -\frac{d}{dt}\ln P(t), \qquad P(T) = \exp\!\Big(-\int_0^T f(u)\,du\Big),`} />
       <P>
-        and most of what follows is easier to read in terms of <M tex="f" />, because it is the
-        rate the curve says you earn over the next instant at <M tex="t" />. The market never
-        quotes <M tex="P" /> or <M tex="f" /> directly. It quotes instruments: overnight index
-        swaps, interest rate futures, forward rate agreements, fixed-for-floating swaps, tenor
-        basis swaps, FX swap points and cross-currency basis. Each quote <M tex="q_k" /> is a
-        constraint on the curve, because the instrument priced off the curve has to come back at
-        its quoted value, <M tex="V_k(P;\,q_k) = 0" />.
+        and most of what follows is easier to read in terms of <M tex="f" />, the rate the
+        curve says is earned over the next instant at <M tex="t" />. The market quotes neither{' '}
+        <M tex="P" /> nor <M tex="f" />. It quotes instruments such as overnight index swaps,
+        futures, forward rate agreements, swaps, basis swaps and FX points. Each quote{' '}
+        <M tex="q_k" /> is a constraint on the curve, since the instrument priced off the curve
+        has to come back at its quoted value, <M tex="V_k(P;\,q_k) = 0" />.
       </P>
       <P>
-        Every quote carries conventions, and the model treats them as data, with the same care as the
-        quote itself. An ESTR OIS accrues ACT/360 and settles two days after trade, a SONIA OIS
-        accrues ACT/365F and settles the same day, and a EURIBOR swap pays its fixed leg
-        annually against a semi-annual floating leg. Get one convention
-        wrong and the curve reprices that quote at a slightly different rate, and every forward
-        after that pillar inherits the error. So the model stores each quote with its calendar,
-        day count, settlement lag and frequency, and the panel shows exactly that.
+        Every quote carries conventions, and the model stores them with the quote. An ESTR OIS
+        accrues ACT/360 and settles two days after trade, a SONIA OIS accrues ACT/365F and
+        settles the same day, and a EURIBOR swap pays annually against a semi-annual floating
+        leg. One wrong convention reprices that quote at a slightly different rate, and every
+        forward after that pillar inherits the error. The panel shows each quote with its
+        calendar, day count, settlement lag and frequency.
       </P>
       <P>
         Nine curves are built from <N>224</N> instruments. After each build, every instrument
@@ -48,13 +46,12 @@ const text: Record<string, ReactNode> = {
       <P>
         Bootstrapping is the inverse problem. Given <M tex="n" /> quotes on a curve, choose{' '}
         <M tex="n" /> pillar dates, treat the discount factors at the pillars as unknowns, and let
-        an interpolation rule fill in everything between. The classical method solves pillar by
-        pillar: the shortest instrument fixes the first pillar, the next instrument fixes the
-        second with the first held, and so on. It works when each instrument depends only on
-        earlier pillars. It breaks for a global interpolator, because a spline&apos;s shape
-        between pillars <M tex="k" /> and <M tex="k+1" /> depends on pillar <M tex="k+2" />, so
-        the earlier solve is wrong by the time the later one finishes. An earlier version of this
-        engine did it that way and stopped converging on the long end.
+        an interpolation rule fill in everything between. The classical method solves one pillar
+        at a time, each instrument fixing the next pillar with the earlier ones held. That works
+        when each instrument depends only on earlier pillars. With a spline it does not, because
+        the shape between pillars <M tex="k" /> and <M tex="k+1" /> depends on pillar{' '}
+        <M tex="k+2" />. An earlier version of this engine solved that way and stopped
+        converging on the long end.
       </P>
       <P>
         So every pillar on a curve is solved at once, as one Newton problem in <M tex="n" />{' '}
@@ -64,13 +61,12 @@ const text: Record<string, ReactNode> = {
       </P>
       <Eq tex={String.raw`\ln P(t)\ \text{piecewise cubic} \;\Longrightarrow\; f(t) = -\frac{d}{dt}\ln P(t)\ \text{piecewise quadratic and continuous.}`} />
       <P>
-        Between pillars the forward bows, and the size of the bow grows with the square of the
-        pillar gap. That is why the quote ladders run monthly to a year and annually to twelve
-        years and never double their spacing, and why the instantaneous forward is the view
-        to judge a build on. A curve can reprice every quote exactly and still have a forward
-        nobody would hedge from. The other lesson, learned the hard way, is that inputs matter
-        more than interpolation: a set of quotes that is not arbitrage-consistent forces any
-        interpolator to oscillate, because the only way to hit all of them is to bend.
+        Between pillars the forward bows, and the bow grows with the square of the pillar gap.
+        That is why the quote ladders run monthly to a year and annually to twelve years, and
+        why the instantaneous forward is the view to judge a build on. A curve can reprice every
+        quote and still have a forward nobody would hedge from. Inputs matter more than
+        interpolation. A set of quotes that is not arbitrage-consistent makes any interpolator
+        oscillate, because bending is the only way to hit all of them.
       </P>
       <Diagram src="/diagrams/construction.svg"
         alt="Flowchart of curve construction: each quote maps to a rate helper chosen by its instrument type, including a float versus float basis swap helper for the 3s6s strip, and all of the helpers for a curve go into one global bootstrap that produces the calibrated term structure and its pillar dates, times and zeros."
@@ -138,12 +134,12 @@ const text: Record<string, ReactNode> = {
       </P>
       <Eq tex={String.raw`f_{\text{ctd}}(t) = \max\big(f_{\text{SOFR}}(t),\, f_{\text{EUR/USD}}(t)\big), \qquad P_{\text{ctd}}(T) = \exp\!\Big(-\int_0^T f_{\text{ctd}}\Big).`} />
       <P>
-        The result has kinks where the maximum switches from one curve to another, and the GPU
-        carries it as an exact table of regions, since a spline would smooth the kinks away. One known limitation sits in
-        this panel. FX points that span the year-end carry a turn premium, and the spline
-        absorbs it as a dip of about <N>25bp</N> in the instantaneous forward either side of
-        31 December. The proper treatment is an explicit jump in the overnight forward on the turn
-        dates, with a clean curve interpolated around it, and it is on the list.
+        The result has kinks where the maximum switches from one curve to another, so the GPU
+        carries it as a table of regions, where a spline would smooth the kinks away. One
+        known limitation sits in this panel. FX points that span the year end carry a turn
+        premium, and the spline absorbs it as a dip of about <N>25bp</N> in the instantaneous
+        forward either side of 31 December. The proper treatment is an explicit jump in the
+        overnight forward on the turn dates, and it is on the list.
       </P>
     </>
   ),
@@ -185,15 +181,14 @@ const text: Record<string, ReactNode> = {
   'cost': (
     <>
       <P>
-        Valuing a swap as an object means building its schedule, then calling the curve once
-        per cashflow through a virtual function. Measured on this machine, per cashflow, that
-        costs <N>2.03 µs</N> through QuantLib&apos;s swap objects, <N>0.249 µs</N> through a flat
-        loop over cashflow arrays that still calls the curve virtually, and <N>0.029 µs</N>{' '}
-        through the raw spline coefficients. Leaving the object model is worth sixty-five to
-        seventy times on a single core. The GPU then adds a factor of one to 1.7 at 6.2 million
-        cashflows, and on bucketed curve risk it never beat the flattened CPU at any book size
-        measured. The old headline of an eight times GPU win was measuring QuantLib&apos;s
-        overhead, not the device.
+        Valuing a swap as an object means building its schedule and calling the curve once per
+        cashflow through a virtual function. On this machine that costs <N>2.03 µs</N> per
+        cashflow through QuantLib&apos;s swap objects, <N>0.249 µs</N> through a flat loop over
+        cashflow arrays, and <N>0.029 µs</N> through the raw spline coefficients. Leaving the
+        object model is worth about seventy times on a single core. The GPU then adds a factor
+        of one to 1.7 at 6.2 million cashflows, and on bucketed curve risk it did not beat the
+        flattened CPU at any book size measured. An earlier headline of an eight times GPU win
+        had been measuring QuantLib&apos;s overhead.
       </P>
       <P>
         The bigger idea is to stop touching trades at all. The value of the book is a sum over
@@ -254,13 +249,12 @@ const text: Record<string, ReactNode> = {
         a single rebuild of each affected curve.
       </P>
       <P>
-        The harder requirement is consistency. If curves are rebuilt one at a time and a reader
-        is pricing while they change, it can read ESTR from one moment and EURIBOR from another,
-        and the book it values never existed. So curves are published as immutable sets, each
-        stamped with an epoch, and a reader holds one set for the whole of a calculation. Two
-        readers checking continuously while the engine rebuilt underneath them never found an
-        inconsistent set. When a solve fails, the last good version of that curve is served and
-        marked stale, and the rest of the set carries on.
+        The harder requirement is consistency. A reader pricing while curves are rebuilt one at
+        a time can take ESTR from one moment and EURIBOR from another, and value a book that
+        existed at neither. So curves are published as immutable sets, each stamped with an
+        epoch, and a reader holds one set for a whole calculation. Two readers checking
+        continuously while the engine rebuilt underneath them found no inconsistent set. When a
+        solve fails, the last good version of that curve is served and marked stale.
       </P>
     </>
   ),
@@ -293,13 +287,11 @@ const text: Record<string, ReactNode> = {
   'session-replay': (
     <>
       <P>
-        Each cycle of the engine does the same five things. It drains the tick queue, dropping
-        repeats and ordering late arrivals. It rebuilds the curves the surviving ticks
-        invalidate, in dependency order. It publishes the result as a new set with the next
-        epoch. It reprices the collapsed book on that set, and it runs the risk ladders and a
-        full-revaluation VaR over the most recent 250 days of the generated scenario history.
-        The replay records each of those clocks per step, and the steps come to a few hundred
-        milliseconds end to end on a book of <N>150,103</N> trades.
+        Each cycle does the same five things. It drains the tick queue, rebuilds the curves the
+        ticks invalidate in dependency order, publishes the result as a new set, reprices the
+        collapsed book on it, and runs the risk ladders and a full-revaluation VaR over the most
+        recent 250 days of generated history. The replay records each of those clocks, and a
+        step comes to a few hundred milliseconds end to end on a book of <N>150,103</N> trades.
       </P>
       <P>
         The session is a recording of the engine fed a scripted stream of prices with repeats
@@ -346,24 +338,21 @@ const text: Record<string, ReactNode> = {
       </P>
       <Eq tex={String.raw`\text{VaR}_{99} = -Q_{0.01}(\Delta V), \qquad \text{ES}_{99} = -\,\mathbb{E}\big[\Delta V \,\big|\, \Delta V \le Q_{0.01}(\Delta V)\big], \qquad \text{VaR}_{10d} = \sqrt{10}\,\text{VaR}_{1d}.`} />
       <P>
-        The engine computes it by historical simulation in the shape CRR Art. 365 asks for:
-        the whole book is fully revalued under each of the 250 most recent business days of
-        curve moves, and again under a one-year window of stress. Real market history cannot
-        ship with this site, so the history is generated from a factor model correlated across
-        curves and tenors with Student-t tails, and its volatility regimes follow the actual
-        chronology: the 2008 crisis at 3.5 times normal with fatter tails, March 2020 at 2.5,
-        the 2022 to 2023 hiking cycle at 1.8. The revaluations under that history are measured,
-        and so is the cost of them.
+        The engine computes it by historical simulation in the shape CRR Art. 365 asks for.
+        The whole book is revalued under each of the 250 most recent business days of curve
+        moves, and again under a one-year window of stress. Real market history cannot ship
+        with this site, so the history is generated from a factor model correlated across
+        curves and tenors with Student-t tails. Its volatility regimes follow the real
+        chronology, with 2008 at 3.5 times normal, March 2020 at 2.5 and the 2022 to 2023
+        hiking cycle at 1.8.
       </P>
       <P>
         On the closing book the one-day 99% VaR is <N>840,709</N> and the expected shortfall{' '}
         <N>891,998</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
-        gives <N>2,946,940</N>, 3.5 times the trailing figure. The backtest counts the days the
-        loss exceeded the VaR predicted the day before: <N>68</N> exceptions in <N>4,603</N> days
-        since 2009 and <N>6</N> in the last 250, which puts it in the amber zone of the Basel
-        traffic light, one over the green limit of four. The cost is the point of the collapsed
-        lane: <N>5,126</N> full revaluations in <N>303 ms</N>, 59 µs each, where a trade-by-trade
-        revaluation takes 42 ms per scenario.
+        gives <N>2,946,940</N>. The backtest counts the days the loss exceeded the VaR predicted
+        the day before, <N>68</N> exceptions in <N>4,603</N> days since 2009 and <N>6</N> in
+        the last 250, which is the amber zone of the Basel traffic light. The collapsed lane is
+        what makes this affordable, <N>5,126</N> full revaluations in <N>303 ms</N>.
       </P>
     </>
   ),
@@ -395,13 +384,11 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         The same run written down twice. The engine output is what the process prints per
-        cycle: the ticks applied and dropped, the curves rebuilt and how long each took, the set
-        published, and anything that failed. It is the log you read when something on the
-        trader screen looks wrong. The trading view is the same cycles as a desk would read
-        them: which curves moved, by how much at the tenors that matter, and what the book and
-        its risk did as a result. Every number on the trading view has to be traceable to a
-        line in the log, and reading one against the other is the check that the replay shows
-        what actually happened.
+        cycle, the ticks applied and dropped, the curves rebuilt and how long each took, the set
+        published and anything that failed. The trading view shows the same cycles as a desk
+        would read them, which curves moved, by how much at the tenors that matter, and what
+        the book and its risk did as a result. Every number on the trading view traces to a line
+        in the log.
       </P>
     </>
   ),
@@ -410,13 +397,12 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         During the day the desk trades on the meeting-dated model. At the close the book is
-        marked on a separate end-of-day family: <N>9</N> curves built from <N>149</N> instruments
-        at standard tenors and real market conventions, the set an independent price
-        verification process compares against. The two families are built on the same
-        machinery, and the end-of-day quotes are implied from the trading snapshot through each
-        instrument&apos;s own helper, so the family reprices its inputs to a round trip of{' '}
-        <N>3.4e-10 bp</N>. The valuation difference between the families, the model basis, is{' '}
-        <N>-223,874</N> on a book of about 454m, and it is attributed curve by curve.
+        marked on a separate end-of-day family of <N>9</N> curves built from <N>149</N>{' '}
+        instruments at standard tenors, the set an independent price verification compares
+        against. The end-of-day quotes are implied from the trading snapshot through each
+        instrument&apos;s own helper, so the family reprices its inputs to <N>3.4e-10 bp</N>.
+        The valuation difference between the families, the model basis, is <N>-223,874</N> on a
+        book of about 454m, attributed curve by curve.
       </P>
       <P>
         Consensus services such as Totem collect each contributor&apos;s mid for every
@@ -462,14 +448,13 @@ const text: Record<string, ReactNode> = {
       </P>
       <P>
         The regulation allows the sensitivity route, which multiplies the Jacobian by the
-        prudent shift. The full route is built as well: move each quote to its prudent level,
-        re-bootstrap the end-of-day family and revalue the whole book, <N>449</N> real curve
-        rebuilds, every one of which reprices its shifted quote to within <N>5.3e-10 bp</N>. The
-        two routes agree to <N>0.49%</N> on market price uncertainty and <N>0.38%</N> on
-        close-out cost. That gap is the sensitivity route&apos;s linearity error, and it is printed
-        per instrument. The result on this book is <N>968,855</N> of market price uncertainty and{' '}
-        <N>1,575,170</N> of close-out cost before aggregation, and a CET1 deduction of{' '}
-        <N>1,267,790</N> after it. The consensus behind these numbers is generated.
+        prudent shift. The full route is built as well. It moves each quote to its prudent
+        level, re-bootstraps the end-of-day family and revalues the whole book, <N>449</N> curve
+        rebuilds in all. The two routes agree to <N>0.49%</N> on market price uncertainty and{' '}
+        <N>0.38%</N> on close-out cost, and the gap is printed per instrument. On this book that
+        is <N>968,855</N> of market price uncertainty, <N>1,575,170</N> of close-out cost, and a
+        CET1 deduction of <N>1,267,790</N> after aggregation. The consensus behind these numbers
+        is generated.
       </P>
     </>
   ),
@@ -486,16 +471,14 @@ const text: Record<string, ReactNode> = {
         valuation, so this page shows the whole table.
       </P>
       <P>
-        The first two rows are the end-of-day full-revaluation figures from Prudent
-        valuation, and the close-out table beside them is the same result grouped by curve.
-        Model risk, Article 11, is sized from this engine&apos;s own alternative
-        constructions: the live EUR discount curve is the meeting-dated build, and the worst
-        absolute spread of the book&apos;s value across the tenor and IMM builds of the same
-        market is <N>1,624,320</N>, or <N>812,160</N> after the 50% weighting. The six remaining
-        rows say why they are not modelled here, and each reason is a real gap: there is no
-        counterparty in this book, so no CVA; discounting at the collateral rate is assumed to
-        capture funding; there is no market-depth or exit-horizon data to size concentration
-        honestly. With model risk included the deduction comes to
+        The first two rows are the end-of-day full-revaluation figures from the prudent
+        valuation panel, and the close-out table beside them is the same result grouped by
+        curve. Model risk, Article 11, is sized from the engine&apos;s own alternative
+        constructions. The worst spread of the book&apos;s value across the tenor and IMM builds
+        of the same market is <N>1,624,320</N>, or <N>812,160</N> after the 50% weighting. The
+        six remaining rows say why they are not modelled here. There is no counterparty in this
+        book, discounting at the collateral rate is assumed to cover funding, and there is no
+        market-depth data to size concentration. With model risk included the deduction comes to
       </P>
       <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 480{,}207 + 787{,}583 + 812{,}160 = 2{,}079{,}950, \qquad \alpha = 0.5.`} />
     </>
