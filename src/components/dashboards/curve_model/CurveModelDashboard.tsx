@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, type ReactNode } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
-import type { Domain } from '../../../config/projects';
+import type { Domain } from '../../../config/workflow';
 import { SHOW_AUD, isAud, dropAudKeys } from '../../../config/aud';
 import ArchitecturePanel from './ArchitecturePanel';
 
@@ -206,11 +206,13 @@ function instAt(pts: Pt[], t: number): number {
 
 export interface CurveChapter { tab: string; curves?: string[]; domain?: Domain }
 
-export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }: { defaultTab?: string; breadcrumb?: string[]; chapter?: CurveChapter }) {
+export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, embedded, onTab, intro }: { defaultTab?: string; breadcrumb?: string[]; chapter?: CurveChapter; embedded?: boolean; onTab?: (t: string) => void; intro?: (t: string) => ReactNode }) {
   // #collapse deep-links the RT engine page to the collapse analysis: open on
   // the perf tab and scroll once its data has arrived.
   const wantCollapse = typeof window !== 'undefined' && window.location.hash === '#collapse';
-  const [tab, setTab] = useState<Tab>(chapter ? chapter.tab as Tab : wantCollapse ? 'perf' : (defaultTab as Tab) ?? 'inputs');
+  const [tab, setTabState] = useState<Tab>(chapter ? chapter.tab as Tab : wantCollapse ? 'perf' : (defaultTab as Tab) ?? 'inputs');
+  const setTab = (t: Tab) => { setTabState(t); onTab?.(t); };
+  const bare = Boolean(chapter || embedded);
   const [inputs, setInputs] = useState<Inputs | null>(null);
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
@@ -422,8 +424,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
   });
 
   return (
-    <div className={chapter ? '' : 'max-w-6xl mx-auto px-6 py-10'}>
-      {!chapter && (
+    <div className={bare ? '' : 'max-w-6xl mx-auto px-6 py-10'}>
+      {!bare && (
       <DashboardHeader
         label={(breadcrumb ?? ['Rates']).join(' / ')}
         title="Curve Market Data Model"
@@ -431,7 +433,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
         techBadges={['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap']}
       />
       )}
-      {chapter && (
+      {bare && (
         <div className="flex flex-wrap gap-2 mb-4">
           {['C++', 'QuantLib', 'CUDA', 'GlobalBootstrap'].map(b => (
             <span key={b} className="font-mono text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(94,170,181,0.08)', border: '1px solid rgba(94,170,181,0.15)', color: 'var(--accent-cool)' }}>{b}</span>
@@ -439,7 +441,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
         </div>
       )}
 
-      <p className={'text-sm mb-8 max-w-4xl' + (chapter ? '' : ' -mt-6')} style={{ color: 'var(--text-dim)' }}>
+      <p className={'text-sm mb-8 max-w-4xl' + (bare ? '' : ' -mt-6')} style={{ color: 'var(--text-dim)' }}>
         I wrote the engine in C++17 on QuantLib, with CUDA for the GPU comparison. The
         book is priced and risked on one curve per currency dated to its central
         bank&apos;s meetings, ESTR (ECB), SOFR (FOMC) and SONIA (MPC). The tenor and IMM
@@ -455,13 +457,14 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter }:
         ))}
       </div>
       )}
+      {intro?.(tab)}
 
       {tab === 'inputs' && inputs && (
         <div>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
             Each of the {inputs.curves.length} curves is built from the quotes listed
             here. Every quote has to be repriced by its finished curve, and each one is a
-            risk bucket in the trade risk chapter. IMM = third Wednesday of the quarter. MTG = the
+            risk bucket in the trade risk panel. IMM = third Wednesday of the quarter. MTG = the
             day a policy decision takes effect.
           </p>
           <div className="flex gap-2 mb-5 flex-wrap">

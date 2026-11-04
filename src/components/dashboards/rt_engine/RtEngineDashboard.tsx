@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import Workstation, { type Timeline } from './Workstation';
 import EodMarkingTab, { type EodMarking } from './EodMarkingTab';
@@ -42,12 +42,13 @@ const chip = (on: boolean, colour: string) => ({
   color: on ? colour : 'var(--text-secondary)',
 });
 
-export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?: string; chapter?: { tabs: string[] } }) {
-  const [tab, setTab] = useState(() => {
+export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }: { defaultTab?: string; chapter?: { tabs: string[] }; embedded?: boolean; onTab?: (t: string) => void; intro?: (t: string) => ReactNode }) {
+  const [tab, setTabState] = useState(() => {
     if (chapter) return chapter.tabs[0];
     const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
     return q && ['desk', 'limits', 'eod', 'va', 'why', 'graph', 'engine', 'trader', 'var', 'stress', 'ipv', 'exit', 'inventory'].includes(q) ? q : (defaultTab ?? 'desk');
   });
+  const setTab = (t: string) => { setTabState(t); onTab?.(t); };
   const [g, setG] = useState<GraphFile | null>(null);
   const [demo, setDemo] = useState<DemoFile | null>(null);
   const [tl, setTl] = useState<Timeline | null>(null);
@@ -133,6 +134,7 @@ export default function RtEngineDashboard({ defaultTab, chapter }: { defaultTab?
         ))}
       </div>
 
+      {intro?.(tab)}
       {tab === 'desk' && tl && (
         <div>
           <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>

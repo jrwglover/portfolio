@@ -47,10 +47,10 @@ export default function Hero() {
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Below is the platform I built, a linear rates engine, written up as a set of notes
-            you can read in order. The curves follow real market conventions, and I timed
-            every benchmark on this machine. Where something is still wrong or unfinished,
-            I say so on the page.
+            Below is the platform I built, a linear rates engine, shown as a workflow of
+            three stages. Each panel is the live tool with my notes above it. The curves
+            follow real market conventions, and I timed every benchmark on this machine.
+            Where something is still wrong or unfinished, I say so on the page.
           </p>
 
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
@@ -79,9 +79,9 @@ export default function Hero() {
               style={{ background: 'var(--accent-warm)', color: '#0a0a0f' }}>
               The project &darr;
             </a>
-            <a href="#chapters" className="font-mono text-xs px-5 py-2.5 rounded"
+            <a href="#workflow" className="font-mono text-xs px-5 py-2.5 rounded"
               style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-              Contents
+              The workflow
             </a>
           </div>
         </div>

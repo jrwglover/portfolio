@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import { rates, chapterList, chapterPath } from '../../config/projects';
+import { project, stages, stagePath } from '../../config/workflow';
 
 // The three systems used to be three case studies. They are one platform now,
-// so the card describes the platform and the chapters carry the detail.
+// so the card describes the platform and the stages carry the detail.
 const TARGET =
   'Value and risk a rates book during the day at full accuracy, keep the curves current as prices arrive, and take the same numbers through to the end-of-day marks and the capital deduction. Every GPU or real-time number has to tie back to the reference library.';
 
@@ -21,7 +21,6 @@ const RESULTS = [
 ];
 
 export default function ProjectCard() {
-  const first = chapterList(rates)[0];
   return (
     <section id="project" className="max-w-[1320px] mx-auto px-8 py-16">
       <div className="mb-10">
@@ -29,9 +28,9 @@ export default function ProjectCard() {
           Project
         </p>
         <h2 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-          {rates.name}
+          {project.name}
         </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{rates.subtitle}</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{project.subtitle}</p>
       </div>
 
       <div className="rounded-lg p-8 grid md:grid-cols-[1.2fr_1fr] gap-8"
@@ -59,14 +58,14 @@ export default function ProjectCard() {
             ))}
           </ul>
           <div className="flex flex-wrap gap-2 mb-6">
-            {rates.stack.map(s => (
+            {project.stack.map(s => (
               <span key={s} className="font-mono text-[10px] px-2 py-1 rounded"
                 style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-dim)' }}>{s}</span>
             ))}
           </div>
-          <Link to={chapterPath(rates, first)} className="font-mono text-xs mt-auto self-start px-4 py-2 rounded transition-colors"
+          <Link to={stagePath(stages[0])} className="font-mono text-xs mt-auto self-start px-4 py-2 rounded transition-colors"
             style={{ border: '1px solid var(--accent-warm)', color: 'var(--accent-warm)' }}>
-            Start from the beginning &rarr;
+            Start with the curves &rarr;
           </Link>
         </div>
       </div>

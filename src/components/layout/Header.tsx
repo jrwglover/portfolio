@@ -1,14 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
 import type { MouseEvent } from 'react';
-import { findChapter } from '../../config/projects';
+import { findStage, stagePath, stages, project } from '../../config/workflow';
 
 export default function Header() {
   const location = useLocation();
   const isHome = location.pathname === '/';
 
-  // On a chapter page the nav shows where the reader is in the project.
-  const [, projectSlug, chapterSlug] = location.pathname.split('/');
-  const ref = !isHome && projectSlug && chapterSlug ? findChapter(projectSlug, chapterSlug) : undefined;
+  // On a stage page the nav shows the three stages, with the open one marked.
+  const [, section, stageSlug] = location.pathname.split('/');
+  const stage = !isHome && section === 'rates' && stageSlug ? findStage(stageSlug) : undefined;
 
   const navLink = (to: string, label: string, hash = false) => {
     const style = { color: 'var(--text-secondary)' };
@@ -53,23 +53,28 @@ export default function Header() {
           {isHome && (
             <>
               {navLink('#project', 'Project', true)}
-              {navLink('#chapters', 'Chapters', true)}
+              {navLink('#workflow', 'Workflow', true)}
             </>
           )}
-          {ref && (
-            <div className="flex items-center gap-1.5 text-sm">
-              <Link to="/#chapters" className="transition-colors" style={{ color: 'var(--text-dim)' }}
+          {stage && (
+            <div className="flex items-center gap-3 text-sm">
+              <Link to="/#workflow" className="hidden md:inline transition-colors" style={{ color: 'var(--text-dim)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-dim)')}>
-                {ref.project.name}
+                {project.name}
               </Link>
-              <span style={{ color: 'var(--border-subtle)' }}>/</span>
-              <span className="hidden md:inline" style={{ color: 'var(--text-dim)' }}>{ref.part.label}</span>
               <span className="hidden md:inline" style={{ color: 'var(--border-subtle)' }}>/</span>
-              <span style={{ color: 'var(--text-secondary)' }}>{ref.chapter.title}</span>
+              {stages.map(s => (
+                <Link key={s.slug} to={stagePath(s)} className="font-mono text-xs transition-colors"
+                  style={{ color: s.slug === stage.slug ? 'var(--accent-warm)' : 'var(--text-dim)' }}
+                  onMouseEnter={(e) => { if (s.slug !== stage.slug) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={(e) => { if (s.slug !== stage.slug) e.currentTarget.style.color = 'var(--text-dim)'; }}>
+                  {s.n} <span className="hidden sm:inline">{s.title}</span>
+                </Link>
+              ))}
             </div>
           )}
-          {!isHome && !ref && navLink('/', 'Home')}
+          {!isHome && !stage && navLink('/', 'Home')}
         </nav>
       </div>
     </header>

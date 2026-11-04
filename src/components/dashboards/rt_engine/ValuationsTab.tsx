@@ -21,7 +21,7 @@ export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: V
 
   // When the prudent valuation results are supplied, the close-out table and
   // the MPU and CoC rows of the AVA table read the end-of-day full-revaluation
-  // figures of the prudent valuation chapter, so the two chapters quote one
+  // figures of the prudent valuation panel, so the two panels quote one
   // set of numbers. Model risk and the six unmodelled rows stay as the engine
   // wrote them.
   const closeRows = useMemo(() => {

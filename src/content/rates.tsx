@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { P, Eq, M, N, Diagram } from './prose';
 
-// The explanation that opens each chapter of the Linear Rates Engine: what
+// The notes shown above each panel of the Linear Rates Engine: what
 // the quantity is, the relation that defines it, and what the engine measured.
 // The panel that follows is the evidence for the text, not the other way
 // round. Every number quoted here comes from the published JSON or the
@@ -140,7 +140,7 @@ const text: Record<string, ReactNode> = {
       <P>
         The result has kinks where the maximum switches from one curve to another, and the GPU
         carries it as an exact table of regions, since a spline would smooth the kinks away. One known limitation sits in
-        this chapter. FX points that span the year-end carry a turn premium, and the spline
+        this panel. FX points that span the year-end carry a turn premium, and the spline
         absorbs it as a dip of about <N>25bp</N> in the instantaneous forward either side of
         31 December. The proper treatment is an explicit jump in the overnight forward on the turn
         dates, with a clean curve interpolated around it, and it is on my list.

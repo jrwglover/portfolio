@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
@@ -54,8 +54,10 @@ function Stage({ n, title, body }: { n: string; title: string; body: string }) {
   );
 }
 
-export default function BridgeDashboard({ defaultTab, breadcrumb, chapter }: { defaultTab?: string; breadcrumb?: string[]; chapter?: boolean }) {
-  const [tab, setTab] = useState<Tab>((defaultTab as Tab) ?? 'problem');
+export default function BridgeDashboard({ defaultTab, breadcrumb, chapter, embedded, onTab, intro }: { defaultTab?: string; breadcrumb?: string[]; chapter?: boolean; embedded?: boolean; onTab?: (t: string) => void; intro?: (t: string) => ReactNode }) {
+  const [tab, setTabState] = useState<Tab>((defaultTab as Tab) ?? 'problem');
+  const setTab = (t: Tab) => { setTabState(t); onTab?.(t); };
+  const bare = Boolean(chapter || embedded);
   const chip = (active: boolean) => ({
     border: `1px solid ${active ? '#5b8fc9' : 'var(--border-subtle)'}`,
     color: active ? '#5b8fc9' : 'var(--text-dim)',
@@ -63,8 +65,8 @@ export default function BridgeDashboard({ defaultTab, breadcrumb, chapter }: { d
   });
 
   return (
-    <div className={chapter ? '' : 'max-w-6xl mx-auto px-6 py-10'}>
-      {!chapter && (
+    <div className={bare ? '' : 'max-w-6xl mx-auto px-6 py-10'}>
+      {!bare && (
       <DashboardHeader
         label={(breadcrumb ?? ['Data Engineering']).join(' / ')}
         title="Spark Trade Bridge"
@@ -94,6 +96,7 @@ export default function BridgeDashboard({ defaultTab, breadcrumb, chapter }: { d
         ))}
       </div>
       )}
+      {intro?.(tab)}
 
       {(chapter || tab === 'problem') && (
         <div>
