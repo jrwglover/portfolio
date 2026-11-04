@@ -442,7 +442,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
       )}
 
       <p className={'text-sm mb-8 max-w-4xl' + (bare ? '' : ' -mt-6')} style={{ color: 'var(--text-dim)' }}>
-        I wrote the engine in C++17 on QuantLib, with CUDA for the GPU comparison. The
+        The engine is C++17 on QuantLib, with CUDA for the GPU comparison. The
         book is priced and risked on one curve per currency dated to its central
         bank&apos;s meetings, ESTR (ECB), SOFR (FOMC) and SONIA (MPC). The tenor and IMM
         builds are only for comparison, and the AUD curves are switched off for now.
@@ -762,9 +762,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
 
               <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
                 Each ladder has its own scale, so compare them by the total printed
-                underneath. I&apos;ve left the GPU lane off Market PV01 because it moves
-                risk between neighbouring pillars while the total holds, and I
-                haven&apos;t explained that yet. On the zero and forward ladders the two
+                underneath. The GPU lane is left off Market PV01 because it moves
+                risk between neighbouring pillars while the total holds, and that
+                is not explained yet. On the zero and forward ladders the two
                 lanes agree to the last digit.
               </p>
             </div>
@@ -901,7 +901,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
       {tab === 'perf' && perf && (
         <div>
           <p className="text-sm mb-2 max-w-4xl" style={{ color: 'var(--text-secondary)' }}>
-            I wanted the fastest way to value a book and refresh its risk during the
+            The aim was the fastest way to value a book and refresh its risk during the
             trading day. Every timing is from this machine, and nearly all of the gain
             came from the code.
           </p>
@@ -998,7 +998,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                   Risk run: cost against book size
                 </h3>
                 <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-                  I timed a full risk run five different ways while growing the book. The GPU pays
+                  A full risk run was timed five different ways while growing the book. The GPU pays
                   a fixed transfer cost per curve, so it starts behind and catches up.
                   The line to watch is all{' '}
                   {sc.threads ?? 16} cores, the realistic alternative to buying a GPU.
@@ -1464,7 +1464,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                 Agreement with QuantLib
               </h3>
               <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-                I check every method above trade by trade at every book size. Errors are
+                Every method above is checked trade by trade at every book size. Errors are
                 measured against notional, because a near-par swap has an NPV close to zero.
               </p>
               <div className="grid md:grid-cols-3 gap-3">
@@ -1504,7 +1504,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                   What it adds up to
                 </h3>
                 <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-                  The changes are listed in the order I made them. All except the third
+                  The changes are listed in the order they were made. All except the third
                   are code changes that cost nothing but the work, while the third is a
                   purchase whose payback depends on the job and the machine it goes
                   into.

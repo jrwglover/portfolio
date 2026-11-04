@@ -116,7 +116,7 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         Valuation Adjustments
       </h3>
       <p className="text-sm mb-2 max-w-4xl" style={dimText}>
-        I compute the market price uncertainty (Art. 9) and close-out cost (Art. 10)
+        The panel computes the market price uncertainty (Art. 9) and close-out cost (Art. 10)
         AVAs for the EOD marking universe under CDR (EU) 2016/101, as amended by
         2020/866, using both of the methods Art. 9(5)(c) allows. Fair value is the EOD family
         valuation, and the consensus inputs are the same GENERATED Totem-style run the
@@ -129,7 +129,7 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
           approximation.
         </li>
         <li>
-          The full-revaluation route, Art. 9(5)(c)(ii), is the one I treat as
+          The full-revaluation route, Art. 9(5)(c)(ii), is the one treated as
           authoritative. It re-bootstraps the EOD family for each of the{' '}
           {va.meta.quotes} instruments at the prudent, expected-value and exit
           quote, then revalues the whole book on the rebuilt curves through the
@@ -446,8 +446,8 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         </li>
         <li>
           MPU is mid-based per Art. 9(5)(a)(ii), so close-out cost is a
-          separate nonzero AVA per Art. 10(2). I take the consensus half
-          bid-offer as the 90%-confident half-spread (the Art. 10(6)
+          separate nonzero AVA per Art. 10(2). The consensus half
+          bid-offer serves as the 90%-confident half-spread (the Art. 10(6)
           assumption), and the exit shift crosses 50% of it.
         </li>
         <li>
@@ -460,8 +460,8 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
           low-net-sensitivity long-end quotes the sensitivity route&apos;s
           linearity error reaches {pct(t.worstRowLinErrPctMpu)} of the
           instrument&apos;s own AVA, even though the category totals agree to{' '}
-          {pct(Math.abs(t.mpu.gapPct))}. That per-instrument error is why I treat
-          the full-revaluation route as authoritative.
+          {pct(Math.abs(t.mpu.gapPct))}. That per-instrument error is the reason
+          the full-revaluation route is treated as authoritative.
         </li>
         <li>
           The full-revaluation route re-bootstraps with the trading curves&apos;

@@ -109,7 +109,7 @@ export default function BridgeDashboard({ defaultTab, breadcrumb, chapter, embed
           </div>
           <div className="max-w-4xl text-sm leading-relaxed space-y-4" style={{ color: 'var(--text-secondary)' }}>
             <p>
-              I wanted the fastest way to load trades from trade capture into the
+              The aim was the fastest way to load trades from trade capture into the
               risk database, because the end-of-day load took a long time for a
               book of this size. The trades themselves are structured, with long
               schedules, per-period detail on every one and optional exercise
@@ -166,7 +166,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
               Moving the file at the production rate
             </h3>
             <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
-              I measured the transfer leg by copying both payloads through a
+              The transfer leg was measured by copying both payloads through a
               token-bucket throttle set to the 0.19 MB/s production rate. The 255 MB
               legacy file took 22.4 minutes as a single stream, and the 16 MB
               partitioned Parquet took 10.6 seconds over 8 parallel streams.
@@ -189,7 +189,7 @@ NESTED (the bridge outputs):                 exactly 25,000 rows
             <p className="text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
               Adding the measured transfer and file-to-database legs puts the whole
               hand-off at 30.6 minutes on the legacy path and 33.5 seconds on the bridge.
-              I didn&apos;t time the hand-off as one run, so those two totals are sums
+              The hand-off was not timed as one run, so those two totals are sums
               of legs measured separately.
             </p>
           </div>

@@ -141,7 +141,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
             Trading session replay
           </h3>
           <p className="text-sm mb-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            I recorded a trading session on the engine so it can be replayed here. It starts
+            A trading session was recorded on the engine so it can be replayed here. It starts
             with a book of {tl.trades.toLocaleString()} trades, and whenever a price arrives
             the engine re-solves just the curves that depend on it before repricing
             everything downstream.

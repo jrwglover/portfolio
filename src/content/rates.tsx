@@ -68,7 +68,7 @@ const text: Record<string, ReactNode> = {
         pillar gap. That is why the quote ladders run monthly to a year and annually to twelve
         years and never double their spacing, and why the instantaneous forward is the view
         to judge a build on. A curve can reprice every quote exactly and still have a forward
-        nobody would hedge from. The other lesson I learned the hard way is that inputs matter
+        nobody would hedge from. The other lesson, learned the hard way, is that inputs matter
         more than interpolation: a set of quotes that is not arbitrage-consistent forces any
         interpolator to oscillate, because the only way to hit all of them is to bend.
       </P>
@@ -143,7 +143,7 @@ const text: Record<string, ReactNode> = {
         this panel. FX points that span the year-end carry a turn premium, and the spline
         absorbs it as a dip of about <N>25bp</N> in the instantaneous forward either side of
         31 December. The proper treatment is an explicit jump in the overnight forward on the turn
-        dates, with a clean curve interpolated around it, and it is on my list.
+        dates, with a clean curve interpolated around it, and it is on the list.
       </P>
     </>
   ),
@@ -191,7 +191,7 @@ const text: Record<string, ReactNode> = {
         loop over cashflow arrays that still calls the curve virtually, and <N>0.029 µs</N>{' '}
         through the raw spline coefficients. Leaving the object model is worth sixty-five to
         seventy times on a single core. The GPU then adds a factor of one to 1.7 at 6.2 million
-        cashflows, and on bucketed curve risk it never beat the flattened CPU at any book size I
+        cashflows, and on bucketed curve risk it never beat the flattened CPU at any book size
         measured. The old headline of an eight times GPU win was measuring QuantLib&apos;s
         overhead, not the device.
       </P>
@@ -465,7 +465,7 @@ const text: Record<string, ReactNode> = {
       </P>
       <P>
         The regulation allows the sensitivity route, which multiplies the Jacobian by the
-        prudent shift. I built the full route as well: move each quote to its prudent level,
+        prudent shift. The full route is built as well: move each quote to its prudent level,
         re-bootstrap the end-of-day family and revalue the whole book, <N>449</N> real curve
         rebuilds, every one of which reprices its shifted quote to within <N>5.3e-10 bp</N>. The
         two routes agree to <N>0.49%</N> on market price uncertainty and <N>0.38%</N> on

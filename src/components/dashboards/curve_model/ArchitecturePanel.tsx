@@ -128,8 +128,8 @@ export default function ArchitecturePanel() {
 
         <Layer kicker="2" title="Curves are solved from them">
           Every pillar is solved at once, so a quote is repriced by the same finished
-          curve it helped build. I moved to the global solve after an earlier
-          pillar-by-pillar version stopped converging on the long end.
+          curve it helped build. The global solve replaced an earlier
+          pillar-by-pillar version that stopped converging on the long end.
         </Layer>
         <Arrow />
 
@@ -139,7 +139,7 @@ export default function ArchitecturePanel() {
           <div className="mt-2">
             EURIBOR discounts on the meeting-dated ESTR curve and each cross currency
             curve is implied against SOFR, so those curves have to exist first. A wrong
-            order usually just breaks the build. The case I guard against is the one
+            order usually just breaks the build. The case guarded against is the one
             where it doesn&apos;t, and a curve quietly builds on a stale parent. The
             BBSW pair needs more than ordering, because
             each side&apos;s 3s6s basis swaps read the other curve. The engine stages
@@ -190,7 +190,7 @@ export default function ArchitecturePanel() {
           ['Pin the short end with instruments',
            'A region with no instrument in it leaves the curve free to take whatever shape it likes there. Synthetic deposits derived from OIS plus basis removed a 7.4bp kink at the deposit/FRA join.'],
           ['Ship the coefficients to the GPU',
-           'The device evaluates numbers it did not produce. That keeps the kernel branch-free and lets me check CPU/GPU agreement exactly.'],
+           'The device evaluates numbers it did not produce. That keeps the kernel branch-free and makes the CPU and GPU agreement checkable to the last digit.'],
         ].map(([h, b], i) => (
           <div key={h} className="px-4 py-3"
                style={{ borderTop: i ? `1px solid ${EDGE}` : undefined, background: CARD }}>
