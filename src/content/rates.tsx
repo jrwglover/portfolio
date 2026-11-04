@@ -68,6 +68,17 @@ const text: Record<string, ReactNode> = {
         interpolation. A set of quotes that is not arbitrage-consistent makes any interpolator
         oscillate, because bending is the only way to hit all of them.
       </P>
+      <P>
+        The dashed lines on the panel take the same quotes through a second interpolation, the
+        min-curve spline. It is a cubic in the zero rate whose slopes come from the natural spline
+        equations for evenly spaced pillars, applied as they stand to pillars that are not. Where
+        neighbouring gaps are equal the curvature is continuous. Where the gap changes only the
+        slope is, so the instantaneous forward kinks at 10Y, 13Y, 15Y and 20Y. Those kinks come to
+        2 to 5 bp against the generating curve, and zero rates move by less than half a basis
+        point. The tenor ESTR build also uses the standard OIS ladder, monthly to a year and
+        annual to twelve years, with an O/N deposit in front and the curve starting on the trade
+        date. On the meeting-dated curves the steps stay and only the spline beyond them changes.
+      </P>
       <Diagram src="/diagrams/construction.svg"
         alt="Flowchart of curve construction: each quote maps to a rate helper chosen by its instrument type, including a float versus float basis swap helper for the 3s6s strip, and all of the helpers for a curve go into one global bootstrap that produces the calibrated term structure and its pillar dates, times and zeros."
         caption="How a curve is built. Each quote becomes a helper chosen by its instrument type, and one global solve takes every helper on the curve together." />
