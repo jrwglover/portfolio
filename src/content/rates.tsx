@@ -35,7 +35,7 @@ const text: Record<string, ReactNode> = {
         day count, settlement lag and frequency, and the panel shows exactly that.
       </P>
       <P>
-        Fourteen curves are built from <N>348</N> instruments. After each build, every instrument
+        Nine curves are built from <N>224</N> instruments. After each build, every instrument
         is repriced off the finished curve and the difference from its quote reported. On the GPU
         path the marks match QuantLib to <N>10⁻¹⁴</N>, and at that level the only limit left is the
         arithmetic itself.
@@ -136,7 +136,7 @@ const text: Record<string, ReactNode> = {
         switch daily. With no volatility assumed, the cheapest-to-deliver discount curve takes
         the highest forward of the collateral curves at every instant,
       </P>
-      <Eq tex={String.raw`f_{\text{ctd}}(t) = \max\big(f_{\text{SOFR}}(t),\, f_{\text{EUR/USD}}(t),\, f_{\text{AUD/USD}}(t)\big), \qquad P_{\text{ctd}}(T) = \exp\!\Big(-\int_0^T f_{\text{ctd}}\Big).`} />
+      <Eq tex={String.raw`f_{\text{ctd}}(t) = \max\big(f_{\text{SOFR}}(t),\, f_{\text{EUR/USD}}(t)\big), \qquad P_{\text{ctd}}(T) = \exp\!\Big(-\int_0^T f_{\text{ctd}}\Big).`} />
       <P>
         The result has kinks where the maximum switches from one curve to another, and the GPU
         carries it as an exact table of regions, since a spline would smooth the kinks away. One known limitation sits in
@@ -242,7 +242,7 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         Most curve systems rebuild every curve on a timer. Set the interval long and a trader can
-        be looking at a stale curve while the market moves. Set it short and all fourteen curves
+        be looking at a stale curve while the market moves. Set it short and all nine curves
         rebuild every cycle whether or not any price changed, and on most cycles none has. The choice of
         interval is a choice between two kinds of waste, and no setting removes both.
       </P>
@@ -282,13 +282,10 @@ const text: Record<string, ReactNode> = {
         are implied against it, then the cheapest-to-deliver curve built on those.
       </P>
       <Diagram src="/diagrams/curve-graph.svg" minWidth={1000}
-        alt="Curve dependency graph: four pricing curves build independently, one per currency; EURIBOR 6M and the two BBSW curves are discounted on their currency's meeting-dated curve; the two BBSW curves are linked by the 3s6s tenor basis strip and solve as one unit; the cross-currency curves are implied against SOFR, and the cheapest-to-deliver curve is derived from them."
+        alt="Curve dependency graph: three pricing curves build independently, one per currency; EURIBOR 6M is discounted on the meeting-dated ESTR curve; the EUR/USD cross-currency curve is built on ESTR ECB and SOFR; FX forwards and the USD CSA cheapest-to-deliver curve are derived from the result."
         caption="The dependency graph, derived from the registry. The curve at the head of an arrow is built on the one at its tail." />
       <P>
-        One structure needs more than an order. The two BBSW curves read each other through the
-        3s6s basis swaps, so they form a cycle. The engine stages that pair and iterates the
-        joint solve to a fixed point, three passes to <N>1e-12</N>, and treats the pair as one
-        unit of the graph. Pick a curve on the panel to see the set its change forces to rebuild.
+        Pick a curve on the panel to see the set its change forces to rebuild.
       </P>
     </>
   ),
@@ -538,7 +535,7 @@ const text: Record<string, ReactNode> = {
       </P>
       <P>
         The build order comes from the dependency graph: EURIBOR needs ESTR first, the
-        cross-currency curves need SOFR first, and the BBSW pair is solved as one unit. Nothing in
+        cross-currency curve needs SOFR first. Nothing in
         the browser prices anything. The pages render what the engine exported.
       </P>
     </>

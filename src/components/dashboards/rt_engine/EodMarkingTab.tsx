@@ -341,8 +341,7 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
       <p className="text-sm max-w-4xl" style={dimText}>
         In the engine&apos;s checks, the EOD bootstrap round-trips its default quotes
         to {em.meta.worstRoundTripBp.toExponential(1)}bp at worst (gate{' '}
-        {em.meta.roundTripGateBp}bp) with the BBSW pair converging in{' '}
-        {em.meta.pairIterations} staged iterations. The collapsed and trade-level
+        {em.meta.roundTripGateBp}bp). The collapsed and trade-level
         lanes agree on the EOD family to {em.npv.reconAbs.toFixed(2)} currency units.
         First-order against full re-solve: {em.firstOrder.map(f =>
           `${f.label} ${f.bumpBp}bp err ${money(f.absErr)}`).join(', ')}.

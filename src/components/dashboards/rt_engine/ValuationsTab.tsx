@@ -311,9 +311,7 @@ export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: V
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             Hover a check for its unit and note. Checks marked not run are on the
             comparison curves, which carry no positions, so there is no ladder to
-            reconcile and no reason to bump their quotes. The BBSW 3M FLAG
-            marks the table gap where the staged basis solve and the published
-            spline disagree most.
+            reconcile and no reason to bump their quotes.
           </p>
         </PanelCard>
       </Group>}

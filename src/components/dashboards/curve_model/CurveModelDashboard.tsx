@@ -86,7 +86,7 @@ interface AggBench {
 }
 interface PerfFile { patterns: PerfPattern[]; accuracy: { metric: string; value: string; note: string }[]; scaling?: Record<string, Scaling>; npvScaling?: NpvScaling; agreement?: Agree[]; bookScale?: BookScale; marketLanes?: MarketLanes; aggBench?: AggBench }
 
-const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£', AUD: 'A$' };
+const CCY_SYM: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
 const fmtMs = (v: number) =>
   v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}s`
     : v >= 1 ? `${v.toFixed(v >= 100 ? 0 : 1)}ms`
@@ -104,11 +104,9 @@ const FX_BUMP_LABELS: Record<string, string> = {
 const CURVE_COLORS: Record<string, string> = {
   ESTR: '#d4a853', ESTR_ECB: '#e07850', ESTR_IMM: '#5cb87a', ESTR_IMMFUT: '#b8b04a',
   EURIBOR6M: '#8b7ec8', EURUSD: '#4a9a68', SOFR: '#9a8bd8', SONIA: '#c86e6e',
-  AONIA: '#63c4f0', AONIA_RBA: '#3b87d4', BBSW3M: '#e896cc', BBSW6M: '#b34a85',
-  AUDUSD: '#3fc4a5',
   // Vivid amber-orange: the one mid-luminance hue band still free on this
   // chart, and it sits opposite the violet/teal/green of the CTD curve's
-  // three parents (SOFR, EURUSD, AUDUSD), so the envelope stays separable
+  // two parents (SOFR, EURUSD), so the envelope stays separable
   // from the curves it rides under both protan and deutan vision.
   CSA_CTD: '#e8963c',
 };
@@ -117,9 +115,6 @@ const CURVE_LABELS: Record<string, string> = {
   ESTR_IMM: 'ESTR IMM-only (comparison)', ESTR_IMMFUT: 'ESTR IMM + futures (comparison)',
   EURIBOR6M: 'EURIBOR 6M (dual-curve)', EURUSD: 'EUR under USD collateral (xccy)',
   SOFR: 'SOFR FOMC meeting-dated', SONIA: 'SONIA MPC meeting-dated',
-  AONIA: 'AONIA (tenor OIS, comparison)', AONIA_RBA: 'AONIA RBA meeting-dated',
-  BBSW3M: 'BBSW 3M (dual-curve, 3s6s long end)', BBSW6M: 'BBSW 6M (dual-curve, 3s6s front)',
-  AUDUSD: 'AUD under USD collateral (xccy)',
   CSA_CTD: 'USD CSA cheapest-to-deliver (derived)',
 };
 const INSTR_BADGE: Record<string, string> = {
@@ -266,10 +261,9 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
   // forward is the curve's own local rate, and is the most sensitive of the
   // four views.
   const eurusdSpot = inputs?.curves.find(c => c.index === 'EURUSD')?.fx_spot;
-  const audusdSpot = inputs?.curves.find(c => c.index === 'AUDUSD')?.fx_spot;
 
   const curveChart = useMemo(() => {
-    const keys = (domain === 'fx' ? ['EURUSD', 'AUDUSD'] : shown).filter(k => curves[k]?.length);
+    const keys = (domain === 'fx' ? ['EURUSD'] : shown).filter(k => curves[k]?.length);
     if (!keys.length) return [];
     // Past its last exported point a curve clamps flat, which fabricates a
     // rising forward at the right edge, so each SERIES stops at its own last
@@ -309,8 +303,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
     if (domain === 'fx') {
       const usd = curves['SOFR'];
       const spots: Record<string, number | undefined> =
-        { EURUSD: eurusdSpot, AUDUSD: audusdSpot };
-      const pairs = ['EURUSD', 'AUDUSD']
+        { EURUSD: eurusdSpot };
+      const pairs = ['EURUSD']
         .filter(p => curves[p]?.length && spots[p]);
       if (!usd?.length || !pairs.length) return [];
       // Anchor each series at spot. Every point on this curve is spot times a
@@ -344,7 +338,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
       }
       return row;
     });
-  }, [curves, shown, domain, tMax, fwdTenor, eurusdSpot, audusdSpot]);
+  }, [curves, shown, domain, tMax, fwdTenor, eurusdSpot]);
 
   const selTrade = trades?.trades.find(t => t.id === selTradeId) ?? null;
 
@@ -445,7 +439,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
         The engine is C++17 on QuantLib, with CUDA for the GPU comparison. The
         book is priced and risked on one curve per currency dated to its central
         bank&apos;s meetings, ESTR (ECB), SOFR (FOMC) and SONIA (MPC). The tenor and IMM
-        builds are only for comparison, and the AUD curves are switched off for now.
+        builds are only for comparison.
       </p>
 
       {!chapter && (
@@ -590,7 +584,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                   domain === 'fx' ? `${String(n).slice(0, 3)}/USD outright` : CURVE_LABELS[n] ?? n]}
                 labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`} />
               <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{CURVE_LABELS[v] ?? v}</span>} />
-              {(domain === 'fx' ? ['EURUSD', 'AUDUSD'] : shown).map(k => (
+              {(domain === 'fx' ? ['EURUSD'] : shown).map(k => (
                 <Line key={k} dataKey={k} stroke={CURVE_COLORS[k]} dot={false} strokeWidth={1.8} isAnimationActive={false} />
               ))}
             </LineChart>
@@ -603,19 +597,14 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
             year end is the year-end turn held by the FX points.
           </p>
           <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            The cross currency curves sit apart because they are implied from FX swap
-            points and basis against SOFR, with no local quotes. The two BBSW curves
-            split where the AUD market does, quarterly 3M swaps to 3Y and semi-annual 6M
-            swaps from 4Y, and a quoted 6M/3M tenor basis strip stitches the halves so
-            both run the full range. Solving those basis swaps as real float against
-            float instruments makes the pair a joint solve, which the engine stages and
-            iterates to a fixed point.
+            The cross currency curve sits apart because it is implied from FX swap
+            points and basis against SOFR, with no local quotes.
           </p>
           <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            Under a USD CSA that accepts USD, EUR or AUD cash, the poster delivers
+            Under a USD CSA that accepts USD or EUR cash, the poster delivers
             whichever is cheapest and can substitute daily. The CTD curve is therefore
-            the pointwise maximum of the forwards on SOFR and the two cross currency
-            curves, integrated to discount factors. It&apos;s a zero volatility
+            the pointwise maximum of the forwards on SOFR and the cross currency
+            curve, integrated to discount factors. It&apos;s a zero volatility
             construction that gives the option to switch later no value, so a
             stochastic model would discount strictly below this envelope.
           </p>

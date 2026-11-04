@@ -101,7 +101,7 @@ export default function ArchitecturePanel() {
         C4 Level 2 · Containers
       </p>
       <Figure src="/diagrams/c4-container.svg" source={contSrc}
-              alt="C4 container diagram: inside the host process, curve construction writes fourteen term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
+              alt="C4 container diagram: inside the host process, curve construction writes nine term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
               caption="Each container names its technology. The host/device split is a real boundary crossed by one cudaMemcpy, and because that copy is the only place the two paths can diverge, reconciliation sits downstream of both." />
 
       <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
@@ -135,16 +135,13 @@ export default function ArchitecturePanel() {
 
         <Layer kicker="3" title="Some curves are built on others">
           <Figure src="/diagrams/curve-graph.svg" source={curveSrc} minWidth={1000}
-                  alt="Curve dependency graph: four pricing curves build independently, one per currency; EURIBOR 6M and the two BBSW curves are discounted on their currency's meeting-dated curve; the two BBSW curves are also linked by the 3s6s tenor basis strip and solve as a staged pair; each cross-currency curve takes SOFR as its USD leg and its own currency's meeting-dated curve as the other; the derived cheapest-to-deliver curve takes SOFR and both cross-currency curves as parents; the four comparison builds carry nothing; and the FX outright forwards are derived in the browser." />
+                  alt="Curve dependency graph: three pricing curves build independently, one per currency; EURIBOR 6M is discounted on the meeting-dated ESTR curve; the EUR/USD cross-currency curve is built on ESTR ECB and SOFR; FX forwards and the USD CSA cheapest-to-deliver curve are derived from the result." />
           <div className="mt-2">
             EURIBOR discounts on the meeting-dated ESTR curve and each cross currency
             curve is implied against SOFR, so those curves have to exist first. A wrong
             order usually just breaks the build. The case guarded against is the one
-            where it doesn&apos;t, and a curve quietly builds on a stale parent. The
-            BBSW pair needs more than ordering, because
-            each side&apos;s 3s6s basis swaps read the other curve. The engine stages
-            that pair and iterates the joint solve to a fixed point. The CTD curve is
-            derived last, as the pointwise max of its three parents&apos;
+            where it doesn&apos;t, and a curve quietly builds on a stale parent. The CTD curve is
+            derived last, as the pointwise max of its two parents&apos;
             instantaneous forwards with zero volatility and no value for the switch
             option.
           </div>

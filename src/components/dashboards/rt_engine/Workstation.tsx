@@ -142,8 +142,6 @@ const LABEL: Record<string, string> = {
   EUR_ESTR: 'ESTR', EUR_ESTR_ECB: 'ESTR meeting', EUR_ESTR_IMM: 'ESTR IMM',
   EUR_ESTR_IMMFUT: 'ESTR IMM fut', EUR_EURIBOR6M: 'EURIBOR 6M',
   USD_SOFR: 'SOFR', GBP_SONIA: 'SONIA', EUR_USD_XCCY: 'EUR/USD xccy',
-  AUD_AONIA: 'AONIA', AUD_AONIA_RBA: 'AONIA meeting', AUD_BBSW3M: 'BBSW 3M',
-  AUD_BBSW6M: 'BBSW 6M', AUD_USD_XCCY: 'AUD/USD xccy',
   USD_CSA_CTD: 'USD CSA CTD',
 };
 
@@ -152,8 +150,7 @@ const COLOUR: Record<string, string> = {
   EUR_ESTR: '#d4a853', EUR_ESTR_ECB: '#e07850', EUR_ESTR_IMM: '#5cb87a',
   EUR_ESTR_IMMFUT: '#b8b04a', EUR_EURIBOR6M: '#8b7ec8', EUR_USD_XCCY: '#4a9a68',
   USD_SOFR: '#9a8bd8', GBP_SONIA: '#c86e6e',
-  AUD_AONIA: '#63c4f0', AUD_AONIA_RBA: '#3b87d4', AUD_BBSW3M: '#e896cc',
-  AUD_BBSW6M: '#b34a85', AUD_USD_XCCY: '#3fc4a5', USD_CSA_CTD: '#e8963c',
+  USD_CSA_CTD: '#e8963c',
 };
 
 const chip = (on: boolean, colour: string) => ({

@@ -25,7 +25,6 @@ export interface VaMeta {
   };
   noShortcut: {
     interpolation: string; worstRoundTripBp: number; roundTripGateBp: number;
-    bbswMaxPairIterations: number; bbswTol: number;
     perInstrumentBuilds: number; jointBuilds: number; npvLane: string;
   };
 }
@@ -315,18 +314,11 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
             {va.meta.rebuilds.passPrudent} / {va.meta.rebuilds.passEv} /{' '}
             {va.meta.rebuilds.passExit} curve re-solves per pass against the
             Jacobian&apos;s {va.meta.rebuilds.jacobianReference}. Each shift
-            re-solves exactly its dependency closure, and the small shortfall is
-            the staged BBSW pair converging in fewer iterations on the smallest
-            shifts, two builds per saved iteration.
+            re-solves its dependency closure.
           </li>
           <li>
             Interpolation: LogCubicDiscount, a natural cubic spline on log discount
             factors, as on the RT trading curves.
-          </li>
-          <li>
-            The staged BBSW 3s6s fixed point runs on every build that touches the
-            AUD pair, up to {n.bbswMaxPairIterations} iterations to tolerance{' '}
-            {n.bbswTol}.
           </li>
           <li>
             The worst bootstrap round trip across all{' '}
@@ -465,8 +457,8 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         </li>
         <li>
           The full-revaluation route re-bootstraps with the trading curves&apos;
-          own construction (GlobalBootstrap over log-cubic discount splines, the
-          staged BBSW 3s6s fixed point and the xccy dependency chain), with no
+          own construction (GlobalBootstrap over log-cubic discount splines and
+          the xccy dependency chain), with no
           additive curve shifts, overlay revaluation or substitute interpolation.
           The build checks above are measured on every export, and the export
           aborts if any of them fails.

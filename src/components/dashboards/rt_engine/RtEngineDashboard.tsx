@@ -28,11 +28,6 @@ const LABEL: Record<string, string> = {
   USD_SOFR: 'SOFR',
   GBP_SONIA: 'SONIA',
   EUR_USD_XCCY: 'EUR/USD cross currency',
-  AUD_AONIA: 'AONIA',
-  AUD_AONIA_RBA: 'AONIA, meeting dated',
-  AUD_BBSW3M: 'BBSW 3M',
-  AUD_BBSW6M: 'BBSW 6M',
-  AUD_USD_XCCY: 'AUD/USD cross currency',
   USD_CSA_CTD: 'USD CSA cheapest-to-deliver',
 };
 
@@ -189,7 +184,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
           <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
             Many curve systems rebuild everything on a timer. With a long interval a
             trader can be looking at a stale curve while the market moves, and with a
-            short one all fourteen curves rebuild whether or not anything happened.
+            short one all nine curves rebuild whether or not anything happened.
             Rebuilding when a price changes avoids having to choose. What makes it hard
             is that the curves are built on each other.
           </p>
@@ -200,12 +195,9 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
           }}>
             <div style={{ color: 'var(--text-dim)' }}>a price moves on SOFR</div>
             <div>&nbsp;</div>
-            <div>SOFR ────────────────┬──&gt; EUR/USD cross currency</div>
-            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; AUD/USD cross currency</div>
+            <div>SOFR ──────&gt; EUR/USD cross currency ──&gt; USD CSA cheapest-to-deliver</div>
             <div>ESTR ECB ──┬──&gt; EUR/USD cross currency</div>
             <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; EURIBOR 6M</div>
-            <div>AONIA RBA ─┬──&gt; BBSW 3M and BBSW 6M</div>
-            <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; AUD/USD cross currency</div>
             <div>&nbsp;</div>
             <div style={{ color: 'var(--text-dim)' }}>SONIA (nothing is built on it)</div>
           </div>

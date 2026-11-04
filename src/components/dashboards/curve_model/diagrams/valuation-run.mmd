@@ -12,7 +12,7 @@ sequenceDiagram
 
   MD->>B: 14 curves of tagged quotes
 
-  Note over B: the dependencies fix the build order:<br/>ESTR ECB before EURIBOR, AONIA RBA before BBSW,<br/>SOFR before the two FX curves. The BBSW pair is a<br/>staged joint solve on the 3s6s basis, and the CTD<br/>curve is derived last from SOFR and both FX curves
+  Note over B: the dependencies fix the build order:<br/>ESTR ECB before EURIBOR,<br/>SOFR before the FX curve, and the CTD<br/>curve is derived last from SOFR and the FX curve
 
   loop per curve, in dependency order
     B->>B: quote to RateHelper by type
