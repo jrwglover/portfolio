@@ -11,12 +11,11 @@ export default function WorkflowList() {
           The workflow
         </p>
         <h2 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Three stages, one book
+          Three stages
         </h2>
         <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-secondary)' }}>
-          The stages follow the data. Quotes become curves, the curves run live under
-          the book with its risk, marks and capital, and the trade feed brings the book
-          in each evening. Every panel is the live tool with my notes above it.
+          Quotes become curves, the curves run live under the book, and the trade feed
+          brings the book in. Each panel is the live tool with short notes above it.
         </p>
       </div>
 

@@ -4,20 +4,20 @@ import { project, stages, stagePath } from '../../config/workflow';
 // The three systems used to be three case studies. They are one platform now,
 // so the card describes the platform and the stages carry the detail.
 const TARGET =
-  'Value and risk a rates book during the day at full accuracy, keep the curves current as prices arrive, and take the same numbers through to the end-of-day marks and the capital deduction. Every GPU or real-time number has to tie back to the reference library.';
+  'Value and risk a rates book during the day, keep the curves current as prices arrive, and carry the same numbers through to the end-of-day marks and the capital deduction.';
 
 const HOW = [
-  'Build the curves in the order their dependencies require, from the instruments a rates desk quotes, solving every pillar on a curve at once.',
-  'Value the book on the GPU from the coefficients the processor built, then reprice every instrument both ways and compare.',
-  'On a price change, rebuild only the curves that depend on it, in dependency order, and publish each set as one immutable version.',
-  'Mark the same book against generated Totem-style consensus, then compute the prudent valuation AVAs by sensitivities and by full revaluation.',
+  'Build the curves from the instruments a desk quotes, all pillars solved at once.',
+  'Value the book on the GPU and reprice every instrument both ways.',
+  'On a price change, rebuild only the curves that depend on it and publish each set as one version.',
+  'Mark the book against consensus, then compute the prudent valuation AVAs two ways.',
 ];
 
 const RESULTS = [
-  'GPU marks match QuantLib to 10⁻¹⁴ on all fourteen curves, 348 instruments repriced identically both ways',
-  '120 prices arriving at once collapse into a single rebuild, and two readers checking continuously never saw a half-updated set',
-  'MPU and CoC AVAs by sensitivities and by full revaluation agree to within 0.5%, with 449 real curve rebuilds behind the check',
-  'The end-of-day trade feed measured 127× faster at the production transfer rate, with zero breaks across 1,035,762 reconciled rows',
+  'GPU marks match QuantLib to 1e-14 on every curve, 348 instruments repriced both ways',
+  '120 prices arriving at once collapse into one rebuild, with no half-updated set ever published',
+  'AVAs by sensitivities and by full revaluation agree within 0.5%',
+  'Trade feed 127 times faster, zero breaks across 1,035,762 rows',
 ];
 
 export default function ProjectCard() {

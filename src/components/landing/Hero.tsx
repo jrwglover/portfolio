@@ -1,19 +1,7 @@
 const TARGETS = [
-  {
-    n: '01',
-    goal: 'Make GPU pricing trustworthy',
-    how: 'a multi-curve rates engine whose CUDA marks match QuantLib to 10⁻¹⁴, verified on 348 instruments',
-  },
-  {
-    n: '02',
-    goal: 'Speed up a slow trade feed',
-    how: 'the end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark, with the file-to-database load measured 21.5× faster',
-  },
-  {
-    n: '03',
-    goal: 'Keep curves current as prices move',
-    how: 'an event driven engine that rebuilds only the curves a price change affects, and never shows a half updated set',
-  },
+  { n: '01', goal: 'Curve construction and risk', how: 'multi-curve bootstrapping in C++ on QuantLib, with a CUDA lane that matches the reference library to 1e-14' },
+  { n: '02', goal: 'Real-time curves', how: 'an event-driven engine that rebuilds only what a price change touches, with risk, VaR and limits on every set' },
+  { n: '03', goal: 'Valuation control', how: 'end-of-day marking, IPV and the prudent valuation AVAs, all on the same book' },
 ];
 
 export default function Hero() {
@@ -35,26 +23,13 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            I&apos;ve spent about twelve years in markets technology, across front-office
-            quant work, quant risk and product ownership of a pricing engine. Most of that
-            work comes back to whether a number is right, and whether it stays right once
-            it has moved between systems.
-          </p>
-
-          <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            Outside work I swim and spend time with my dog Charlie. I also write code for
-            the fun of it, and that&apos;s how this site started.
+            Quant developer in interest rate derivatives. Twelve years across front-office
+            quant work, quant risk and product ownership of a pricing engine.
           </p>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Below is the platform I built, a linear rates engine, shown as a workflow of
-            three stages. Each panel is the live tool with my notes above it. The curves
-            follow real market conventions, and I timed every benchmark on this machine.
-            Where something is still wrong or unfinished, I say so on the page.
-          </p>
-
-          <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-dim)' }}>
-            Three problems it set out to solve:
+            This site is one working project, a linear rates engine, which you can open and
+            use. It covers three areas:
           </p>
 
           <ul className="space-y-4 mb-8">
@@ -71,7 +46,7 @@ export default function Hero() {
           </ul>
 
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-            Every result quoted on the site was produced by these systems.
+            All data on the site is generated, and every number comes from a run of the engine.
           </p>
 
           <div className="flex gap-3 mt-9">
