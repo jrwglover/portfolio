@@ -38,7 +38,16 @@ export const stages: Stage[] = [
     ],
   },
   {
-    slug: 'live', n: '02', title: 'Run the book live', component: 'RtEngineDashboard',
+    slug: 'book', n: '02', title: 'Get the book in', component: 'BridgeDashboard',
+    lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark and measured.',
+    panels: [
+      { key: 'problem', title: 'The problem', notes: ['trade-feed'] },
+      { key: 'pipeline', title: 'The pipeline', notes: ['trade-feed'] },
+      { key: 'benchmarks', title: 'Measured benchmarks', notes: ['trade-feed'] },
+    ],
+  },
+  {
+    slug: 'live', n: '03', title: 'Run the book live', component: 'RtEngineDashboard',
     lede: 'Curves rebuilt on events as prices arrive, the desk view of a recorded session, limits, VaR and stress, then the end-of-day marks and the capital deduction.',
     panels: [
       { key: 'desk', title: 'Trading session replay', notes: ['session-replay'] },
@@ -54,15 +63,6 @@ export const stages: Stage[] = [
       { key: 'ipv', title: 'Trading-curve IPV', notes: ['eod-marking'] },
       { key: 'exit', title: 'The nine AVA categories', notes: ['ava-table'] },
       { key: 'inventory', title: 'Model inventory', notes: ['model-inventory'] },
-    ],
-  },
-  {
-    slug: 'book', n: '03', title: 'Get the book in', component: 'BridgeDashboard',
-    lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark and measured.',
-    panels: [
-      { key: 'problem', title: 'The problem', notes: ['trade-feed'] },
-      { key: 'pipeline', title: 'The pipeline', notes: ['trade-feed'] },
-      { key: 'benchmarks', title: 'Measured benchmarks', notes: ['trade-feed'] },
     ],
   },
 ];

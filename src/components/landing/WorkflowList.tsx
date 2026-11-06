@@ -14,8 +14,8 @@ export default function WorkflowList() {
           Three stages
         </h2>
         <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-secondary)' }}>
-          Quotes become curves, the curves run live under the book, and the trade feed
-          brings the book in. Each panel is the live tool with short notes above it.
+          Quotes become curves, the trade feed brings the book in, and the book then runs
+          live on those curves. Each panel is the live tool with short notes above it.
         </p>
       </div>
 
