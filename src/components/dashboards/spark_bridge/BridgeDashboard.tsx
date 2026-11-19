@@ -1,14 +1,16 @@
 import { useState, type ReactNode } from 'react';
+import StaticDataPanel from './StaticDataPanel';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
 import DashboardHeader from '../DashboardHeader';
 
-type Tab = 'problem' | 'pipeline' | 'benchmarks';
+type Tab = 'problem' | 'pipeline' | 'benchmarks' | 'static';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'problem', label: 'The Problem' },
   { key: 'pipeline', label: 'The Pipeline' },
   { key: 'benchmarks', label: 'Measured Benchmarks' },
+  { key: 'static', label: 'Bond Static Data' },
 ];
 
 const chartGrid = '#1a1a28';
@@ -97,6 +99,8 @@ export default function BridgeDashboard({ defaultTab, breadcrumb, chapter, embed
       </div>
       )}
       {intro?.(tab)}
+
+      {!chapter && tab === 'static' && <StaticDataPanel />}
 
       {(chapter || tab === 'problem') && (
         <div>

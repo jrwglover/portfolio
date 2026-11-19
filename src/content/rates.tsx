@@ -574,6 +574,31 @@ const text: Record<string, ReactNode> = {
     </>
   ),
 
+  'bond-static-data': (
+    <>
+      <P>
+        A bond&apos;s price changes all day, and its terms almost never change. The coupon, the
+        dates and the day count are static data, and a pricing engine takes them on trust. A
+        wrong term does not fail. It produces a price that is slightly or badly wrong, and
+        the error looks like a market move.
+      </P>
+      <P>
+        A desk has two places to get terms from. A vendor reference feed is broad and arrives
+        every day, and it is wrong whenever the vendor is wrong or late. A manually kept
+        record is needed for corrections and for lines the feed does not carry, and it picks
+        up keying errors. The engine keeps both, compares them field by field, and settles
+        each difference by a fixed rule. The result is one record per bond, and the curve and
+        the relative value panel in stage 01 are built from it.
+      </P>
+      <P>
+        The panel then gives each break a cost. The engine puts the losing value back and
+        reprices, so a mistyped coupon shows as a change in that bond&apos;s yield and a wrong
+        maturity on a benchmark shows as a move in the whole curve. Some breaks cost nothing,
+        and the panel shows those too.
+      </P>
+    </>
+  ),
+
   'pipelines': (
     <>
       <P>

@@ -41,11 +41,12 @@ export const stages: Stage[] = [
   },
   {
     slug: 'book', n: '02', title: 'Get the book in', component: 'BridgeDashboard',
-    lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark and measured.',
+    lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark and measured. The bond terms the book is priced on are reconciled between a reference feed and a manual record.',
     panels: [
       { key: 'problem', title: 'The problem', notes: ['trade-feed'] },
       { key: 'pipeline', title: 'The pipeline', notes: ['trade-feed'] },
       { key: 'benchmarks', title: 'Measured benchmarks', notes: ['trade-feed'] },
+      { key: 'static', title: 'Bond static data', notes: ['bond-static-data'] },
     ],
   },
   {
