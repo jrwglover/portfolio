@@ -1,5 +1,5 @@
 /* Pipelines panel for the curve-model dashboard. It lists what each pipeline
-   runs and what the last local run of the same scripts produced, then the
+   runs and what the runs of 2026-11-19 produced, then the
    gates the data export applies before anything reaches the site. The figures
    come from scripts/ci-engine.sh and scripts/ci-site.sh, run on 2026-11-19. */
 
@@ -61,8 +61,8 @@ export default function PipelinesPanel() {
       <p className="text-sm mb-6 max-w-4xl" style={{ color: SEC }}>
         Each repository has one pipeline, defined as a GitHub Actions workflow. Every stage
         calls a script that lives in the repository, so the commands on the runner are the
-        commands a developer runs before a push. The results shown are from a local run of
-        those scripts on 2026-11-19.
+        commands a developer runs before a push. The results shown are from the runs of
+        2026-11-19.
       </p>
 
       <div className="grid gap-4 lg:grid-cols-2">
