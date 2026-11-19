@@ -7,6 +7,7 @@ import type { Domain } from '../../../config/workflow';
 import { SHOW_AUD, isAud, dropAudKeys } from '../../../config/aud';
 import ArchitecturePanel from './ArchitecturePanel';
 import PipelinesPanel from './PipelinesPanel';
+import BondPanel from './BondPanel';
 
 /* ── Types ── */
 // Stamped at build time by vite.config so a redeploy cannot be served
@@ -25,10 +26,11 @@ interface MarketCurve {
 }
 interface Inputs { curves: MarketCurve[] }
 
-type Tab = 'inputs' | 'curves' | 'sensis' | 'perf' | 'arch' | 'pipelines';
+type Tab = 'inputs' | 'curves' | 'bonds' | 'sensis' | 'perf' | 'arch' | 'pipelines';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
+  { key: 'bonds', label: 'Bonds & Relative Value' },
   { key: 'sensis', label: 'Trade Risk & Cashflows' },
   { key: 'perf', label: 'CPU vs GPU' },
   { key: 'arch', label: 'Architecture' },
@@ -888,6 +890,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
 
       {tab === 'arch' && <ArchitecturePanel />}
       {tab === 'pipelines' && <PipelinesPanel />}
+      {tab === 'bonds' && <BondPanel />}
 
       {tab === 'perf' && perf && (
         <div>

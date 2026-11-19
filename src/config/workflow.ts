@@ -28,10 +28,11 @@ export const project = {
 export const stages: Stage[] = [
   {
     slug: 'curves', n: '01', title: 'Build the curves', component: 'CurveModelDashboard',
-    lede: 'The quotes every curve is built from, the curves themselves, the risk of a trade against them, what a run costs, and the pipelines that build and test the code.',
+    lede: 'The quotes every curve is built from, the curves themselves, a government bond curve with relative value, the risk of a trade against them, what a run costs, and the pipelines that build and test the code.',
     panels: [
       { key: 'inputs', title: 'Market data model', notes: ['market-data-model'] },
       { key: 'curves', title: 'Bootstrapped curves', notes: ['bootstrapping', 'meeting-dated-curves', 'fx-and-cross-currency'] },
+      { key: 'bonds', title: 'Government bonds and relative value', notes: ['bond-curve'] },
       { key: 'sensis', title: 'Trade risk and cashflows', notes: ['trade-risk'] },
       { key: 'perf', title: 'Cost of a risk run', notes: ['cost'] },
       { key: 'arch', title: 'Architecture', notes: ['architecture'] },

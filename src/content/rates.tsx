@@ -543,6 +543,37 @@ const text: Record<string, ReactNode> = {
     </>
   ),
 
+  'bond-curve': (
+    <>
+      <P>
+        A government bond quotes a price, and its yield is one number that averages over every
+        coupon date. The curve underneath is the set of discount factors{' '}
+        <M tex="P(t)" /> that reprices each benchmark bond,
+      </P>
+      <Eq tex={String.raw`\text{price}_k + \text{accrued}_k = \sum_i c_{k,i}\, \frac{P(t_{k,i})}{P(t_s)},`} />
+      <P>
+        with <M tex="t_s" /> the settlement date two business days ahead. The curve is solved
+        from <N>18</N> benchmark bonds, four bills and one bond near each maturity point out to
+        thirty years. It uses the same spline on zero rates as the ESTR curve, with every
+        pillar solved at once.
+      </P>
+      <P>
+        The other <N>33</N> bonds are left off the curve so that they can be measured against
+        it. The residual is a bond&apos;s market yield less the yield at its curve price, and a
+        positive residual means the bond is cheap. A residual on its own says little, because
+        an old high-coupon bond can sit a few basis points cheap for years. The panel
+        therefore compares today&apos;s residual with the bond&apos;s own history and marks the
+        ones more than two standard deviations away.
+      </P>
+      <P>
+        Two spreads place each bond against the swap market. The z-spread is the constant
+        shift of the ESTR zero curve that reprices the bond. The asset swap spread is the
+        margin over ESTR a holder receives for swapping the bond&apos;s coupons at par. The
+        bond universe, the prices and the history are generated for this site.
+      </P>
+    </>
+  ),
+
   'pipelines': (
     <>
       <P>

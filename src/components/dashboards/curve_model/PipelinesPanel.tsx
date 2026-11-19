@@ -37,9 +37,9 @@ const PIPELINES: Pipeline[] = [
       { name: 'Type-check and build', does: 'tsc over the whole project, then the production bundle.',
         result: 'built' },
       { name: 'Data checks', does: 'Every exported file parses, fits the host limit and holds the fields the panels read.',
-        result: '10 files, 0 problems' },
+        result: '11 files, 0 problems' },
       { name: 'Smoke test', does: 'Serves the built site and requests the front page, each stage and the recorded session.',
-        result: '6 requests answered' },
+        result: '7 requests answered' },
     ],
   },
 ];
