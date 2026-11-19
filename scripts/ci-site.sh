@@ -13,7 +13,7 @@ data()    { "${PYTHON:-python3}" scripts/check_site_data.py; }
 # Serve the built site and request every stage and one data file, the way a
 # visitor's browser does.
 smoke() {
-  npx vite preview --port "$PORT" --strictPort > /tmp/site-preview.log 2>&1 &
+  node node_modules/vite/bin/vite.js preview --port "$PORT" --strictPort > /tmp/site-preview.log 2>&1 &
   local pid=$!
   trap 'kill $pid 2>/dev/null || true' RETURN
   for _ in $(seq 1 30); do curl -sf "http://localhost:$PORT/" > /dev/null && break || sleep 1; done
