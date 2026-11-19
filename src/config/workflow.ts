@@ -51,10 +51,11 @@ export const stages: Stage[] = [
   },
   {
     slug: 'live', n: '03', title: 'Run the book live', component: 'RtEngineDashboard',
-    lede: 'Curves rebuilt on events as prices arrive, with value and risk on the whole book refreshed in a median of 178 ms. The desk view of a recorded session, limits, VaR and stress follow, then the end-of-day marks and the capital deduction.',
+    lede: 'Curves rebuilt on events as prices arrive, with value and risk on the whole book refreshed in a median of 183 ms. The desk view of a recorded session, limits and a government bond desk marked on every set come first. VaR and stress follow, then the end-of-day marks and the capital deduction.',
     panels: [
       { key: 'desk', title: 'Trading session replay', notes: ['session-replay'] },
       { key: 'limits', title: 'Limits', notes: ['limits'] },
+      { key: 'bonds', title: 'Government bond desk', notes: ['bond-desk'] },
       { key: 'eod', title: 'Independent price verification', notes: ['eod-marking'] },
       { key: 'va', title: 'Close-out cost and mid-price uncertainty', notes: ['prudent-valuation'] },
       { key: 'why', title: 'Why events', notes: ['why-events'] },

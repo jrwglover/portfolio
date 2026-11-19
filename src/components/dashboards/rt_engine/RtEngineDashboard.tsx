@@ -4,6 +4,7 @@ import Workstation, { type Timeline } from './Workstation';
 import EodMarkingTab, { type EodMarking } from './EodMarkingTab';
 import ValAdjustmentsTab, { type ValAdjustments } from './ValAdjustmentsTab';
 import RiskTab from './RiskTab';
+import BondDeskTab from './BondDeskTab';
 import { SHOW_AUD, isAud, dropAudKeys, dropAudRows } from '../../../config/aud';
 import ValuationsTab from './ValuationsTab';
 import { type RiskVal } from './riskval';
@@ -29,6 +30,7 @@ const LABEL: Record<string, string> = {
   GBP_SONIA: 'SONIA',
   EUR_USD_XCCY: 'EUR/USD cross currency',
   USD_CSA_CTD: 'USD CSA cheapest-to-deliver',
+  EUR_GOVT: 'Government bonds',
 };
 
 const chip = (on: boolean, colour: string) => ({
@@ -41,7 +43,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
   const [tab, setTabState] = useState(() => {
     if (chapter) return chapter.tabs[0];
     const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
-    return q && ['desk', 'limits', 'eod', 'va', 'why', 'graph', 'engine', 'trader', 'var', 'stress', 'ipv', 'exit', 'inventory'].includes(q) ? q : (defaultTab ?? 'desk');
+    return q && ['desk', 'limits', 'bonds', 'eod', 'va', 'why', 'graph', 'engine', 'trader', 'var', 'stress', 'ipv', 'exit', 'inventory'].includes(q) ? q : (defaultTab ?? 'desk');
   });
   const setTab = (t: string) => { setTabState(t); onTab?.(t); };
   const [g, setG] = useState<GraphFile | null>(null);
@@ -77,7 +79,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
   const GROUPS: { label: string; tabs: [string, string][] }[] = [
     {
       label: 'Trading',
-      tabs: [['desk', 'Trading session replay'], ['limits', 'Limits']],
+      tabs: [['desk', 'Trading session replay'], ['limits', 'Limits'], ['bonds', 'Government bond desk']],
     },
     {
       label: 'Valuations',
@@ -156,6 +158,10 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
         </div>
       )}
 
+      {tab === 'bonds' && tl && <BondDeskTab tl={tl} />}
+      {tab === 'bonds' && !tl && (
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading.</p>
+      )}
       {tab === 'limits' && rv && <RiskTab rv={rv} panel="limits" />}
       {tab === 'var' && rv && <RiskTab rv={rv} panel="var" />}
       {tab === 'stress' && rv && <RiskTab rv={rv} panel="stress" />}
@@ -184,7 +190,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
           <p className="text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
             Many curve systems rebuild everything on a timer. With a long interval a
             trader can be looking at a stale curve while the market moves, and with a
-            short one all nine curves rebuild whether or not anything happened.
+            short one all ten curves rebuild whether or not anything happened.
             Rebuilding when a price changes avoids having to choose. What makes it hard
             is that the curves are built on each other.
           </p>
@@ -200,6 +206,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
             <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; EURIBOR 6M</div>
             <div>&nbsp;</div>
             <div style={{ color: 'var(--text-dim)' }}>SONIA (nothing is built on it)</div>
+            <div style={{ color: 'var(--text-dim)' }}>Government bonds (built from bond prices, nothing is built on it)</div>
           </div>
 
           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
@@ -251,7 +258,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
                   <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
                     {n.dependsOn.length
                       ? 'built on ' + n.dependsOn.map(d => LABEL[d] ?? d).join(' and ')
-                      : 'built on its own quotes'}
+                      : n.id === 'EUR_GOVT' ? 'built on bond prices and bond terms' : 'built on its own quotes'}
                   </div>
                 </div>
               );

@@ -1,0 +1,46 @@
+%% The bond lane on the event-driven engine.
+%% Two kinds of input (a price, a static record) and two destinations (the
+%% engine, for the eighteen bonds the curve is solved through, and the desk's
+%% own store, for the rest). The desk reads both curves from ONE published
+%% set, which is what makes a spread between them a number from one moment.
+flowchart TB
+  subgraph SRC["Sources"]
+    direction LR
+    FEED@{ shape: lin-cyl, label: "Reference feed<br/><b>[vendor-style file]</b><br/><small>terms, every line, daily</small>" }
+    MAN@{ shape: lin-cyl, label: "Manual record<br/><b>[file]</b><br/><small>corrections, overrides</small>" }
+    PX@{ shape: lin-cyl, label: "Bond prices<br/><b>[ticks]</b><br/><small>clean price, sequence number</small>" }
+  end
+
+  REC@{ shape: diam, label: "Reconciliation<br/><b>[Python]</b><br/><small>one record per bond;<br/>every difference logged</small>" }
+
+  subgraph ENG["Event-driven engine"]
+    direction TB
+    Q@{ shape: subproc, label: "Queue and stores<br/><b>[C++17]</b><br/><small>quotes conflated per bond;<br/>records ordered by sequence</small>" }
+    BLD@{ shape: subproc, label: "Bond curve build<br/><b>[C++17 / QuantLib]</b><br/><small>18 benchmark bonds,<br/>every pillar solved at once</small>" }
+    SET@{ shape: win-pane, label: "Published set<br/><b>[immutable]</b><br/><small>government curve and ESTR,<br/>one version of each</small>" }
+  end
+
+  subgraph DESK["Bond desk"]
+    direction LR
+    STORE@{ shape: win-pane, label: "Price store and flat bonds<br/><b>[C++17]</b><br/><small>51 bonds, flattened once<br/>per change of terms</small>" }
+    MARK@{ shape: subproc, label: "Mark on every set<br/><b>[C++17]</b><br/><small>residual, z-spread, asset swap;<br/>book value, P&L split, ladders</small>" }
+    CHK@{ shape: diam, label: "Check<br/><b>[QuantLib]</b><br/><small>every bond priced a second way;<br/>the export stops on a gap</small>" }
+  end
+
+  OUT@{ shape: docs, label: "Recorded session<br/><b>[static JSON]</b><br/><small>screen and book per set</small>" }
+
+  FEED --> REC
+  MAN --> REC
+  REC -->|"record for a benchmark bond<br/><b>[reference event]</b>"| Q
+  REC -->|"record for any other bond"| STORE
+  PX -->|"benchmark bond<br/><b>[quote tick]</b>"| Q
+  PX -->|"every bond"| STORE
+  Q -->|"dirty curve"| BLD
+  BLD -->|"solved, or last good if the solve fails"| SET
+  SET -->|"both curves, one set"| MARK
+  STORE --> MARK
+  MARK --> CHK
+  CHK --> OUT
+
+  classDef bnd fill:none,stroke:#2a2a3e
+  class SRC,ENG,DESK bnd

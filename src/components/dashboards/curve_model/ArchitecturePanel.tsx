@@ -4,6 +4,7 @@ import contSrc from './diagrams/c4-container.mmd?raw';
 import runSrc from './diagrams/valuation-run.mmd?raw';
 import buildSrc from './diagrams/construction.mmd?raw';
 import curveSrc from './diagrams/curve-graph.mmd?raw';
+import bondSrc from './diagrams/bond-events.mmd?raw';
 
 /* Architecture panel for the curve-model dashboard.
    A schematic, not a chart: structure carries the meaning, so colour stays
@@ -101,7 +102,7 @@ export default function ArchitecturePanel() {
         C4 Level 2 · Containers
       </p>
       <Figure src="/diagrams/c4-container.svg" source={contSrc}
-              alt="C4 container diagram: inside the host process, curve construction writes nine term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
+              alt="C4 container diagram: inside the host process, curve construction writes the term structures which feed coefficient extraction, the risk engine and reconciliation; coefficients cross to CUDA global memory by cudaMemcpy and are read by the evaluation kernels; both paths meet at reconciliation before results are exported."
               caption="Each container names its technology. The host/device split is a real boundary crossed by one cudaMemcpy, and because that copy is the only place the two paths can diverge, reconciliation sits downstream of both." />
 
       <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
@@ -123,6 +124,8 @@ export default function ArchitecturePanel() {
           Deposits, OIS, futures, FRAs, swaps, tenor basis swaps, FX swap points and
           cross currency basis arrive in one file per valuation date. Each quote states
           its instrument type, so the builder never has to guess from the tenor.
+          Government bonds arrive as a clean price per bond, and each bond&apos;s terms
+          come from a record reconciled between a reference feed and a manual one.
         </Layer>
         <Arrow />
 
@@ -143,7 +146,9 @@ export default function ArchitecturePanel() {
             where it doesn&apos;t, and a curve quietly builds on a stale parent. The CTD curve is
             derived last, as the pointwise max of its two parents&apos;
             instantaneous forwards with zero volatility and no value for the switch
-            option.
+            option. The government bond curve is the opposite case. It is solved from
+            bond prices alone and nothing is built on it, so it can be rebuilt at any
+            time without touching another curve.
           </div>
         </Layer>
         <Arrow label="the same curve object, two ways" />
@@ -177,6 +182,13 @@ export default function ArchitecturePanel() {
         </Layer>
       </div>
 
+      <p className="text-sm mt-8 mb-2 font-mono uppercase tracking-wider" style={{ color: DIM }}>
+        The bond lane on the event engine
+      </p>
+      <Figure src="/diagrams/bond-events.svg" source={bondSrc} minWidth={620}
+              alt="Flowchart of the bond lane on the event engine. A reference feed and a manual record are reconciled into one record per bond. Prices for the eighteen benchmark bonds and static records for those bonds go through the engine's queue to the builder thread, which rebuilds the government curve and publishes a new set. Prices and records for the other bonds go to the desk's own store. The desk reads the government curve and the ESTR curve from one published set and produces the relative value screen, the book value and attribution, and the risk ladders, with every bond checked against QuantLib."
+              caption="Stage 03 runs this lane live. A price or a static record for a benchmark bond is an event in the engine and rebuilds the curve. Everything else goes to the desk, which marks all 51 bonds and the book against one published set." />
+
       <p className="text-sm mt-8 mb-3 font-mono uppercase tracking-wider" style={{ color: DIM }}>
         Decisions that cost the most to get wrong
       </p>
@@ -186,6 +198,8 @@ export default function ArchitecturePanel() {
            'Pinning the pillars down one after another silently failed to converge on the long end. Solving them together fixed it.'],
           ['Pin the short end with instruments',
            'A region with no instrument in it leaves the curve free to take whatever shape it likes there. Synthetic deposits derived from OIS plus basis removed a 7.4bp kink at the deposit/FRA join.'],
+          ['Treat a bond record as an event',
+           'A wrong coupon or maturity does not fail. It gives a price that looks like a market move. Sending the record through the same queue as a price means the curve is rebuilt when a term changes, and the change is ordered and logged like any other event.'],
           ['Ship the coefficients to the GPU',
            'The device evaluates numbers it did not produce. That keeps the kernel branch-free and makes the CPU and GPU agreement checkable to the last digit.'],
         ].map(([h, b], i) => (

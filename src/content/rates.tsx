@@ -33,7 +33,8 @@ const text: Record<string, ReactNode> = {
         calendar, day count, settlement lag and frequency.
       </P>
       <P>
-        Nine curves are built from <N>232</N> instruments. After each build, every instrument
+        Nine rate curves are built from <N>232</N> instruments, and the government bond curve
+        from <N>18</N> bonds. After each build, every instrument
         is repriced off the finished curve and the difference from its quote reported. On the GPU
         path the marks match QuantLib to <N>10⁻¹⁴</N>, and at that level the only limit left is the
         arithmetic itself.
@@ -249,7 +250,7 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         Most curve systems rebuild every curve on a timer. Set the interval long and a trader can
-        be looking at a stale curve while the market moves. Set it short and all nine curves
+        be looking at a stale curve while the market moves. Set it short and all ten curves
         rebuild every cycle whether or not any price changed, and on most cycles none has. The choice of
         interval is a choice between two kinds of waste, and no setting removes both.
       </P>
@@ -258,7 +259,9 @@ const text: Record<string, ReactNode> = {
         belongs to one curve, the dependency graph says which other curves are built on it, and
         only that set is rebuilt. Everything else keeps the version it already has. Prices that
         arrive together are coalesced first, so a burst of <N>120</N> prices in one cycle produces
-        a single rebuild of each affected curve.
+        a single rebuild of each affected curve. The same applies to an input that is not a
+        price. A change in a bond&apos;s terms is an event too, and it rebuilds the one curve
+        built from that bond.
       </P>
       <P>
         The harder requirement is consistency. A reader pricing while curves are rebuilt one at
@@ -291,6 +294,12 @@ const text: Record<string, ReactNode> = {
         alt="Curve dependency graph: three pricing curves build independently, one per currency; EURIBOR 6M is discounted on the meeting-dated ESTR curve; the EUR/USD cross-currency curve is built on ESTR ECB and SOFR; FX forwards and the USD CSA cheapest-to-deliver curve are derived from the result."
         caption="The dependency graph, derived from the registry. The curve at the head of an arrow is built on the one at its tail." />
       <P>
+        The government bond curve stands alone in the graph. It is solved from bond prices,
+        nothing is built on it, and a benchmark bond price rebuilds it and nothing else.
+        Bonds are compared with ESTR, and that comparison reads both curves from one
+        published set without making either depend on the other.
+      </P>
+      <P>
         Pick a curve on the panel to see the set its change forces to rebuild.
       </P>
     </>
@@ -306,11 +315,12 @@ const text: Record<string, ReactNode> = {
         step comes to a few hundred milliseconds end to end on a book of <N>150,103</N> trades.
       </P>
       <P>
-        The first three clocks are the ones a trader waits on. Across the eight cycles of the
-        session that rebuild a curve, the time from draining the queue to refreshed value and
-        risk ladders has a median of <N>178 ms</N> and a slowest cycle of <N>222 ms</N>. The
-        curve rebuild is most of that time. Revaluing every trade takes about <N>5 ms</N> and
-        the ladders about <N>29 ms</N>.
+        The first three clocks are the ones a trader waits on. Across the nine cycles of the
+        session that rebuild a rate curve, the time from draining the queue to refreshed value
+        and risk ladders has a median of <N>183 ms</N> and a slowest cycle of <N>234 ms</N>.
+        The curve rebuild is most of that time. Revaluing every trade takes about{' '}
+        <N>6 ms</N> and the ladders about <N>29 ms</N>. A cycle that rebuilds only the
+        government bond curve solves it in about <N>4.5 ms</N>.
       </P>
       <P>
         The session is a recording of the engine fed a scripted stream of prices with repeats
@@ -318,7 +328,8 @@ const text: Record<string, ReactNode> = {
         exercised. Tickets arrive during the session and are dealt at the
         market on the set they land on. They run unhedged against the limits intraday, and that is
         the story the Limits page tells. They are hedged at the close, before the end-of-day
-        marks in EOD marking and IPV.
+        marks in EOD marking and IPV. The last eight steps are government bond prices and bond
+        static records, and the Government bond desk page follows them.
       </P>
     </>
   ),
@@ -510,7 +521,8 @@ const text: Record<string, ReactNode> = {
         A model validation function asks three things of a curve engine: which models are in
         use, what each one is built from, and what evidence says it works. This is the
         inventory. Every curve in the registry is listed with its construction (a par OIS
-        bootstrap, a dual-curve build, an implied cross-currency curve or a derived one), its
+        bootstrap, a dual-curve build, an implied cross-currency curve, a government bond
+        bootstrap or a derived one), its
         interpolation, the curves it depends on, and the checks the engine ran against the
         final published set.
       </P>
@@ -540,6 +552,13 @@ const text: Record<string, ReactNode> = {
         cross-currency curve needs SOFR first. Nothing in
         the browser prices anything. The pages render what the engine exported.
       </P>
+      <P>
+        Government bonds enter on the same path. Their terms are reconciled between a
+        reference feed and a manual record before a run. The bond curve is solved by the same
+        global bootstrap with bonds as its instruments, and the live engine rebuilds it when
+        a bond price or a bond record arrives. The last diagram on the panel follows that
+        lane.
+      </P>
     </>
   ),
 
@@ -554,26 +573,109 @@ const text: Record<string, ReactNode> = {
       <P>
         with <M tex="t_s" /> the settlement date two business days ahead. The curve is solved
         from <N>18</N> benchmark bonds, four bills and one bond near each maturity point out to
-        thirty years. It uses the same spline on zero rates as the ESTR curve, with every
-        pillar solved at once.
+        thirty years. It uses the same spline on zero rates as the ESTR curve. The unknowns
+        are the zero rates at the <N>18</N> maturities and the conditions are the{' '}
+        <N>18</N> prices. They are solved together, because a coupon that falls between two
+        pillars is discounted on a stretch of spline that both pillars shape. Each benchmark
+        then reprices to within a millionth of a cent.
       </P>
       <P>
         The other <N>33</N> bonds are left off the curve so that they can be measured against
-        it. The residual is a bond&apos;s market yield less the yield at its curve price, and a
-        positive residual means the bond is cheap. A residual on its own says little, because
-        an old high-coupon bond can sit a few basis points cheap for years. The panel
-        therefore compares today&apos;s residual with the bond&apos;s own history and marks the
-        ones more than two standard deviations away.
+        it. Each has a market yield <M tex="y" />, the single rate that discounts its
+        cashflows to its price,
+      </P>
+      <Eq tex={String.raw`\text{price} + \text{accrued} = \sum_i \frac{c_i}{(1+y)^{\tau_i}},`} />
+      <P>
+        where <M tex={String.raw`\tau_i`} /> counts coupon periods from settlement on the
+        bond&apos;s own day count. The same equation at the curve price gives the curve yield{' '}
+        <M tex="y^{*}" />, and the residual is <M tex="r = y - y^{*}" />. A positive residual
+        means the bond is cheap. A residual on its own says little, because an old
+        high-coupon bond can sit a few basis points cheap for years. The panel therefore
+        scores today&apos;s residual against the bond&apos;s own history,
+      </P>
+      <Eq tex={String.raw`z = \frac{r - \bar r}{\sigma_r},`} />
+      <P>
+        with the mean and standard deviation taken over <N>250</N> business days, and marks
+        the bonds beyond two standard deviations.
       </P>
       <P>
-        Two spreads place each bond against the swap market. The z-spread is the constant
-        shift of the ESTR zero curve that reprices the bond. The asset swap spread is the
-        margin over ESTR a holder receives for swapping the bond&apos;s coupons at par. The
-        bond universe, the prices and the history are generated for this site.
+        Two spreads place each bond against the swap market. The z-spread{' '}
+        <M tex="s" /> is the constant shift of the ESTR zero curve that reprices the bond,
+      </P>
+      <Eq tex={String.raw`\text{price} + \text{accrued} = \sum_i c_i\, \frac{P_E(t_i)}{P_E(t_s)}\, e^{-s\,(t_i - t_s)}.`} />
+      <P>
+        The asset swap spread <M tex="a" /> is the margin over ESTR a holder receives for
+        swapping the bond&apos;s coupons at par. It is the bond&apos;s value on the ESTR
+        curve less its price, spread over an annuity <M tex="A" /> of annual ACT/360 periods
+        to maturity,
+      </P>
+      <Eq tex={String.raw`a = \frac{\sum_i c_i\, P_E(t_i)/P_E(t_s) - (\text{price} + \text{accrued})}{100\, A}.`} />
+      <P>
+        The bond universe, the prices and the history are generated for this site. The same
+        curve runs on events in stage 03, where a bond price or a change in a bond&apos;s
+        terms rebuilds it and the screen is refreshed on every set.
       </P>
     </>
   ),
 
+  'bond-desk': (
+    <>
+      <P>
+        The government curve is one more curve in the engine. It is registered with no parent
+        and no child, because it is solved from bond prices alone and only bonds are
+        discounted on it. A benchmark bond price therefore rebuilds this curve and no other,
+        and a swap quote leaves it where it is. In the recorded session that rebuild takes
+        about <N>4.5 ms</N>, and marking all <N>51</N> bonds and the book on the new set
+        takes <N>0.6 ms</N>.
+      </P>
+      <P>
+        Bond inputs reach the engine by three routes. The <N>18</N> bonds the curve is solved
+        through are quotes on the curve, and a new price starts a rebuild. The other{' '}
+        <N>33</N> go to the desk&apos;s price store, where a new price changes that
+        bond&apos;s mark and its place on the screen and no curve is rebuilt. The third route
+        is the bond&apos;s terms. A term changes rarely, but when it does the curve built
+        from it is out of date in the same way as after a price change. A static record is
+        therefore an event as well. It is queued, ordered by sequence number and applied by
+        the builder thread, and the curve is rebuilt when the bond is one of its instruments.
+      </P>
+      <Diagram src="/diagrams/bond-events.svg" minWidth={620}
+        alt="Flowchart of the bond lane on the event engine. A reference feed and a manual record are reconciled into one record per bond. Prices for the eighteen benchmark bonds and static records for those bonds go through the engine's queue to the builder thread, which rebuilds the government curve and publishes a new set. Prices and records for the other bonds go to the desk's own store. The desk reads the government curve and the ESTR curve from one published set and produces the relative value screen, the book value and attribution, and the risk ladders, with every bond checked against QuantLib."
+        caption="The bond lane. A benchmark price or record goes through the engine and rebuilds the curve. Everything else goes to the desk, which marks every bond against one published set." />
+      <P>
+        A position is valued at its market price. To separate what the curve did from what
+        the bond did, each bond carries the constant spread <M tex="s" /> over the government
+        curve <M tex="P_G" /> that reprices it. A position of face <M tex="N" /> is worth
+      </P>
+      <Eq tex={String.raw`V(P_G, s) = \frac{N}{100} \sum_i c_i\, \frac{P_G(t_i)}{P_G(t_s)}\, e^{-s\,(t_i - t_s)},`} />
+      <P>
+        and its profit since the open splits into two parts with nothing left over. With{' '}
+        <M tex="P_G^{0}" /> and <M tex="s_0" /> the curve and the spread at the open,
+      </P>
+      <Eq tex={String.raw`\Delta V = \underbrace{V(P_G, s_0) - V(P_G^{0}, s_0)}_{\text{curve}} \;+\; \underbrace{V(P_G, s) - V(P_G, s_0)}_{\text{spread}}.`} />
+      <P>
+        Risk follows the same split. Each pillar of the government curve is moved one basis
+        point with every spread held, and the changes in value form the bond ladder. The swap
+        hedges have their own ladder on ESTR. The two ladders offset while the two curves
+        move together. What is left when they do not is swap spread risk, which is the risk
+        the book is there to take.
+      </P>
+      <P>
+        The book is put on at the open by rule. A bond two standard deviations cheap against
+        its history is bought and swapped to maturity. A bond that rich is sold against the
+        nearest benchmark. An inventory in the benchmark bonds is hedged with four swaps. In
+        the first nine sets of the session only rates move, so the bonds stand still and the
+        hedges carry all of the profit and loss. The last eight sets are bond prices and
+        static records.
+      </P>
+      <P>
+        The desk prices from cashflows flattened once per bond, the way the swap book is
+        priced. As a check, the engine also prices every bond through QuantLib on the same
+        published curves on every set. Yield, curve price and z-spread agree to within a
+        billionth of a basis point across <N>867</N> comparisons, and the export stops if
+        they do not. The bonds, their prices and their history are generated.
+      </P>
+    </>
+  ),
   'bond-static-data': (
     <>
       <P>
@@ -596,6 +698,14 @@ const text: Record<string, ReactNode> = {
         maturity on a benchmark shows as a move in the whole curve. Some breaks cost nothing,
         and the panel shows those too.
       </P>
+      <P>
+        The same records reach the live engine as events. In stage 03 the wrong maturity on
+        the benchmark arrives during the session. The curve is rebuilt from it, and the bond
+        book shows a loss of <N>161,370</N> with no market move behind it. The correction
+        arrives on the next set and the loss is gone. The wrong coupon moves its bond&apos;s
+        yield by <N>44 bp</N> at an unchanged price, and the screen shows that bond{' '}
+        <N>34</N> standard deviations rich until the record is corrected.
+      </P>
     </>
   ),
 
@@ -604,14 +714,17 @@ const text: Record<string, ReactNode> = {
       <P>
         The engine and the site are separate repositories, and each has its own pipeline. A
         pipeline runs on a push and on a pull request. The engine pipeline builds the
-        event-driven engine, runs its two test suites and then replays a tick session while
-        reader threads check that every published curve set is one coherent version. The site
+        event-driven engine and runs its three test suites, one of them for the bond desk. It
+        then runs the bond static data reconciliation against the terms the prices were
+        generated from, and replays a tick session while reader threads check that every
+        published curve set is one coherent version. The site
         pipeline lints, type-checks and builds the site, checks the exported data and requests
         each stage from the built pages.
       </P>
       <P>
         A second layer of checks sits in the data export. The export reconciles its own
-        results before it writes a file, and a failed gate stops the run. The panel lists both
+        results before it writes a file, and a failed gate stops the run. For bonds the
+        export prices every bond a second time through QuantLib and compares. The panel lists both
         layers, and it ends with the parts of the workflow that are still done by hand.
       </P>
     </>

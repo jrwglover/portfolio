@@ -4,19 +4,21 @@
 flowchart TB
   Q(["Quant / rates desk<br/><b>[Person]</b><br/><small>Needs marks and risk that reconcile<br/>before they reach a book</small>"])
 
-  SYS["Multi-curve rates pricing and risk engine<br/><b>[Software System]</b><br/><small>Bootstraps nine curves, prices and risks them on<br/>CPU and GPU, and proves the two agree</small>"]
+  SYS["Multi-curve rates pricing and risk engine<br/><b>[Software System]</b><br/><small>Bootstraps nine rate curves and a government bond curve,<br/>prices and risks them on CPU and GPU, and proves the two agree</small>"]
 
   MKT@{ shape: lin-cyl, label: "Market data<br/><b>[Software System · external]</b><br/><small>Instrument-typed quote set per valuation date</small>" }
+  REF@{ shape: lin-cyl, label: "Bond reference data<br/><b>[Software System · external]</b><br/><small>Bond terms from a reference feed<br/>and a manually kept record</small>" }
   QLIB["QuantLib<br/><b>[Software System · external]</b><br/><small>Reference term-structure, helper and<br/>instrument library</small>"]
   SITE@{ shape: curv-trap, label: "Portfolio site<br/><b>[Software System · external]</b><br/><small>React · Cloudflare Workers</small>" }
 
   MKT -->|"supplies quotes and fixings<br/><b>[JSON file, read at start of run]</b>"| SYS
+  REF -->|"supplies bond terms, reconciled to one record per bond<br/><b>[JSON files, read before the run and as events]</b>"| SYS
   SYS -->|"constructs curves and prices instruments<br/><b>[C++ API, in-process]</b>"| QLIB
   SYS -->|"publishes frozen curves, ladders and cashflows<br/><b>[JSON, static files]</b>"| SITE
   Q -->|"reads marks, risk ladders and reconciliation results<br/><b>[HTTPS]</b>"| SITE
 
   classDef ext stroke-dasharray:4 3
-  class MKT,QLIB,SITE ext
+  class MKT,REF,QLIB,SITE ext
 
   subgraph KEY[" Key "]
     direction LR

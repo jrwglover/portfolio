@@ -3,6 +3,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart,
   ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
+import type { BondDesk, BondFrame } from './bondDesk';
 
 interface Row {
   id: string; book: string; npv: number; dv01: number; fair: number; degraded: boolean;
@@ -107,6 +108,9 @@ interface Frame {
   mktPending: Record<string, (number | null)[]> | null;
   mktStale?: string;
   mktUs: number; mktRebuilds: number; mktFailed: number;
+  // The government bond desk on this set: the bond events that arrived, the
+  // curve's pillars, every bond against the two curves, and the book.
+  bond?: BondFrame;
 }
 
 // ---- position detail ------------------------------------------------------
@@ -136,13 +140,14 @@ export interface Timeline {
   curveIds: string[]; frames: Frame[];
   feed: FeedTrade[];
   detail?: Detail;
+  bondDesk?: BondDesk;
 }
 
 const LABEL: Record<string, string> = {
   EUR_ESTR: 'ESTR', EUR_ESTR_ECB: 'ESTR meeting', EUR_ESTR_IMM: 'ESTR IMM',
   EUR_ESTR_IMMFUT: 'ESTR IMM fut', EUR_EURIBOR6M: 'EURIBOR 6M',
   USD_SOFR: 'SOFR', GBP_SONIA: 'SONIA', EUR_USD_XCCY: 'EUR/USD xccy',
-  USD_CSA_CTD: 'USD CSA CTD',
+  USD_CSA_CTD: 'USD CSA CTD', EUR_GOVT: 'Govt bonds',
 };
 
 // The curve model's own colours, so a curve is the same colour on both projects.
@@ -150,7 +155,7 @@ const COLOUR: Record<string, string> = {
   EUR_ESTR: '#d4a853', EUR_ESTR_ECB: '#e07850', EUR_ESTR_IMM: '#5cb87a',
   EUR_ESTR_IMMFUT: '#b8b04a', EUR_EURIBOR6M: '#8b7ec8', EUR_USD_XCCY: '#4a9a68',
   USD_SOFR: '#9a8bd8', GBP_SONIA: '#c86e6e',
-  USD_CSA_CTD: '#e8963c',
+  USD_CSA_CTD: '#e8963c', EUR_GOVT: '#5eaab5',
 };
 
 const chip = (on: boolean, colour: string) => ({
@@ -328,7 +333,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
 
   const feed = useMemo(() => {
     const out: {
-      label: string; ticks: string[]; rebuilt: number; dup: number;
+      label: string; ticks: string[]; rebuilt: number; dup: number; desk: boolean;
       events: NonNullable<Frame['bl']>['events'];
     }[] = [];
     for (let k = i; k >= 0 && out.length < 6; k--) {
@@ -336,6 +341,8 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       out.push({
         label: fr.label, ticks: fr.ticks, rebuilt: fr.rebuilt.length,
         dup: fr.duplicate, events: fr.bl?.events ?? [],
+        // A bond price or record that rebuilt no curve still moved the bond desk.
+        desk: (fr.bond?.events.length ?? 0) > 0,
       });
     }
     return out;
@@ -726,7 +733,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                   style={{ color: k === 0 ? 'var(--text-secondary)' : 'var(--text-dim)' }}>
                   <span className="truncate">{e.ticks.length ? e.ticks[0] : e.label}</span>
                   <span style={{ color: e.dup ? '#c86e6e' : e.rebuilt ? '#d4a853' : 'var(--text-dim)' }}>
-                    {e.dup ? 'rejected' : e.rebuilt ? `${e.rebuilt} rebuilt` : 'no change'}
+                    {e.dup ? 'rejected' : e.rebuilt ? `${e.rebuilt} rebuilt` : e.desk ? 'bond desk marked' : 'no change'}
                   </span>
                 </div>
                 {/* Limit crossings the engine detected on this set, in the

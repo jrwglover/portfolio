@@ -4,16 +4,19 @@
 %% device boundary also name the protocol. Shapes are secondary to the labels
 %% and are explained in the key.
 %% .
-%% Deliberately not one container per source file: the nine term structures are
+%% Deliberately not one container per source file: the term structures are
 %% process state rather than a container, and the CSV/JSON outputs are one
 %% dataset. An earlier version listed both and laid out 4613px wide, which is
 %% not readable on a page.
 flowchart TB
   MD@{ shape: lin-cyl, label: "Market data<br/><b>[External · JSON]</b><br/><small>Quotes and fixings,<br/>instrument-typed</small>" }
 
+  BSD@{ shape: lin-cyl, label: "Bond terms and prices<br/><b>[External · JSON]</b><br/><small>Reference feed, manual record,<br/>one clean price per bond</small>" }
+  SREC@{ shape: diam, label: "Static data reconciliation<br/><b>[Python]</b><br/><small>One record per bond;<br/>every difference logged</small>" }
+
   subgraph HOST["Rates engine, host process"]
     direction TB
-    BOOT@{ shape: subproc, label: "Curve construction<br/><b>[C++17 / QuantLib]</b><br/><small>Helpers per instrument type;<br/>all pillars solved at once</small>" }
+    BOOT@{ shape: subproc, label: "Curve construction<br/><b>[C++17 / QuantLib]</b><br/><small>Helpers per instrument type, bonds included;<br/>all pillars solved at once</small>" }
     COEF@{ shape: subproc, label: "Coefficient extraction<br/><b>[C++17]</b><br/><small>Reads the coefficients<br/>each interval holds</small>" }
     RISK@{ shape: subproc, label: "Risk engine<br/><b>[C++17 / OpenMP]</b><br/><small>PV01 by re-bootstrapping<br/>each bumped quote</small>" }
     RECON@{ shape: diam, label: "Reconciliation<br/><b>[C++17 / Python]</b><br/><small>Differences both paths;<br/>re-derives every quote</small>" }
@@ -28,6 +31,8 @@ flowchart TB
   PUB@{ shape: docs, label: "Published dataset<br/><b>[External · static JSON]</b><br/><small>Curves, ladders, cashflows,<br/>frozen and served with the page</small>" }
 
   MD -->|"read at start of run<br/><b>[file]</b>"| BOOT
+  BSD -->|"two sources of terms"| SREC
+  SREC -->|"reconciled terms and prices<br/><b>[file]</b>"| BOOT
   BOOT -->|"calibrated curves"| COEF
   BOOT -->|"reference prices and bumps"| RISK
   BOOT -->|"CPU reference values"| RECON

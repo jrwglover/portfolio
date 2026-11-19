@@ -17,7 +17,7 @@ smoke() {
   local pid=$!
   trap 'kill $pid 2>/dev/null || true' RETURN
   for _ in $(seq 1 30); do curl -sf "http://localhost:$PORT/" > /dev/null && break || sleep 1; done
-  for path in / /rates/curves /rates/book /rates/live "/rates/curves?tab=pipelines" "/rates/curves?tab=bonds" "/rates/book?tab=static"; do
+  for path in / /rates/curves /rates/book /rates/live "/rates/curves?tab=pipelines" "/rates/curves?tab=bonds" "/rates/book?tab=static" "/rates/live?tab=bonds"; do
     curl -sf "http://localhost:$PORT$path" | grep -q '<div id="root">' || { echo "FAIL $path" >&2; return 1; }
     echo "ok   $path"
   done
