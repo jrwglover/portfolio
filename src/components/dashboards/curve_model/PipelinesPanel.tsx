@@ -30,7 +30,7 @@ const PIPELINES: Pipeline[] = [
   },
   {
     name: 'site-ci', repo: 'This site, TypeScript and React', script: 'scripts/ci-site.sh',
-    runner: 'ubuntu-latest, Node 22',
+    runner: 'ubuntu-latest, Node 24',
     steps: [
       { name: 'Lint', does: 'ESLint over every source file, with the warning count capped at its present level.',
         result: '0 errors' },
