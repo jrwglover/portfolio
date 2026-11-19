@@ -577,7 +577,7 @@ const text: Record<string, ReactNode> = {
   'bond-static-data': (
     <>
       <P>
-        A bond&apos;s price changes all day, and its terms almost never change. The coupon, the
+        A bond&apos;s price changes all day, and its terms change rarely. The coupon, the
         dates and the day count are static data, and a pricing engine takes them on trust. A
         wrong term does not fail. It produces a price that is slightly or badly wrong, and
         the error looks like a market move.
