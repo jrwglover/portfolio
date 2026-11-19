@@ -1,6 +1,6 @@
 const TARGETS = [
-  { n: '01', goal: 'Curve construction and risk', how: 'multi-curve bootstrapping in C++ on QuantLib, with a CUDA lane that matches the reference library to 1e-14' },
-  { n: '02', goal: 'Real-time curves', how: 'an event-driven engine that rebuilds only what a price change touches, with risk, VaR and limits on every set' },
+  { n: '01', goal: 'Live risk and P&L', how: 'an event-driven engine that rebuilds the curves a price change touches, then refreshes value, risk, VaR and limits on every set, with P&L attribution between marks' },
+  { n: '02', goal: 'Curve construction and risk', how: 'multi-curve bootstrapping in C++ on QuantLib, with a CUDA lane that matches the reference library to 1e-14' },
   { n: '03', goal: 'Valuation control', how: 'end-of-day marking, IPV and the prudent valuation AVAs, all on the same book' },
 ];
 
@@ -23,7 +23,7 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-            Quant developer in interest rate derivatives. Twelve years across front-office
+            Quant developer and engineer in interest rate derivatives. Twelve years across front-office
             quant work, quant risk and product ownership of a pricing engine.
           </p>
 

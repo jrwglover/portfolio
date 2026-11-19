@@ -6,6 +6,7 @@ import DashboardHeader from '../DashboardHeader';
 import type { Domain } from '../../../config/workflow';
 import { SHOW_AUD, isAud, dropAudKeys } from '../../../config/aud';
 import ArchitecturePanel from './ArchitecturePanel';
+import PipelinesPanel from './PipelinesPanel';
 
 /* ── Types ── */
 // Stamped at build time by vite.config so a redeploy cannot be served
@@ -24,13 +25,14 @@ interface MarketCurve {
 }
 interface Inputs { curves: MarketCurve[] }
 
-type Tab = 'inputs' | 'curves' | 'sensis' | 'perf' | 'arch';
+type Tab = 'inputs' | 'curves' | 'sensis' | 'perf' | 'arch' | 'pipelines';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
   { key: 'sensis', label: 'Trade Risk & Cashflows' },
   { key: 'perf', label: 'CPU vs GPU' },
   { key: 'arch', label: 'Architecture' },
+  { key: 'pipelines', label: 'Pipelines' },
 ];
 
 interface LadderRow { tenor: string; instrument: string; rate: number; cpu: number; gpu: number | null }
@@ -885,6 +887,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
       )}
 
       {tab === 'arch' && <ArchitecturePanel />}
+      {tab === 'pipelines' && <PipelinesPanel />}
 
       {tab === 'perf' && perf && (
         <div>

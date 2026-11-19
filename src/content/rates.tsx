@@ -306,6 +306,13 @@ const text: Record<string, ReactNode> = {
         step comes to a few hundred milliseconds end to end on a book of <N>150,103</N> trades.
       </P>
       <P>
+        The first three clocks are the ones a trader waits on. Across the eight cycles of the
+        session that rebuild a curve, the time from draining the queue to refreshed value and
+        risk ladders has a median of <N>178 ms</N> and a slowest cycle of <N>222 ms</N>. The
+        curve rebuild is most of that time. Revaluing every trade takes about <N>5 ms</N> and
+        the ladders about <N>29 ms</N>.
+      </P>
+      <P>
         The session is a recording of the engine fed a scripted stream of prices with repeats
         and out-of-order arrivals, including one solver failure, so that the failure path gets
         exercised. Tickets arrive during the session and are dealt at the
@@ -532,6 +539,24 @@ const text: Record<string, ReactNode> = {
         The build order comes from the dependency graph: EURIBOR needs ESTR first, the
         cross-currency curve needs SOFR first. Nothing in
         the browser prices anything. The pages render what the engine exported.
+      </P>
+    </>
+  ),
+
+  'pipelines': (
+    <>
+      <P>
+        The engine and the site are separate repositories, and each has its own pipeline. A
+        pipeline runs on a push and on a pull request. The engine pipeline builds the
+        event-driven engine, runs its two test suites and then replays a tick session while
+        reader threads check that every published curve set is one coherent version. The site
+        pipeline lints, type-checks and builds the site, checks the exported data and requests
+        each stage from the built pages.
+      </P>
+      <P>
+        A second layer of checks sits in the data export. The export reconciles its own
+        results before it writes a file, and a failed gate stops the run. The panel lists both
+        layers, and it ends with the parts of the workflow that are still done by hand.
       </P>
     </>
   ),

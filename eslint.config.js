@@ -19,5 +19,10 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // The chart library hands its formatter and tooltip callbacks untyped
+      // payloads. Those stay visible as warnings, and the pipeline caps the count.
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
   },
 ])

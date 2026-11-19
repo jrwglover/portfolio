@@ -22,19 +22,20 @@ export interface Stage {
 export const project = {
   name: 'Linear Rates Engine',
   subtitle: 'Curves, risk, real time and prudent valuation',
-  stack: ['C++17', 'QuantLib', 'CUDA', 'PySpark', 'React'],
+  stack: ['C++17', 'QuantLib', 'CUDA', 'Python', 'PySpark', 'React'],
 };
 
 export const stages: Stage[] = [
   {
     slug: 'curves', n: '01', title: 'Build the curves', component: 'CurveModelDashboard',
-    lede: 'The quotes every curve is built from, the curves themselves, the risk of a trade against them, and what a run costs.',
+    lede: 'The quotes every curve is built from, the curves themselves, the risk of a trade against them, what a run costs, and the pipelines that build and test the code.',
     panels: [
       { key: 'inputs', title: 'Market data model', notes: ['market-data-model'] },
       { key: 'curves', title: 'Bootstrapped curves', notes: ['bootstrapping', 'meeting-dated-curves', 'fx-and-cross-currency'] },
       { key: 'sensis', title: 'Trade risk and cashflows', notes: ['trade-risk'] },
       { key: 'perf', title: 'Cost of a risk run', notes: ['cost'] },
       { key: 'arch', title: 'Architecture', notes: ['architecture'] },
+      { key: 'pipelines', title: 'Build and test pipelines', notes: ['pipelines'] },
     ],
   },
   {
@@ -48,7 +49,7 @@ export const stages: Stage[] = [
   },
   {
     slug: 'live', n: '03', title: 'Run the book live', component: 'RtEngineDashboard',
-    lede: 'Curves rebuilt on events as prices arrive, the desk view of a recorded session, limits, VaR and stress, then the end-of-day marks and the capital deduction.',
+    lede: 'Curves rebuilt on events as prices arrive, with value and risk on the whole book refreshed in a median of 178 ms. The desk view of a recorded session, limits, VaR and stress follow, then the end-of-day marks and the capital deduction.',
     panels: [
       { key: 'desk', title: 'Trading session replay', notes: ['session-replay'] },
       { key: 'limits', title: 'Limits', notes: ['limits'] },

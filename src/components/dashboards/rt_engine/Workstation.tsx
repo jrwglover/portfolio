@@ -312,6 +312,8 @@ export default function Workstation({ tl }: { tl: Timeline }) {
     () => bl?.net.filter(r => r.breach) ?? [], [bl]);
 
   useEffect(() => {
+    // The flash is a timed highlight keyed to the frame, so it is set here and cleared by the timer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFlash(new Set(f.rebuilt));
     const t = window.setTimeout(() => setFlash(new Set()), 1100);
     return () => window.clearTimeout(t);

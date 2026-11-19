@@ -1,0 +1,39 @@
+# Lint, type-check, build, data checks and a smoke test for the site. Every
+# stage calls scripts/ci-site.sh, the same script a developer runs locally.
+# Publishing stays a manual `npx wrangler deploy` from a build that passed.
+name: site-ci
+
+on:
+  push:
+    branches: [master, release/**]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Lint, type-check, build, data checks, smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: bash scripts/ci-site.sh install
+      - run: bash scripts/ci-site.sh lint
+      - run: bash scripts/ci-site.sh build
+      - run: bash scripts/ci-site.sh data
+      - run: bash scripts/ci-site.sh smoke
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-dist
+          path: dist/
+          retention-days: 7
