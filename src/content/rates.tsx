@@ -194,11 +194,11 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         Valuing a swap as an object means building its schedule and calling the curve once per
-        cashflow through a virtual function. On this machine that costs <N>1.81 µs</N> per
-        cashflow through QuantLib&apos;s swap objects, <N>0.028 µs</N> through a flat loop over
+        cashflow through a virtual function. On this machine that costs <N>0.50 µs</N> per
+        cashflow through QuantLib&apos;s swap objects, <N>0.027 µs</N> through a flat loop over
         cashflow arrays, and <N>0.009 µs</N> through the raw spline coefficients. Leaving the
-        object model is worth about 64 times on a single core. At 6.2 million cashflows the GPU
-        is 2.4 times the flat loop on one core, and slower than 16 threads. On bucketed curve
+        object model is worth about 18 times on a single core. At 6.2 million cashflows the GPU
+        is 2.3 times the flat loop on one core, and slower than 16 threads. On bucketed curve
         risk it passes 16 threads only at the largest books, by about 1.5 times. An earlier headline of an eight times GPU win
         had been measuring QuantLib&apos;s overhead.
       </P>
