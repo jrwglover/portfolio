@@ -168,8 +168,8 @@ export default function AgentFlowPanel() {
              'The reviewer is a second context on the same model as the builder. It catches what a fresh reading catches. The result rests on the tests and the pipeline, which involve no model.'],
             ['No agent in the hosted pipeline',
              'The agents run on the workstation. The hosted pipeline runs the deterministic stages on every push, and a review step on pull requests is the next addition.'],
-            ['One run',
-             'The workflow has taken one small change through. The failure paths were exercised by calling the guard directly, and have not yet come up in a run.'],
+            ['One real run',
+             'The workflow has taken one small change through. The failure paths have not come up in a run with a model. The pipeline tests them on every push with a stub that edits a test, touches a protected file or disputes a test, 18 cases in all.'],
           ].map(([h, b], i) => (
             <div key={h} className="px-4 py-3" style={{ borderTop: i ? `1px solid ${EDGE}` : undefined, background: CARD }}>
               <div className="text-xs font-semibold mb-1" style={{ color: PRI }}>{h}</div>

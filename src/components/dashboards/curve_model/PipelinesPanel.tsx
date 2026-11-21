@@ -26,8 +26,10 @@ const PIPELINES: Pipeline[] = [
         result: '52 bonds, 8 fields, 0 wrong' },
       { name: 'Tick replay', does: 'Replays a scripted session with duplicate and stale ticks, a failed solve and a burst of 120 prices, while reader threads check every published curve set.',
         result: '1.7 million reads, 0 incoherent' },
-      { name: 'Logs kept', does: 'The build log, the test logs, the reconciliation log and the replay log are stored with the run.',
-        result: '6 files' },
+      { name: 'Agent workflow guards', does: 'Runs the agent workflow against a stub that misbehaves in one way per case, then calls the guard hook with tool calls each role must not make.',
+        result: '18 cases, 0 failed' },
+      { name: 'Logs kept', does: 'The build log, the test logs, the reconciliation log, the replay log and the agent workflow log are stored with the run.',
+        result: '7 files' },
     ],
   },
   {
