@@ -21,7 +21,7 @@ const PIPELINES: Pipeline[] = [
       { name: 'Build', does: 'Compiles the engine, the three test suites and the replay with -Wall -Wextra.',
         result: '0 warnings' },
       { name: 'Unit tests', does: 'Runs the engine suite, the trader platform suite and the bond desk suite. A failed check in any suite fails the pipeline.',
-        result: '59 tests, 6,407 checks passed' },
+        result: '60 tests, 6,448 checks passed' },
       { name: 'Static data', does: 'Rebuilds one record per bond from the reference feed and the manual record, then compares every field with the terms the prices were generated from.',
         result: '52 bonds, 8 fields, 0 wrong' },
       { name: 'Tick replay', does: 'Replays a scripted session with duplicate and stale ticks, a failed solve and a burst of 120 prices, while reader threads check every published curve set.',
@@ -41,7 +41,7 @@ const PIPELINES: Pipeline[] = [
       { name: 'Data checks', does: 'Every exported file parses, fits the host limit and holds the fields the panels read.',
         result: '11 files, 0 problems' },
       { name: 'Smoke test', does: 'Serves the built site and requests the front page, each stage and the recorded session.',
-        result: '9 requests answered' },
+        result: '10 requests answered' },
     ],
   },
 ];
@@ -66,7 +66,7 @@ export default function PipelinesPanel() {
         Each repository has one pipeline, defined as a GitHub Actions workflow. Every stage
         calls a script that lives in the repository, so the commands on the runner are the
         commands a developer runs before a push. The results shown are from the runs of
-        2026-11-19.
+        2026-11-21.
       </p>
 
       <div className="grid gap-4 lg:grid-cols-2">

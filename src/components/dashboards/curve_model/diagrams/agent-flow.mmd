@@ -1,0 +1,26 @@
+%% The agent workflow in the event-driven engine's repository
+%% (scripts/agent-flow.sh). Three headless Claude Code sessions, each with its
+%% own role, and one stage with no model in it. A person owns both ends.
+flowchart TB
+  SPEC@{ shape: doc, label: "Spec<br/><b>[a person]</b><br/><small>the change, and the numbers<br/>it has to reconcile to</small>" }
+
+  subgraph RUN["scripts/agent-flow.sh, with a guard on every tool call and a git check after every stage"]
+    direction LR
+    T@{ shape: subproc, label: "1. Tests<br/><b>[agent: test-writer]</b><br/><small>reads the spec and the headers;<br/>cannot read the implementation</small>" }
+    B@{ shape: subproc, label: "2. Build<br/><b>[agent: builder]</b><br/><small>implements until the tests pass;<br/>cannot edit tests, specs or scripts</small>" }
+    P@{ shape: diam, label: "3. Pipeline<br/><b>[no model]</b><br/><small>build, three test suites,<br/>static data, tick replay</small>" }
+    R@{ shape: subproc, label: "4. Review<br/><b>[agent: numerics-reviewer]</b><br/><small>read-only; works the arithmetic<br/>and ends in a verdict</small>" }
+  end
+
+  H@{ shape: doc, label: "Commit and push<br/><b>[a person]</b><br/><small>reads the diff and the review</small>" }
+  CI@{ shape: diam, label: "Hosted pipeline<br/><b>[GitHub Actions]</b><br/><small>stage 3 again, on the push</small>" }
+
+  SPEC --> T
+  T -->|"tests only"| B
+  B -->|"tests unchanged"| P
+  P -->|"green, 0 warnings"| R
+  R -->|"VERDICT: PASS"| H
+  H --> CI
+
+  classDef bnd fill:none,stroke:#2a2a3e
+  class RUN bnd

@@ -28,7 +28,7 @@ export const project = {
 export const stages: Stage[] = [
   {
     slug: 'curves', n: '01', title: 'Build the curves', component: 'CurveModelDashboard',
-    lede: 'The quotes every curve is built from, the curves themselves, the risk of a trade against them, what a run costs, and the pipelines that build and test the code.',
+    lede: 'The quotes every curve is built from, the curves themselves, the risk of a trade against them, what a run costs, the pipelines that build and test the code, and the agent workflow a change goes through.',
     panels: [
       { key: 'inputs', title: 'Market data model', notes: ['market-data-model'] },
       { key: 'curves', title: 'Bootstrapped curves', notes: ['bootstrapping', 'meeting-dated-curves', 'fx-and-cross-currency', 'bond-curve'] },
@@ -37,6 +37,7 @@ export const stages: Stage[] = [
       { key: 'perf', title: 'Cost of a risk run', notes: ['cost'] },
       { key: 'arch', title: 'Architecture', notes: ['architecture'] },
       { key: 'pipelines', title: 'Build and test pipelines', notes: ['pipelines'] },
+      { key: 'agents', title: 'Agent workflow', notes: ['agent-workflow'] },
     ],
   },
   {

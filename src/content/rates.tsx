@@ -724,6 +724,29 @@ const text: Record<string, ReactNode> = {
       </P>
     </>
   ),
+
+  'agent-workflow': (
+    <>
+      <P>
+        The engine is built with Claude Code. An agent writes code quickly and is wrong often
+        enough to matter, so the useful question is what stops a wrong change. The answer
+        used here is separation. One agent writes the tests from the spec before any code
+        exists, a second writes the code and cannot touch those tests, and a third reviews
+        the result without being able to edit it.
+      </P>
+      <P>
+        The separation is enforced by the tooling. A hook checks each tool call against the
+        role of the session that made it, and the runner script checks from git which files
+        each stage changed. Between the build and the review sits the pipeline, which has no
+        model in it and decides whether the change is correct. A person writes the spec at
+        the start and makes the commit at the end.
+      </P>
+      <P>
+        The panel shows the stages, the guards, and the first change taken through the
+        workflow, a convexity function for the bond desk.
+      </P>
+    </>
+  ),
 };
 
 export default text;
