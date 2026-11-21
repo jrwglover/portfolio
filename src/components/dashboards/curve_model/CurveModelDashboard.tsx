@@ -7,7 +7,6 @@ import type { Domain } from '../../../config/workflow';
 import { SHOW_AUD, isAud, dropAudKeys } from '../../../config/aud';
 import ArchitecturePanel from './ArchitecturePanel';
 import PipelinesPanel from './PipelinesPanel';
-import VerificationPanel from './VerificationPanel';
 import BondPanel from './BondPanel';
 
 /* ── Types ── */
@@ -31,7 +30,7 @@ interface BondFile {
   bonds: { name: string; benchmark: string; onCurve: boolean; t: number; clean: number }[];
 }
 
-type Tab = 'inputs' | 'curves' | 'bonds' | 'sensis' | 'perf' | 'arch' | 'pipelines' | 'verify';
+type Tab = 'inputs' | 'curves' | 'bonds' | 'sensis' | 'perf' | 'arch' | 'pipelines';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
@@ -40,7 +39,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'perf', label: 'CPU vs GPU' },
   { key: 'arch', label: 'Architecture' },
   { key: 'pipelines', label: 'Pipelines' },
-  { key: 'verify', label: 'Verification & Claude' },
 ];
 
 interface LadderRow { tenor: string; instrument: string; rate: number; cpu: number; gpu: number | null }
@@ -913,7 +911,6 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
 
       {tab === 'arch' && <ArchitecturePanel />}
       {tab === 'pipelines' && <PipelinesPanel />}
-      {tab === 'verify' && <VerificationPanel />}
       {tab === 'bonds' && <BondPanel />}
 
       {tab === 'perf' && perf && (

@@ -41,7 +41,7 @@ const PIPELINES: Pipeline[] = [
       { name: 'Data checks', does: 'Every exported file parses, fits the host limit and holds the fields the panels read.',
         result: '11 files, 0 problems' },
       { name: 'Smoke test', does: 'Serves the built site and requests the front page, each stage and the recorded session.',
-        result: '10 requests answered' },
+        result: '9 requests answered' },
     ],
   },
 ];

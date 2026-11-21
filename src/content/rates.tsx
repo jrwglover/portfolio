@@ -724,25 +724,6 @@ const text: Record<string, ReactNode> = {
       </P>
     </>
   ),
-
-  'verification': (
-    <>
-      <P>
-        The engine was built with Claude Code. The author specified the work, chose the
-        methods and reviewed the results, and Claude wrote most of the code. That changes
-        where the effort goes. Writing code is cheap, so the scarce part is knowing what the
-        answer should be and proving that the code gives it.
-      </P>
-      <P>
-        Each published number therefore has a second route to the same value, such as the
-        library against the flattened pricer, sensitivities against full revaluation, or a
-        ladder against a parallel shift. The two routes are compared to a stated tolerance on
-        every export, and a difference stops the run. The panel sets out who did what, the
-        second method behind each number, three errors this process caught, and what it
-        does not cover.
-      </P>
-    </>
-  ),
 };
 
 export default text;
