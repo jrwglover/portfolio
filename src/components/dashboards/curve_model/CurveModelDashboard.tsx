@@ -25,12 +25,16 @@ interface MarketCurve {
   derived?: boolean; derivation?: string;
 }
 interface Inputs { curves: MarketCurve[] }
+interface BondFile {
+  grid: number[][];
+  bonds: { name: string; benchmark: string; onCurve: boolean; t: number; clean: number }[];
+}
 
 type Tab = 'inputs' | 'curves' | 'bonds' | 'sensis' | 'perf' | 'arch' | 'pipelines';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
-  { key: 'bonds', label: 'Government Bonds' },
+  { key: 'bonds', label: 'Bond RV' },
   { key: 'sensis', label: 'Trade Risk & Cashflows' },
   { key: 'perf', label: 'CPU vs GPU' },
   { key: 'arch', label: 'Architecture' },
@@ -113,6 +117,7 @@ const CURVE_COLORS: Record<string, string> = {
   // two parents (SOFR, EURUSD), so the envelope stays separable
   // from the curves it rides under both protan and deutan vision.
   CSA_CTD: '#e8963c',
+  EUR_GOVT: '#4fb3d9', GOVT: '#4fb3d9',
 };
 const CURVE_LABELS: Record<string, string> = {
   ESTR: 'ESTR (tenor OIS, comparison)', ESTR_ECB: 'ESTR ECB meeting-dated',
@@ -120,11 +125,12 @@ const CURVE_LABELS: Record<string, string> = {
   EURIBOR6M: 'EURIBOR 6M (dual-curve)', EURUSD: 'EUR under USD collateral (xccy)',
   SOFR: 'SOFR FOMC meeting-dated', SONIA: 'SONIA MPC meeting-dated',
   CSA_CTD: 'USD CSA cheapest-to-deliver (derived)',
+  EUR_GOVT: 'EUR government bonds',
 };
 const INSTR_BADGE: Record<string, string> = {
   OIS: '#5eaab5', IMM_OIS: '#5cb87a', MTG_OIS: '#e07850', FUTURE: '#b8b04a',
   DEPOSIT: '#8b8a97', FRA: '#8b8a97', IMM_FRA: '#5cb87a', IRS: '#8b7ec8',
-  FXSWAP: '#4a9a68', XCCY: '#d4a853', SPOT: '#c9a227', TBS: '#c9699e',
+  FXSWAP: '#4a9a68', XCCY: '#d4a853', SPOT: '#c9a227', TBS: '#c9699e', BOND: '#4fb3d9',
 };
 
 type Measure = 'market' | 'zero' | 'forward';
@@ -213,6 +219,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
   const setTab = (t: Tab) => { setTabState(t); onTab?.(t); };
   const bare = Boolean(chapter || embedded);
   const [inputs, setInputs] = useState<Inputs | null>(null);
+  const [govt, setGovt] = useState<MarketCurve | null>(null);
   const [curves, setCurves] = useState<Record<string, Pt[]>>({});
   const [selCurve, setSelCurve] = useState('EUR_ESTR_ECB');
   const [shown, setShown] = useState<string[]>(chapter?.curves ?? ['ESTR', 'ESTR_ECB', 'EURIBOR6M', 'EURUSD']);
@@ -247,7 +254,19 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
       fetch(`${base}/${name}${v}`, { cache: 'no-store' })
         .then(r => r.json()).then(set).catch(() => {});
     get('inputs.json', (i: Inputs) => setInputs(SHOW_AUD ? i : { ...i, curves: i.curves.filter(c => !isAud(c.curve)) }));
-    get('curves.json', (c: Record<string, Pt[]>) => setCurves(dropAudKeys(c)));
+    get('curves.json', (c: Record<string, Pt[]>) => setCurves(prev => ({ ...prev, ...dropAudKeys(c) })));
+    // The government bond curve is written by the bond run. Its quotes join
+    // the other curves on the inputs panel and its zero and forward rates join
+    // them on the chart.
+    get('bonds.json', (b: BondFile) => {
+      setGovt({
+        curve: 'EUR_GOVT', currency: 'EUR', index: 'GOVT', type: 'bond',
+        day_counter: 'ACT/ACT ICMA', settlement_days: 2,
+        quotes: b.bonds.filter(x => x.onCurve).sort((x, y) => x.t - y.t)
+          .map(x => ({ tenor: `${x.benchmark}, ${x.name}`, instrument: 'BOND', price: x.clean })),
+      });
+      setCurves(prev => ({ ...prev, EUR_GOVT: b.grid.map(g => [g[0], g[2] * 100, g[1] * 100] as Pt) }));
+    });
     get('trades.json', setTrades);
     get('performance.json', setPerf);
   }, []);
@@ -257,7 +276,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perf]);
 
-  const selMkt = inputs?.curves.find(c => c.curve === selCurve);
+  const mktCurves = useMemo(() => inputs ? (govt ? [...inputs.curves, govt] : inputs.curves) : [], [inputs, govt]);
+  const selMkt = mktCurves.find(c => c.curve === selCurve);
   const curveKeys = Object.keys(CURVE_LABELS).filter(k => curves[k]);
 
   // One chart, four domains. Discrete forwards are period rates off the same
@@ -460,13 +480,13 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
       {tab === 'inputs' && inputs && (
         <div>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Each of the {inputs.curves.length} curves is built from the quotes listed
+            Each of the {mktCurves.length} curves is built from the quotes listed
             here. Every quote has to be repriced by its finished curve, and each one is a
             risk bucket in the trade risk panel. IMM = third Wednesday of the quarter. MTG = the
             day a policy decision takes effect.
           </p>
           <div className="flex gap-2 mb-5 flex-wrap">
-            {inputs.curves.map(c => (
+            {mktCurves.map(c => (
               <button key={c.curve} onClick={() => setSelCurve(c.curve)}
                 className="font-mono text-xs px-3 py-1.5 rounded"
                 style={chip(selCurve === c.curve, CURVE_COLORS[c.index] ?? '#5b8fc9')}>
@@ -516,7 +536,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                           </span>
                         </td>
                         <td className="px-3 py-1.5 text-right">
-                          {q.price != null ? q.price.toFixed(2) + ' (price)'
+                          {q.instrument === 'BOND' ? (q.price ?? 0).toFixed(3) + ' (clean price)'
+                            : q.price != null ? q.price.toFixed(2) + ' (price)'
                             : q.instrument === 'SPOT' ? (q.rate ?? 0).toFixed(4)
                               : q.instrument === 'FXSWAP' ? ((q.rate ?? 0) * 1e4).toFixed(2) + ' pts'
                                 : q.instrument === 'TBS' ? ((q.rate ?? 0) * 1e4).toFixed(2) + ' bp'

@@ -569,8 +569,14 @@ const text: Record<string, ReactNode> = {
         pillars is discounted on a stretch of spline that both pillars shape. Each benchmark
         then reprices to within a millionth of a cent.
       </P>
+    </>
+  ),
+
+  'bond-rv': (
+    <>
       <P>
-        The other <N>33</N> bonds are left off the curve so that they can be measured against
+        The government curve is solved from <N>18</N> benchmark bonds. The other{' '}
+        <N>33</N> bonds are left off the curve so that they can be measured against
         it. Each has a market yield <M tex="y" />, the single rate that discounts its
         cashflows to its price,
       </P>
@@ -680,7 +686,7 @@ const text: Record<string, ReactNode> = {
         record is needed for corrections and for lines the feed does not carry, and it picks
         up keying errors. The engine keeps both, compares them field by field, and settles
         each difference by a fixed rule. The result is one record per bond, and the curve and
-        the Government bonds panel in stage 01 are built from it.
+        the Bond RV panel in stage 01 are built from it.
       </P>
       <P>
         The panel then gives each break a cost. The engine puts the losing value back and

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ScatterChart, Scatter, ReferenceLine, ReferenceArea, Cell, ComposedChart,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ScatterChart, Scatter, ReferenceLine, ReferenceArea, Cell,
 } from 'recharts';
 
-/* Government bond curve and relative value. Everything shown is read from
-   bonds.json, which the engine's bond_rv run writes: the curve solved from the
-   benchmark bonds on the min-curve spline, and every bond in the universe
-   measured against that curve and against ESTR. The bonds, prices and history
+/* Bond relative value. Everything shown is read from bonds.json, which the
+   engine's bond_rv run writes: every bond in the universe measured against
+   the government curve and against ESTR. The curve itself is drawn on the
+   Bootstrapped Curves panel. The bonds, prices and history
    are generated. */
 
 const CARD = 'var(--bg-card)';
@@ -16,7 +16,6 @@ const DIM = 'var(--text-dim)';
 const SEC = 'var(--text-secondary)';
 const PRI = 'var(--text-primary)';
 const GOV = '#d9a441';
-const REF = '#5b8fc9';
 const CHEAP = '#5cb87a';
 const RICH = '#c86e6e';
 const NEUTRAL = '#6f6e80';
@@ -94,7 +93,7 @@ export default function BondPanel() {
   }, [data, sort, onlySignals]);
 
   if (failed) return <p className="text-sm" style={{ color: DIM }}>The bond data could not be loaded.</p>;
-  if (!data) return <p className="text-sm" style={{ color: DIM }}>Loading the bond curve.</p>;
+  if (!data) return <p className="text-sm" style={{ color: DIM }}>Loading the bonds.</p>;
 
   const cheapest = [...measured].sort((a, b) => (b.z ?? 0) - (a.z ?? 0))[0];
   const richest = [...measured].sort((a, b) => (a.z ?? 0) - (b.z ?? 0))[0];
@@ -108,36 +107,19 @@ export default function BondPanel() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <Tile title="Universe" value={`${data.curve.universe} bonds`}
           note={`${data.curve.instruments} on the curve, ${data.curve.universe - data.curve.instruments} measured against it`} />
-        <Tile title="Curve instruments reprice" value={`${data.curve.worstRepriceCents.toFixed(4)} cents`}
-          note="Worst price difference on a benchmark bond" />
+        <Tile title="Outside two standard deviations" value={`${signals} of ${measured.length}`}
+          note="Bonds rich or cheap against their own history" />
         <Tile title="Cheapest against history" value={cheapest ? `${bp(cheapest.z ?? 0, 2)} sd` : '-'}
           note={cheapest ? `${cheapest.name}, ${bp(cheapest.residBp)} bp to the curve` : ''} />
         <Tile title="Richest against history" value={richest ? `${bp(richest.z ?? 0, 2)} sd` : '-'}
           note={richest ? `${richest.name}, ${bp(richest.residBp)} bp to the curve` : ''} />
       </div>
 
-      <Label>The bond curve against ESTR</Label>
+      <Label>The bond curve less ESTR</Label>
       <p className="text-sm mb-3 max-w-4xl" style={{ color: SEC }}>
-        Zero rates, continuously compounded. The bond curve is solved from {data.curve.instruments}{' '}
-        benchmark bonds, and the dots mark their maturities. The lower chart is the difference
-        between the two curves.
+        The difference in zero rates between the government bond curve and ESTR. Both curves
+        are on the Bootstrapped Curves panel.
       </p>
-      <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={curveChart} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
-          <CartesianGrid stroke={chartGrid} />
-          <XAxis dataKey="t" type="number" domain={[0, tMax]} stroke={chartAxis} tick={{ fontSize: 11 }}
-            tickFormatter={v => `${v}Y`} />
-          <YAxis stroke={chartAxis} tick={{ fontSize: 11 }} width={56} domain={['auto', 'auto']}
-            tickFormatter={v => `${Number(v).toFixed(2)}%`} />
-          <Tooltip {...tt} labelFormatter={l => `t = ${Number(l).toFixed(2)}Y`}
-            formatter={(v, n) => [`${Number(v).toFixed(4)}%`, n === 'gov' ? 'Government bond curve' : 'ESTR']} />
-          <Legend formatter={(v: string) => <span style={{ fontSize: 11 }}>{v === 'gov' ? 'Government bond curve' : v === 'ref' ? 'ESTR' : 'Benchmark bonds'}</span>} />
-          <Line dataKey="ref" stroke={REF} dot={false} strokeWidth={1.6} isAnimationActive={false} />
-          <Line dataKey="gov" stroke={GOV} dot={false} strokeWidth={1.8} isAnimationActive={false} />
-          <Scatter name="pillars" data={data.pillars.map(p => ({ t: p.t, gov: p.zero * 100 }))} dataKey="gov"
-            fill={GOV} isAnimationActive={false} legendType="circle" />
-        </ComposedChart>
-      </ResponsiveContainer>
       <ResponsiveContainer width="100%" height={170}>
         <LineChart data={curveChart} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
           <CartesianGrid stroke={chartGrid} />

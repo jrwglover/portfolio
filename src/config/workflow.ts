@@ -31,8 +31,8 @@ export const stages: Stage[] = [
     lede: 'The quotes every curve is built from, the curves themselves, the risk of a trade against them, what a run costs, and the pipelines that build and test the code.',
     panels: [
       { key: 'inputs', title: 'Market data model', notes: ['market-data-model'] },
-      { key: 'curves', title: 'Bootstrapped curves', notes: ['bootstrapping', 'meeting-dated-curves', 'fx-and-cross-currency'] },
-      { key: 'bonds', title: 'Government bonds', notes: ['bond-curve'] },
+      { key: 'curves', title: 'Bootstrapped curves', notes: ['bootstrapping', 'meeting-dated-curves', 'fx-and-cross-currency', 'bond-curve'] },
+      { key: 'bonds', title: 'Bond relative value', notes: ['bond-rv'] },
       { key: 'sensis', title: 'Trade risk and cashflows', notes: ['trade-risk'] },
       { key: 'perf', title: 'Cost of a risk run', notes: ['cost'] },
       { key: 'arch', title: 'Architecture', notes: ['architecture'] },
