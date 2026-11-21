@@ -33,7 +33,7 @@ const text: Record<string, ReactNode> = {
         calendar, day count, settlement lag and frequency.
       </P>
       <P>
-        The curves are built from <N>232</N> rate instruments and <N>18</N> bonds. After each build, every instrument
+        The curves are built from <N>230</N> rate instruments and <N>18</N> bonds. After each build, every instrument
         is repriced off the finished curve and the difference from its quote reported. On the GPU
         path the marks match QuantLib to <N>10⁻¹⁴</N>, and at that level the only limit left is the
         arithmetic itself.
@@ -74,11 +74,11 @@ const text: Record<string, ReactNode> = {
         natural spline equations for evenly spaced pillars, applied as they stand to pillars
         that are not. Where neighbouring gaps are equal the curvature is continuous, and where
         the gap changes only the slope is. The forward kinks at those pillars, at 2Y, 10Y, 13Y,
-        15Y and 20Y on the meeting-dated curves. On the tenor ESTR curve they fall at 2Y, 12Y,
+        15Y and 30Y on the meeting-dated curves. On the tenor ESTR curve they fall at 2Y, 12Y,
         15Y and 30Y. Against the generating curve the kinks come to 2 to 5 bp, and the zero rates
         stay within half a basis point. The tenor ESTR curve is built on the standard OIS ladder,
-        monthly to a year and annual to twelve years, with an O/N deposit in front and the curve
-        starting on the trade date.
+        monthly to a year and annual to twelve years, with a synthetic overnight anchor in front.
+        It starts at spot, as every EUR curve here does.
       </P>
       <Diagram src="/diagrams/construction.svg"
         alt="Flowchart of curve construction: each quote maps to a rate helper chosen by its instrument type, including a float versus float basis swap helper for the 3s6s strip, and all of the helpers for a curve go into one global bootstrap that produces the calibrated term structure and its pillar dates, times and zeros."
@@ -147,11 +147,11 @@ const text: Record<string, ReactNode> = {
       <Eq tex={String.raw`f_{\text{ctd}}(t) = \max\big(f_{\text{SOFR}}(t),\, f_{\text{EUR/USD}}(t)\big), \qquad P_{\text{ctd}}(T) = \exp\!\Big(-\int_0^T f_{\text{ctd}}\Big).`} />
       <P>
         The result has kinks where the maximum switches from one curve to another, so the GPU
-        carries it as a table of regions, where a spline would smooth the kinks away. One
-        known limitation sits in this panel. FX points that span the year end carry a turn
-        premium, and the spline absorbs it as a dip of about <N>25bp</N> in the instantaneous
-        forward either side of 31 December. The proper treatment is an explicit jump in the
-        overnight forward on the turn dates, and it is on the list.
+        carries it as a table of regions, where a spline would smooth the kinks away. FX
+        points that span the year end carry a turn premium. The curve holds it as an explicit
+        overlay, a step in the overnight forward from 31 December to 4 January, so the spline
+        does not have to absorb it. The instantaneous forward drops by about <N>50bp</N> across
+        those days and comes back.
       </P>
     </>
   ),
@@ -194,12 +194,12 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         Valuing a swap as an object means building its schedule and calling the curve once per
-        cashflow through a virtual function. On this machine that costs <N>2.03 µs</N> per
-        cashflow through QuantLib&apos;s swap objects, <N>0.249 µs</N> through a flat loop over
-        cashflow arrays, and <N>0.029 µs</N> through the raw spline coefficients. Leaving the
-        object model is worth about seventy times on a single core. The GPU then adds a factor
-        of one to 1.7 at 6.2 million cashflows, and on bucketed curve risk it did not beat the
-        flattened CPU at any book size measured. An earlier headline of an eight times GPU win
+        cashflow through a virtual function. On this machine that costs <N>1.81 µs</N> per
+        cashflow through QuantLib&apos;s swap objects, <N>0.028 µs</N> through a flat loop over
+        cashflow arrays, and <N>0.009 µs</N> through the raw spline coefficients. Leaving the
+        object model is worth about 64 times on a single core. At 6.2 million cashflows the GPU
+        is 2.4 times the flat loop on one core, and slower than 16 threads. On bucketed curve
+        risk it passes 16 threads only at the largest books, by about 1.5 times. An earlier headline of an eight times GPU win
         had been measuring QuantLib&apos;s overhead.
       </P>
       <P>
@@ -286,8 +286,8 @@ const text: Record<string, ReactNode> = {
         A change to curve <M tex="c" /> invalidates <M tex="c" /> and every descendant of{' '}
         <M tex="c" /> in the graph, and the invalidated set is rebuilt in topological order, each
         curve at most once even when several of its inputs moved together. A SONIA quote rebuilds
-        SONIA and nothing else. A SOFR quote rebuilds SOFR, then both cross-currency curves that
-        are implied against it, then the cheapest-to-deliver curve built on those.
+        SONIA and nothing else. A SOFR quote rebuilds SOFR, then the EUR/USD cross-currency curve
+        implied against it, then the cheapest-to-deliver curve built on those.
       </P>
       <Diagram src="/diagrams/curve-graph.svg" minWidth={1000}
         alt="Curve dependency graph: three pricing curves build independently, one per currency; EURIBOR 6M is discounted on the meeting-dated ESTR curve; the EUR/USD cross-currency curve is built on ESTR ECB and SOFR; FX forwards and the USD CSA cheapest-to-deliver curve are derived from the result."
@@ -314,10 +314,10 @@ const text: Record<string, ReactNode> = {
       <P>
         The first three clocks are the ones a trader waits on. Across the nine cycles of the
         session that rebuild a rate curve, the time from draining the queue to refreshed value
-        and risk ladders has a median of <N>183 ms</N> and a slowest cycle of <N>234 ms</N>.
+        and risk ladders has a median of <N>189 ms</N> and a slowest cycle of <N>271 ms</N>.
         The curve rebuild is most of that time. Revaluing every trade takes about{' '}
-        <N>6 ms</N> and the ladders about <N>29 ms</N>. A cycle that rebuilds only the
-        government bond curve solves it in about <N>4.5 ms</N>.
+        <N>6 ms</N> and the ladders about <N>30 ms</N>. A cycle that rebuilds only the
+        government bond curve solves it in about <N>4.7 ms</N>.
       </P>
       <P>
         The session is a recording of the engine fed a scripted stream of prices with repeats
@@ -398,12 +398,12 @@ const text: Record<string, ReactNode> = {
         the rest of the book. The Value at risk page shows the split by desk.
       </P>
       <P>
-        On the closing book the one-day 99% VaR is <N>839,782</N> and the expected shortfall{' '}
-        <N>892,479</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
-        gives <N>2,942,780</N>. The backtest counts the days the loss exceeded the VaR predicted
-        the day before, <N>67</N> exceptions in <N>4,603</N> days since 2009 and <N>6</N> in
-        the last 250, which is the amber zone of the Basel traffic light. The collapsed lane is
-        what makes this affordable, <N>5,126</N> full revaluations in <N>370 ms</N>.
+        On the closing book the one-day 99% VaR is <N>839,615</N> and the expected shortfall{' '}
+        <N>1,040,600</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
+        gives <N>2,975,590</N>. The backtest counts the days the loss exceeded the VaR predicted
+        the day before, <N>58</N> exceptions in <N>4,603</N> days since 2009 and <N>3</N> in
+        the last 250, which is the green zone of the Basel traffic light. The collapsed lane is
+        what makes this affordable, <N>5,126</N> full revaluations in <N>470 ms</N>.
       </P>
     </>
   ),
@@ -430,10 +430,12 @@ const text: Record<string, ReactNode> = {
         government curve at held spread, and the GOVT_RV column adds them to the hedge swaps.
       </P>
       <P>
-        On the closing book the parallel rise gains <N>6.05m</N> and the parallel fall loses{' '}
-        <N>7.18m</N>. The asymmetry is convexity: the hedged book is left net paid, and a paid
+        On the closing book the parallel rise gains <N>6.18m</N> and the parallel fall loses{' '}
+        <N>6.71m</N>. The asymmetry is convexity. The hedged book is left net paid, and a paid
         position gains less on a rise than it loses on an equal fall. The steepener and the
-        flattener come to <N>1.45m</N> and <N>-1.49m</N>, and the basis widening to <N>3.77m</N>.
+        flattener come to <N>0.52m</N> and <N>-0.43m</N>, and the basis widening to <N>3.76m</N>.
+        The sovereign spread widening loses <N>9.93m</N>, all of it on the bond positions, and
+        the swap spread tightening loses <N>7.23m</N>.
       </P>
     </>
   ),
@@ -455,12 +457,12 @@ const text: Record<string, ReactNode> = {
     <>
       <P>
         During the day the desk trades on the meeting-dated model. At the close the book is
-        marked on a separate end-of-day family of <N>9</N> curves built from <N>149</N>{' '}
+        marked on a separate end-of-day family of <N>5</N> curves built from <N>88</N>{' '}
         instruments at standard tenors, the set an independent price verification compares
         against. The end-of-day quotes are implied from the trading snapshot through each
-        instrument&apos;s own helper, so the family reprices its inputs to <N>3.5e-10 bp</N>.
-        The valuation difference between the families, the model basis, is <N>-241,623</N> on a
-        book of about 454m, attributed curve by curve.
+        instrument&apos;s own helper, so the family reprices its inputs to <N>4.9e-10 bp</N>.
+        The valuation difference between the families, the model basis, is <N>-245,076</N> on a
+        swap book of about 456m, attributed curve by curve.
       </P>
       <P>
         Consensus services such as Totem collect each contributor&apos;s mid for every
@@ -514,11 +516,11 @@ const text: Record<string, ReactNode> = {
       <P>
         The regulation allows the sensitivity route, which multiplies the Jacobian by the
         prudent shift. The full route is built as well. It moves each quote to its prudent
-        level, re-bootstraps the end-of-day family and revalues the whole book, <N>449</N> curve
-        rebuilds in all. The two routes agree to <N>0.49%</N> on market price uncertainty and{' '}
-        <N>0.38%</N> on close-out cost, and the gap is printed per instrument. On this book that
-        is <N>968,791</N> of market price uncertainty, <N>1,575,150</N> of close-out cost, and a
-        CET1 deduction of <N>1,267,740</N> after aggregation. The consensus behind these numbers
+        level, re-bootstraps the end-of-day family and revalues the whole book, <N>492</N> curve
+        rebuilds in all. The two routes agree to <N>0.46%</N> on market price uncertainty and{' '}
+        <N>0.32%</N> on close-out cost, and the gap is printed per instrument. On the swap book
+        that is <N>986,772</N> of market price uncertainty, <N>1,624,220</N> of close-out cost,
+        and a CET1 deduction of <N>1,295,590</N> after aggregation. The consensus behind these numbers
         is generated.
       </P>
       <P>
@@ -552,12 +554,12 @@ const text: Record<string, ReactNode> = {
         valuation panel, and the close-out table beside them is the same result grouped by
         curve. Model risk, Article 11, is sized from the engine&apos;s own alternative
         constructions. The worst spread of the book&apos;s value across the tenor and IMM builds
-        of the same market is <N>1.99m</N>, or <N>994,994</N> after the 50% weighting. The
+        of the same market is <N>1.86m</N>, or <N>928,749</N> after the 50% weighting. The
         six remaining rows say why they are not modelled here. There is no counterparty in this
         book, discounting at the collateral rate is assumed to cover funding, and there is no
         market-depth data to size concentration. With model risk included the deduction comes to
       </P>
-      <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 480{,}162 + 787{,}574 + 994{,}994 = 2{,}262{,}730, \qquad \alpha = 0.5.`} />
+      <Eq tex={String.raw`\text{AVA} = \sum_{i} \alpha\,\text{AVA}_i = 906{,}399 + 1{,}401{,}400 + 928{,}749 = 3{,}236{,}548, \qquad \alpha = 0.5.`} />
     </>
   ),
 
@@ -671,7 +673,7 @@ const text: Record<string, ReactNode> = {
         and no child, because it is solved from bond prices alone and only bonds are
         discounted on it. A benchmark bond price therefore rebuilds this curve and no other,
         and a swap quote leaves it where it is. In the recorded session that rebuild takes
-        about <N>4.5 ms</N>, and marking all <N>51</N> bonds and the book on the new set
+        about <N>4.7 ms</N>, and marking all <N>51</N> bonds and the book on the new set
         takes <N>0.6 ms</N>.
       </P>
       <P>
@@ -711,7 +713,7 @@ const text: Record<string, ReactNode> = {
         nearest benchmark. An inventory in the benchmark bonds is hedged with four swaps. In
         the first nine sets of the session only rates move, so the bonds stand still and the
         hedges carry all of the profit and loss. The last eight sets are bond prices and
-        static records.
+        static records, with one swap move that follows the bonds.
       </P>
       <P>
         The desk prices from cashflows flattened once per bond, the way the swap book is
@@ -769,7 +771,7 @@ const text: Record<string, ReactNode> = {
       <P>
         The engine and the site are separate repositories, and each has its own pipeline. A
         pipeline runs on a push and on a pull request. The engine pipeline builds the
-        event-driven engine and runs its three test suites. It
+        event-driven engine and runs its four test suites. It
         then runs the static data reconciliation against the terms the prices were
         generated from, and replays a tick session while reader threads check that every
         published curve set is one coherent version. The site

@@ -1268,7 +1268,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         <p className="text-sm mt-2 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
           Every point plotted here was evaluated by the engine from the published
           curve. Two shapes that look like artifacts are real. The EURIBOR 6M bump between 13 and
-          16 months sits where its quote spacing changes, and the ~25bp drop in the
+          16 months sits where its quote spacing changes, and the ~50bp drop in the
           EUR/USD instantaneous forward across year end is the year-end turn.
         </p>
       </div>

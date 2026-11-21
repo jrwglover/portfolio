@@ -18,18 +18,18 @@ const PIPELINES: Pipeline[] = [
     name: 'engine-ci', repo: 'Event-driven engine, C++17', script: 'scripts/ci-engine.sh',
     runner: 'ubuntu-22.04, g++ 11.4',
     steps: [
-      { name: 'Build', does: 'Compiles the engine, the three test suites and the replay with -Wall -Wextra.',
+      { name: 'Build', does: 'Compiles the engine, the four test suites and the replay with -Wall -Wextra.',
         result: '0 warnings' },
-      { name: 'Unit tests', does: 'Runs the engine suite, the trader platform suite and the bond desk suite. A failed check in any suite fails the pipeline.',
-        result: '60 tests, 6,448 checks passed' },
+      { name: 'Unit tests', does: 'Runs the engine suite, the trader platform suite, the bond desk suite and the bond valuation control suite. A failed check fails the pipeline, and so does a suite that reports no checks.',
+        result: '76 tests, 11,604 checks passed' },
       { name: 'Static data', does: 'Rebuilds one record per bond from the reference feed and the manual record, then compares every field with the terms the prices were generated from.',
         result: '52 bonds, 8 fields, 0 wrong' },
       { name: 'Tick replay', does: 'Replays a scripted session with duplicate and stale ticks, a failed solve and a burst of 120 prices, while reader threads check every published curve set.',
-        result: '1.7 million reads, 0 incoherent' },
+        result: 'over a million reads, 0 incoherent' },
       { name: 'Agent workflow guards', does: 'Runs the agent workflow against a stub that misbehaves in one way per case, then calls the guard hook with tool calls each role must not make.',
-        result: '18 cases, 0 failed' },
+        result: '40 cases, 0 failed' },
       { name: 'Logs kept', does: 'The build log, the test logs, the reconciliation log, the replay log and the agent workflow log are stored with the run.',
-        result: '7 files' },
+        result: '8 files' },
     ],
   },
   {
@@ -53,7 +53,7 @@ const GATES: [string, string, string][] = [
   ['Rebuild count', 'Each shifted quote rebuilds the curves that depend on it and no others.', 'equal to the dependency graph'],
   ['Reconciliation', 'The valuation adjustments from sensitivities agree with full revaluation in total.', 'within 1%'],
   ['Positivity', 'Every valuation adjustment and the headline deduction are zero or positive.', 'no negative value'],
-  ['Bond pricing', 'Yield, curve price and z-spread from the flattened cashflows agree with QuantLib, for every bond on every set.', 'within 0.000001 bp'],
+  ['Bond pricing', 'Yield and z-spread from the flattened cashflows agree with QuantLib to 0.000001 bp, and the curve price to 0.00001 cents per 100, for every bond on every set.', 'within tolerance'],
   ['Bond P&L', 'The curve part and the spread part of the bond book add up to the change in its market value.', 'within 1 euro'],
 ];
 

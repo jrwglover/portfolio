@@ -52,7 +52,7 @@ export const stages: Stage[] = [
   },
   {
     slug: 'live', n: '03', title: 'Run the book live', component: 'RtEngineDashboard',
-    lede: 'Curves rebuilt on events as prices arrive, with value and risk on the whole book refreshed in a median of 183 ms. The desk view of a recorded session and limits come first. VaR and stress follow, then the end-of-day marks and the capital deduction.',
+    lede: 'Curves rebuilt on events as prices arrive, with value and risk on the whole book refreshed in a median of 189 ms. The desk view of a recorded session and limits come first. VaR and stress follow, then the end-of-day marks and the capital deduction.',
     panels: [
       { key: 'desk', title: 'Trading session replay', notes: ['session-replay'] },
       { key: 'limits', title: 'Limits', notes: ['limits'] },

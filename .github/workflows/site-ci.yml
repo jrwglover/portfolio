@@ -1,6 +1,7 @@
 # Lint, type-check, build, data checks and a smoke test for the site. Every
 # stage calls scripts/ci-site.sh, the same script a developer runs locally.
-# Publishing stays a manual `npx wrangler deploy` from a build that passed.
+# Publishing stays manual: `npm run deploy` runs this same script (all stages)
+# and deploys only the dist that passed it.
 name: site-ci
 
 on:
@@ -31,7 +32,7 @@ jobs:
       - run: bash scripts/ci-site.sh lint
       - run: bash scripts/ci-site.sh build
       - run: bash scripts/ci-site.sh data
-      - run: bash scripts/ci-site.sh smoke
+      - run: bash scripts/ci-site.sh smoke   # headless Chrome from npm ci (puppeteer)
       - uses: actions/upload-artifact@v4
         with:
           name: site-dist

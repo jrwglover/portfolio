@@ -618,7 +618,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
           </ResponsiveContainer>
 
           <p className="text-sm mt-3 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
-            One shape that looks like an artifact is real. The ~25bp drop in the EUR/USD
+            One shape that looks like an artifact is real. The ~50bp drop in the EUR/USD
             instantaneous forward across year end is the year-end turn held by the FX
             points.
           </p>
@@ -779,8 +779,8 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                 Each ladder has its own scale, so compare them by the total printed
                 underneath. The GPU lane is left off Market PV01 because it moves
                 risk between neighbouring pillars while the total holds, and that
-                is not explained yet. On the zero and forward ladders the two
-                lanes agree to the last digit.
+                is not explained yet. On the EURIBOR 6M ladders the two lanes agree
+                to ten figures. On the OIS zero ladders they differ by up to about 2 a bucket.
               </p>
             </div>
           )}
@@ -1024,7 +1024,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                 <p className="font-mono text-[11px] mb-3" style={{ color: 'var(--text-dim)' }}>
                   {sc.buckets} buckets &times; 1 to {sc.points[sc.points.length - 1].trades} EURIBOR swaps,
                   up to {sc.points[sc.points.length - 1].repricings.toLocaleString()} repricings
-                  &middot; same prepared book for every line, best of three after a warm-up
+                  &middot; same prepared book for every line, best of several timed runs after a warm-up
                   &middot; lower is faster
                 </p>
                 <ResponsiveContainer width="100%" height={320}>
@@ -1281,7 +1281,7 @@ export default function CurveModelDashboard({ defaultTab, breadcrumb, chapter, e
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
                       against the biggest bucket in the same ladder, the one a hedge is
-                      sized off. That is eleven figures, and it&apos;s the floor for this
+                      sized off. That is about seven figures, and it&apos;s the floor for this
                       method because a PV01 is the difference of two large numbers
                     </div>
                   </div>

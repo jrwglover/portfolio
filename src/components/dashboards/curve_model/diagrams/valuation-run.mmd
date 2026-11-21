@@ -10,7 +10,7 @@ sequenceDiagram
   participant GPU as CUDA device
   participant V as reconcile
 
-  MD->>B: 14 curves of tagged quotes
+  MD->>B: 9 curves of tagged quotes
 
   Note over B: the dependencies fix the build order:<br/>ESTR ECB before EURIBOR,<br/>SOFR before the FX curve, and the CTD<br/>curve is derived last from SOFR and the FX curve
 

@@ -1,7 +1,7 @@
 /* The agent workflow in the event-driven engine's repository: the stages, what
-   each role may touch, how that is enforced, and the first change taken
-   through it. The figures are from the run of 2026-11-21 and the files named
-   are in the repository. */
+   each role may touch, how that is enforced, the changes taken through it and
+   the comparison of models by stage. The figures are from runs on 2026-11-21
+   and the files named are in the repository. */
 
 const CARD = 'var(--bg-card)';
 const EDGE = 'var(--border-subtle)';
@@ -30,10 +30,10 @@ const STAGES: { n: string; name: string; kind: Kind; who: string; may: string; c
     exit: 'only tests/ changed' },
   { n: '2', name: 'Build', kind: 'agent', who: 'builder',
     may: 'Implements until the tests pass. Runs the pipeline script and read-only git.',
-    cannot: 'Cannot edit tests, specs, pipeline scripts or agent configuration.',
+    cannot: 'Cannot edit tests, specs, build files, pipeline scripts or agent configuration.',
     exit: 'tests unchanged since stage 1' },
   { n: '3', name: 'Pipeline', kind: 'machine', who: 'scripts/ci-engine.sh all',
-    may: 'Build, three test suites, the static data reconciliation and the tick replay. The hosted pipeline runs the same script.',
+    may: 'A build from clean, four test suites, the static data reconciliation and the tick replay. The hosted pipeline runs the same script.',
     cannot: '',
     exit: 'green with 0 warnings' },
   { n: '4', name: 'Review', kind: 'agent', who: 'numerics-reviewer',
@@ -49,8 +49,10 @@ const STAGES: { n: string; name: string; kind: Kind; who: string; may: string; c
 const GUARDS: [string, string][] = [
   ['A hook on every tool call',
    'The runner starts each session with its role. A hook reads every read, edit and command before it runs and blocks one outside that role. A call the hook cannot parse is blocked.'],
-  ['A check from git after every stage',
-   'The runner lists the files that changed. Stage 1 fails if anything outside tests/ changed. Stage 2 fails if the tests changed or a protected path was touched. The separation holds even if a call got past the hook.'],
+  ['A check by content after every stage',
+   'Stage 1 fails if anything outside tests/ changed. Stage 2 fails if the hash of any test, build file, pipeline script or git setting moved. Stage 4 fails if any file in the tree changed. The hashes are kept in the runner, where an agent cannot write, so the separation holds even if a call got past the hook.'],
+  ['A pipeline that counts',
+   'The build starts from clean, so a warning in a file the builder did not recompile still counts. A suite has to end with its count of checks, at least one and none failed. A suite that exits 0 after running nothing fails the stage.'],
   ['A dispute goes to a person',
    'A builder that believes a test is wrong stops and replies TEST DISPUTE with its arithmetic. It does not get to change the test.'],
   ['Each agent starts cold',
@@ -60,8 +62,16 @@ const GUARDS: [string, string][] = [
 const RUN: [string, string, string][] = [
   ['1 Tests', '181 s', 'One test of 200 lines and 41 checks. Each expected value has a second route: a closed form, a second difference with a derived tolerance, or a remainder bound.'],
   ['2 Build', '53 s', 'A 13-line function and its declaration. The tests were left unchanged.'],
-  ['3 Pipeline', 'green', '60 tests, 6,448 checks, 0 warnings, 0 incoherent reads in the replay.'],
+  ['3 Pipeline', 'green', '60 tests, 6,448 checks, 0 warnings, 0 incoherent reads in the replay. The suites have since grown to 76 tests and 11,604 checks.'],
   ['4 Review', '88 s', 'Passed with nothing required and six suggestions.'],
+];
+
+// model, test stage result, cost of a test stage run, build stage, review stage
+const MODELS: [string, string, string, string, string][] = [
+  ['Fable', '19 and 19 of 19', '$3.96', '1 of 1', '4 of 4'],
+  ['Opus', '18 and 19 of 19', '$0.54 to $0.63', '2 of 2', '4 of 4'],
+  ['Sonnet', '19 and 17 of 19', '$0.19 to $0.21', '2 of 2', '4 of 4'],
+  ['Haiku', '19 of 19, and one suite that failed the correct implementation', '$0.02 to $0.03', '2 of 2', '4 of 4'],
 ];
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -161,15 +171,86 @@ export default function AgentFlowPanel() {
       </div>
 
       <div className="mt-10">
+        <Label>Second run: curve conventions, and a rejection</Label>
+        <p className="text-sm mb-3 max-w-4xl" style={{ color: SEC }}>
+          The second spec changed how the batch engine builds its curves. Long instruments are
+          solved on the published curve, and the payment lags, calendars and fixing days come
+          from the conventions file. It had seven acceptance criteria and ended with 11 tests
+          and 736 checks.
+        </p>
+        <div className="rounded-lg overflow-hidden max-w-4xl" style={{ border: `1px solid ${EDGE}` }}>
+          {[
+            ['The reviewer rejected the first attempt',
+             'Two checks counted instruments of a type the frozen market does not contain, so the count was zero before and after the change. The checks passed on any implementation. The pipeline was green and the review still ended in CHANGES REQUIRED.'],
+            ['What happened next',
+             'The two checks were rewritten by hand to count the instrument type the criterion names. The runner restarted at the pipeline stage, and a second review on a different model passed the change.'],
+          ].map(([h, b], i) => (
+            <div key={h} className="px-4 py-3" style={{ borderTop: i ? `1px solid ${EDGE}` : undefined, background: CARD }}>
+              <div className="text-xs font-semibold mb-1" style={{ color: PRI }}>{h}</div>
+              <div className="text-xs leading-relaxed" style={{ color: SEC }}>{b}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <Label>Which model for which stage</Label>
+        <p className="text-sm mb-3 max-w-4xl" style={{ color: SEC }}>
+          Each stage was run on four Claude models against the convexity spec, with the other
+          stages held fixed. A suite of tests is scored by what it catches. The reference
+          implementation was copied 19 times with one seeded defect each, and twice more as
+          rewrites that compute the same number. A good suite fails the 19 and passes the 2.
+        </p>
+        <div className="rounded-lg overflow-x-auto max-w-4xl" style={{ border: `1px solid ${EDGE}` }}>
+          <table className="w-full text-xs" style={{ background: CARD }}>
+            <thead>
+              <tr style={{ color: DIM }}>
+                {['Model', 'Tests: seeded defects caught, two runs', 'Cost per run', 'Build: green, tests untouched', 'Review: planted defects rejected'].map(h => (
+                  <th key={h} className="text-left font-mono font-normal uppercase tracking-wider text-[10px] px-4 py-2"
+                      style={{ borderBottom: `1px solid ${EDGE}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {MODELS.map(([m, t, c, b, r], i) => (
+                <tr key={m} style={{ borderTop: i ? `1px solid ${EDGE}` : undefined }}>
+                  <td className="px-4 py-2.5 font-semibold whitespace-nowrap align-top" style={{ color: PRI }}>{m}</td>
+                  <td className="px-4 py-2.5 leading-relaxed align-top" style={{ color: SEC }}>{t}</td>
+                  <td className="px-4 py-2.5 font-mono whitespace-nowrap align-top" style={{ color: SEC }}>{c}</td>
+                  <td className="px-4 py-2.5 font-mono whitespace-nowrap align-top" style={{ color: SEC }}>{b}</td>
+                  <td className="px-4 py-2.5 font-mono whitespace-nowrap align-top" style={{ color: SEC }}>{r}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="rounded-lg overflow-hidden max-w-4xl mt-3" style={{ border: `1px solid ${EDGE}` }}>
+          {[
+            ['Only the test stage separated the models',
+             'Every model built a passing implementation of 13 to 18 lines and left the tests alone. Every reviewer passed the clean change and rejected the four planted ones. Those were a loosened tolerance on an old check, a missing guard with its tests removed, a check that recomputed the code under test, and a tolerance six orders looser than the spec. The suites differed. One Opus suite and one Sonnet suite let a weakened guard through, and one Haiku suite failed the correct implementation, which stops the build stage.'],
+            ['The defaults that follow',
+             'The runner uses Opus for the tests and the review, where a miss costs the most, and Sonnet for the build, which the tests and the pipeline check anyway. The largest model is an override on the test stage for a spec with new numerics. Each stage records its model, time, cost and blocked calls.'],
+            ['What the comparison does not show',
+             'It is one small spec with a closed form, two runs per model, and planted defects of a simple kind. It says the spec and the pipeline carry a well-posed change on any of these models. It does not say how the models rank on a change like the curve conventions, which has one run.'],
+          ].map(([h, b], i) => (
+            <div key={h} className="px-4 py-3" style={{ borderTop: i ? `1px solid ${EDGE}` : undefined, background: CARD }}>
+              <div className="text-xs font-semibold mb-1" style={{ color: PRI }}>{h}</div>
+              <div className="text-xs leading-relaxed" style={{ color: SEC }}>{b}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-10">
         <Label>What it does not do yet</Label>
         <div className="rounded-lg overflow-hidden max-w-4xl" style={{ border: `1px solid ${EDGE}` }}>
           {[
-            ['One model in three roles',
-             'The reviewer is a second context on the same model as the builder. It catches what a fresh reading catches. The result rests on the tests and the pipeline, which involve no model.'],
+            ['The reviewer is still a model',
+             'It is a different model from the builder and starts with no record of the build. It catches what a fresh reading catches. The result rests on the tests and the pipeline, which involve no model.'],
             ['No agent in the hosted pipeline',
              'The agents run on the workstation. The hosted pipeline runs the deterministic stages on every push, and a review step on pull requests is the next addition.'],
-            ['One real run',
-             'The workflow has taken one small change through. The failure paths have not come up in a run with a model. The pipeline tests them on every push with a stub that edits a test, touches a protected file or disputes a test, 18 cases in all.'],
+            ['Two real changes',
+             'The workflow has taken two changes through, and one rejection came up in a run with a model. The other failure paths are tested by the pipeline on every push with a stub that edits a test, changes a build file, hides an edit through git settings or writes during the review, 40 cases in all.'],
           ].map(([h, b], i) => (
             <div key={h} className="px-4 py-3" style={{ borderTop: i ? `1px solid ${EDGE}` : undefined, background: CARD }}>
               <div className="text-xs font-semibold mb-1" style={{ color: PRI }}>{h}</div>

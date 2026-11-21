@@ -8,6 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "check": "bash scripts/ci-site.sh all",
+    "smoke": "bash scripts/ci-site.sh smoke",
+    "deploy": "bash scripts/ci-site.sh all && npx wrangler deploy",
     "diagrams": "mmdc -i src/components/dashboards/curve_model/diagrams/c4-context.mmd -o public/diagrams/c4-context.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/c4-container.mmd -o public/diagrams/c4-container.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/valuation-run.mmd -o public/diagrams/valuation-run.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/construction.mmd -o public/diagrams/construction.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/curve-graph.mmd -o public/diagrams/curve-graph.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/bond-events.mmd -o public/diagrams/bond-events.svg -c .mermaidrc.json -p puppeteer.json -b transparent && mmdc -i src/components/dashboards/curve_model/diagrams/agent-flow.mmd -o public/diagrams/agent-flow.svg -c .mermaidrc.json -p puppeteer.json -b transparent"
   },
   "dependencies": {

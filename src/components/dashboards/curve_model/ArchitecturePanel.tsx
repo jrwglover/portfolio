@@ -185,7 +185,7 @@ export default function ArchitecturePanel() {
           ['Solve every pillar at once',
            'Pinning the pillars down one after another silently failed to converge on the long end. Solving them together fixed it.'],
           ['Pin the short end with instruments',
-           'A region with no instrument in it leaves the curve free to take whatever shape it likes there. Synthetic deposits derived from OIS plus basis removed a 7.4bp kink at the deposit/FRA join.'],
+           'A region with no instrument in it leaves the curve free to take whatever shape it likes there. A 7.4bp kink at the deposit/FRA join once looked like this and was a defect in an earlier hand-written spline. With the library interpolator it is gone, and no synthetic deposit is needed.'],
           ['Treat static data as an event',
            'A wrong coupon or maturity does not fail. It gives a price that looks like a market move. Sending the record through the same queue as a price means the curve is rebuilt when a term changes, and the change is ordered and logged like any other event.'],
           ['Ship the coefficients to the GPU',
