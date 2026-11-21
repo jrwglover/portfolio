@@ -4,10 +4,10 @@
 flowchart TB
   Q(["Quant / rates desk<br/><b>[Person]</b><br/><small>Needs marks and risk that reconcile<br/>before they reach a book</small>"])
 
-  SYS["Multi-curve rates pricing and risk engine<br/><b>[Software System]</b><br/><small>Bootstraps nine rate curves and a government bond curve,<br/>prices and risks them on CPU and GPU, and proves the two agree</small>"]
+  SYS["Multi-curve rates pricing and risk engine<br/><b>[Software System]</b><br/><small>Bootstraps ten curves, prices and risks them on<br/>CPU and GPU, and proves the two agree</small>"]
 
   MKT@{ shape: lin-cyl, label: "Market data<br/><b>[Software System · external]</b><br/><small>Instrument-typed quote set per valuation date</small>" }
-  REF@{ shape: lin-cyl, label: "Bond reference data<br/><b>[Software System · external]</b><br/><small>Bond terms from a reference feed<br/>and a manually kept record</small>" }
+  REF@{ shape: lin-cyl, label: "Reference data<br/><b>[Software System · external]</b><br/><small>Bond terms from a reference feed<br/>and a manually kept record</small>" }
   QLIB["QuantLib<br/><b>[Software System · external]</b><br/><small>Reference term-structure, helper and<br/>instrument library</small>"]
   SITE@{ shape: curv-trap, label: "Portfolio site<br/><b>[Software System · external]</b><br/><small>React · Cloudflare Workers</small>" }
 

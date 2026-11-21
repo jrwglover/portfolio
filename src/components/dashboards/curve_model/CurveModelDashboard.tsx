@@ -30,7 +30,7 @@ type Tab = 'inputs' | 'curves' | 'bonds' | 'sensis' | 'perf' | 'arch' | 'pipelin
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inputs', label: 'Market Data Model' },
   { key: 'curves', label: 'Bootstrapped Curves' },
-  { key: 'bonds', label: 'Bonds & Relative Value' },
+  { key: 'bonds', label: 'Government Bonds' },
   { key: 'sensis', label: 'Trade Risk & Cashflows' },
   { key: 'perf', label: 'CPU vs GPU' },
   { key: 'arch', label: 'Architecture' },

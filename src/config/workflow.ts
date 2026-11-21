@@ -28,11 +28,11 @@ export const project = {
 export const stages: Stage[] = [
   {
     slug: 'curves', n: '01', title: 'Build the curves', component: 'CurveModelDashboard',
-    lede: 'The quotes every curve is built from, the curves themselves, a government bond curve with relative value, the risk of a trade against them, what a run costs, and the pipelines that build and test the code.',
+    lede: 'The quotes every curve is built from, the curves themselves, the risk of a trade against them, what a run costs, and the pipelines that build and test the code.',
     panels: [
       { key: 'inputs', title: 'Market data model', notes: ['market-data-model'] },
       { key: 'curves', title: 'Bootstrapped curves', notes: ['bootstrapping', 'meeting-dated-curves', 'fx-and-cross-currency'] },
-      { key: 'bonds', title: 'Government bonds and relative value', notes: ['bond-curve'] },
+      { key: 'bonds', title: 'Government bonds', notes: ['bond-curve'] },
       { key: 'sensis', title: 'Trade risk and cashflows', notes: ['trade-risk'] },
       { key: 'perf', title: 'Cost of a risk run', notes: ['cost'] },
       { key: 'arch', title: 'Architecture', notes: ['architecture'] },
@@ -41,21 +41,21 @@ export const stages: Stage[] = [
   },
   {
     slug: 'book', n: '02', title: 'Get the book in', component: 'BridgeDashboard',
-    lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark and measured. The bond terms the book is priced on are reconciled between a reference feed and a manual record.',
+    lede: 'The end-of-day trade feed from trade capture to the risk platform, rebuilt in Spark and measured, with the static data the book is priced on.',
     panels: [
       { key: 'problem', title: 'The problem', notes: ['trade-feed'] },
       { key: 'pipeline', title: 'The pipeline', notes: ['trade-feed'] },
       { key: 'benchmarks', title: 'Measured benchmarks', notes: ['trade-feed'] },
-      { key: 'static', title: 'Bond static data', notes: ['bond-static-data'] },
+      { key: 'static', title: 'Static data', notes: ['bond-static-data'] },
     ],
   },
   {
     slug: 'live', n: '03', title: 'Run the book live', component: 'RtEngineDashboard',
-    lede: 'Curves rebuilt on events as prices arrive, with value and risk on the whole book refreshed in a median of 183 ms. The desk view of a recorded session, limits and a government bond desk marked on every set come first. VaR and stress follow, then the end-of-day marks and the capital deduction.',
+    lede: 'Curves rebuilt on events as prices arrive, with value and risk on the whole book refreshed in a median of 183 ms. The desk view of a recorded session and limits come first. VaR and stress follow, then the end-of-day marks and the capital deduction.',
     panels: [
       { key: 'desk', title: 'Trading session replay', notes: ['session-replay'] },
       { key: 'limits', title: 'Limits', notes: ['limits'] },
-      { key: 'bonds', title: 'Government bond desk', notes: ['bond-desk'] },
+      { key: 'bonds', title: 'Government bonds', notes: ['bond-desk'] },
       { key: 'eod', title: 'Independent price verification', notes: ['eod-marking'] },
       { key: 'va', title: 'Close-out cost and mid-price uncertainty', notes: ['prudent-valuation'] },
       { key: 'why', title: 'Why events', notes: ['why-events'] },

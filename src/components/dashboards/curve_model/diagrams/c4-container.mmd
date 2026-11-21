@@ -16,7 +16,7 @@ flowchart TB
 
   subgraph HOST["Rates engine, host process"]
     direction TB
-    BOOT@{ shape: subproc, label: "Curve construction<br/><b>[C++17 / QuantLib]</b><br/><small>Helpers per instrument type, bonds included;<br/>all pillars solved at once</small>" }
+    BOOT@{ shape: subproc, label: "Curve construction<br/><b>[C++17 / QuantLib]</b><br/><small>Helpers per instrument type;<br/>all pillars solved at once</small>" }
     COEF@{ shape: subproc, label: "Coefficient extraction<br/><b>[C++17]</b><br/><small>Reads the coefficients<br/>each interval holds</small>" }
     RISK@{ shape: subproc, label: "Risk engine<br/><b>[C++17 / OpenMP]</b><br/><small>PV01 by re-bootstrapping<br/>each bumped quote</small>" }
     RECON@{ shape: diam, label: "Reconciliation<br/><b>[C++17 / Python]</b><br/><small>Differences both paths;<br/>re-derives every quote</small>" }

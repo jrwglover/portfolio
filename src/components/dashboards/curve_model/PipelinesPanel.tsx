@@ -22,7 +22,7 @@ const PIPELINES: Pipeline[] = [
         result: '0 warnings' },
       { name: 'Unit tests', does: 'Runs the engine suite, the trader platform suite and the bond desk suite. A failed check in any suite fails the pipeline.',
         result: '59 tests, 6,407 checks passed' },
-      { name: 'Bond static data', does: 'Rebuilds one record per bond from the reference feed and the manual record, then compares every field with the terms the prices were generated from.',
+      { name: 'Static data', does: 'Rebuilds one record per bond from the reference feed and the manual record, then compares every field with the terms the prices were generated from.',
         result: '52 bonds, 8 fields, 0 wrong' },
       { name: 'Tick replay', does: 'Replays a scripted session with duplicate and stale ticks, a failed solve and a burst of 120 prices, while reader threads check every published curve set.',
         result: '1.7 million reads, 0 incoherent' },
@@ -51,10 +51,8 @@ const GATES: [string, string, string][] = [
   ['Rebuild count', 'Each shifted quote rebuilds the curves that depend on it and no others.', 'equal to the dependency graph'],
   ['Reconciliation', 'The valuation adjustments from sensitivities agree with full revaluation in total.', 'within 1%'],
   ['Positivity', 'Every valuation adjustment and the headline deduction are zero or positive.', 'no negative value'],
-  ['Bond curve', 'Each benchmark bond priced off the curve it built returns its quote, on every set.', 'within 0.0001 cents'],
   ['Bond pricing', 'Yield, curve price and z-spread from the flattened cashflows agree with QuantLib, for every bond on every set.', 'within 0.000001 bp'],
   ['Bond P&L', 'The curve part and the spread part of the bond book add up to the change in its market value.', 'within 1 euro'],
-  ['Bond rebuilds', 'The government curve rebuilds on the sets with a benchmark price or record and on no other.', 'equal to the events'],
 ];
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -104,7 +102,7 @@ export default function PipelinesPanel() {
         <Label>Gates on the data export</Label>
         <p className="text-sm mb-3 max-w-4xl" style={{ color: SEC }}>
           The numbers on this site are written by an export run on the workstation. The export
-          applies the gates below to the valuation adjustments and to the bond desk. When one fails, the export
+          applies the gates below. When one fails, the export
           prints the value that failed and stops before it writes a file.
         </p>
         <div className="rounded-lg overflow-x-auto max-w-4xl" style={{ border: `1px solid ${EDGE}` }}>

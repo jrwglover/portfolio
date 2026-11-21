@@ -79,7 +79,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
   const GROUPS: { label: string; tabs: [string, string][] }[] = [
     {
       label: 'Trading',
-      tabs: [['desk', 'Trading session replay'], ['limits', 'Limits'], ['bonds', 'Government bond desk']],
+      tabs: [['desk', 'Trading session replay'], ['limits', 'Limits'], ['bonds', 'Government bonds']],
     },
     {
       label: 'Valuations',
@@ -206,7 +206,7 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
             <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──&gt; EURIBOR 6M</div>
             <div>&nbsp;</div>
             <div style={{ color: 'var(--text-dim)' }}>SONIA (nothing is built on it)</div>
-            <div style={{ color: 'var(--text-dim)' }}>Government bonds (built from bond prices, nothing is built on it)</div>
+            <div style={{ color: 'var(--text-dim)' }}>Government bonds (nothing is built on it)</div>
           </div>
 
           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>

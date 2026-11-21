@@ -159,7 +159,7 @@ export default function BondDeskTab({ tl }: { tl: Timeline }) {
 
   return (
     <div>
-      <h3 className="text-base font-semibold mb-1" style={{ color: PRI }}>Government bond desk</h3>
+      <h3 className="text-base font-semibold mb-1" style={{ color: PRI }}>Government bonds</h3>
       <p className="text-sm mb-4 max-w-4xl" style={{ color: DIM }}>
         The recorded session also carries a government bond curve, {desk.bonds.length} bonds
         and a book of {desk.positions.length} bond positions hedged with {desk.hedges.length} swaps.

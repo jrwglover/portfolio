@@ -4,9 +4,7 @@
 %% One curve per currency prices the book: ESTR ECB, SOFR and SONIA. The three
 %% comparison builds (ESTR tenor, ESTR IMM, ESTR IMM+futures) carry no
 %% dependencies and nothing is valued on them, so they share one node.
-%% The government bond curve has no parent and no child. Relative value reads
-%% it beside ESTR ECB, which is a comparison and not a dependency, so that
-%% link is dotted.
+%% The government bond curve has no parent and no child.
 flowchart TB
   subgraph PRC [One pricing curve per currency]
     direction LR
@@ -35,15 +33,12 @@ flowchart TB
   CMP["Comparison builds<br/><small>ESTR tenor · ESTR IMM · ESTR IMM+futures</small><br/><small>independent · nothing is valued on them</small>"]
   XC ~~~ CMP
 
-  GOV["Government bond curve<br/><small>solved from 18 benchmark bonds</small><br/><small>no parent, no child · rebuilt on a bond price or a bond record</small>"]
+  GOV["Government bond curve<br/><small>solved from 18 benchmark bonds</small><br/><small>independent · no parent, no child</small>"]
   CMP ~~~ GOV
-  RV["Bond relative value<br/><small>residual to the bond curve</small><br/><small>z-spread and asset swap spread against ESTR ECB</small>"]
-  GOV -- "bonds measured against it" --> RV
-  ECB -. "compared with, in one published set" .-> RV
 
   classDef dep stroke-width:1.5px
   classDef derived stroke-dasharray:4 3
   classDef cmp stroke-dasharray:2 3,opacity:0.7
   class E6,XC dep
-  class FWD,CTD,RV derived
+  class FWD,CTD derived
   class CMP cmp

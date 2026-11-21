@@ -10,7 +10,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'problem', label: 'The Problem' },
   { key: 'pipeline', label: 'The Pipeline' },
   { key: 'benchmarks', label: 'Measured Benchmarks' },
-  { key: 'static', label: 'Bond Static Data' },
+  { key: 'static', label: 'Static Data' },
 ];
 
 const chartGrid = '#1a1a28';

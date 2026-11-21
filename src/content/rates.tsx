@@ -33,8 +33,7 @@ const text: Record<string, ReactNode> = {
         calendar, day count, settlement lag and frequency.
       </P>
       <P>
-        Nine rate curves are built from <N>232</N> instruments, and the government bond curve
-        from <N>18</N> bonds. After each build, every instrument
+        The curves are built from <N>232</N> rate instruments and <N>18</N> bonds. After each build, every instrument
         is repriced off the finished curve and the difference from its quote reported. On the GPU
         path the marks match QuantLib to <N>10⁻¹⁴</N>, and at that level the only limit left is the
         arithmetic itself.
@@ -294,10 +293,8 @@ const text: Record<string, ReactNode> = {
         alt="Curve dependency graph: three pricing curves build independently, one per currency; EURIBOR 6M is discounted on the meeting-dated ESTR curve; the EUR/USD cross-currency curve is built on ESTR ECB and SOFR; FX forwards and the USD CSA cheapest-to-deliver curve are derived from the result."
         caption="The dependency graph, derived from the registry. The curve at the head of an arrow is built on the one at its tail." />
       <P>
-        The government bond curve stands alone in the graph. It is solved from bond prices,
-        nothing is built on it, and a benchmark bond price rebuilds it and nothing else.
-        Bonds are compared with ESTR, and that comparison reads both curves from one
-        published set without making either depend on the other.
+        The government bond curve has no parent and no child, like SONIA, so a bond price
+        rebuilds it and nothing else.
       </P>
       <P>
         Pick a curve on the panel to see the set its change forces to rebuild.
@@ -328,8 +325,8 @@ const text: Record<string, ReactNode> = {
         exercised. Tickets arrive during the session and are dealt at the
         market on the set they land on. They run unhedged against the limits intraday, and that is
         the story the Limits page tells. They are hedged at the close, before the end-of-day
-        marks in EOD marking and IPV. The last eight steps are government bond prices and bond
-        static records, and the Government bond desk page follows them.
+        marks in EOD marking and IPV. The last eight steps are bond prices and static
+        records, shown on the Government bonds page.
       </P>
     </>
   ),
@@ -552,13 +549,6 @@ const text: Record<string, ReactNode> = {
         cross-currency curve needs SOFR first. Nothing in
         the browser prices anything. The pages render what the engine exported.
       </P>
-      <P>
-        Government bonds enter on the same path. Their terms are reconciled between a
-        reference feed and a manual record before a run. The bond curve is solved by the same
-        global bootstrap with bonds as its instruments, and the live engine rebuilds it when
-        a bond price or a bond record arrives. The last diagram on the panel follows that
-        lane.
-      </P>
     </>
   ),
 
@@ -690,7 +680,7 @@ const text: Record<string, ReactNode> = {
         record is needed for corrections and for lines the feed does not carry, and it picks
         up keying errors. The engine keeps both, compares them field by field, and settles
         each difference by a fixed rule. The result is one record per bond, and the curve and
-        the relative value panel in stage 01 are built from it.
+        the Government bonds panel in stage 01 are built from it.
       </P>
       <P>
         The panel then gives each break a cost. The engine puts the losing value back and
@@ -714,8 +704,8 @@ const text: Record<string, ReactNode> = {
       <P>
         The engine and the site are separate repositories, and each has its own pipeline. A
         pipeline runs on a push and on a pull request. The engine pipeline builds the
-        event-driven engine and runs its three test suites, one of them for the bond desk. It
-        then runs the bond static data reconciliation against the terms the prices were
+        event-driven engine and runs its three test suites. It
+        then runs the static data reconciliation against the terms the prices were
         generated from, and replays a tick session while reader threads check that every
         published curve set is one coherent version. The site
         pipeline lints, type-checks and builds the site, checks the exported data and requests
@@ -723,8 +713,7 @@ const text: Record<string, ReactNode> = {
       </P>
       <P>
         A second layer of checks sits in the data export. The export reconciles its own
-        results before it writes a file, and a failed gate stops the run. For bonds the
-        export prices every bond a second time through QuantLib and compares. The panel lists both
+        results before it writes a file, and a failed gate stops the run. The panel lists both
         layers, and it ends with the parts of the workflow that are still done by hand.
       </P>
     </>
