@@ -142,6 +142,11 @@ export default function RtEngineDashboard({ defaultTab, chapter, onTab, intro }:
             with a book of {tl.trades.toLocaleString()} trades, and whenever a price arrives
             the engine re-solves just the curves that depend on it before repricing
             everything downstream.
+            {tl.bondBook && <>
+              {' '}A government bond desk of {tl.bondBook.positions} positions and{' '}
+              {tl.bondBook.hedges} hedge swaps is in the book as {tl.bondBook.book}, so its
+              value, risk, limits and VaR are part of the desk totals.
+            </>}
           </p>
           <p className="text-sm mb-4 max-w-4xl" style={{ color: 'var(--text-dim)' }}>
             Each currency discounts on one meeting-dated curve, with the projection and

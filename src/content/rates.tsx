@@ -328,6 +328,12 @@ const text: Record<string, ReactNode> = {
         marks in EOD marking and IPV. The last eight steps are bond prices and static
         records, shown on the Government bonds page.
       </P>
+      <P>
+        The government bond positions and their hedge swaps are in the book as GOVT_RV. The
+        positions are marked by the bond desk and the hedge swaps are priced in the swap lanes
+        with the rest of the book, so each is counted once. The desk totals, the limits, VaR
+        and the stress scenarios all include them.
+      </P>
     </>
   ),
 
@@ -343,6 +349,15 @@ const text: Record<string, ReactNode> = {
         quoted instrument. They are evaluated on every published set whose market run completed,
         and a set whose market run was skipped because a curve was stale is not evaluated, since
         a known-incomplete number should not be compared with a limit as if it were whole.
+      </P>
+      <P>
+        The government curve is solved from bond prices, so the bond lines are set on the
+        zero pillar ladder of the bond positions with each bond&apos;s spread held. Govt bonds
+        is the net DV01 to the government curve. It is rate risk, so it counts in the desk
+        total. Govt CS01 is the DV01 to the bonds&apos; own spreads. Bond net adds the DV01 of
+        the GOVT_RV hedge swaps to the bond DV01, which is what the hedged book has left.
+        Neither of those two counts in the desk total. Each pillar of the government curve
+        carries its own cap as well.
       </P>
       <P>
         The levels are illustrative. What is measured is the utilisation under them, and the
@@ -374,6 +389,15 @@ const text: Record<string, ReactNode> = {
         hiking cycle at 1.8.
       </P>
       <P>
+        The government bond positions are revalued in full on every day as well. The
+        government curve moves with the same history, which carries its own factor for the
+        spread between government and swap rates. A bond with a residual history also takes
+        its own spread change, and that history is short, so it is recycled over the window.
+        The bond P&amp;L is added to the swap P&amp;L day by day, and VaR, stressed VaR and the
+        backtest are all taken on that one series. The hedge swaps are in the swap P&amp;L with
+        the rest of the book. The Value at risk page shows the split by desk.
+      </P>
+      <P>
         On the closing book the one-day 99% VaR is <N>839,782</N> and the expected shortfall{' '}
         <N>892,479</N>. The stressed window runs from 10 October 2008 to 24 September 2009 and
         gives <N>2,942,780</N>. The backtest counts the days the loss exceeded the VaR predicted
@@ -395,8 +419,15 @@ const text: Record<string, ReactNode> = {
       <Eq tex={String.raw`P^{s}(t) = P(t)\,e^{-s(t)\,t}, \qquad \text{P\&L} = V\big(P^{s}\big) - V\big(P\big),`} />
       <P>
         with the book fully revalued under each, for the whole desk and for each book within
-        it. The five here are a parallel rise and fall of 100bp, a steepener and a flattener
-        of 20bp at the front against 40bp at thirty years, and a basis widening.
+        it. The rate scenarios are a parallel rise and fall of 100bp, a steepener and a
+        flattener of 20bp at the front against 40bp at thirty years, and a basis widening.
+      </P>
+      <P>
+        Two more move the government curve against swaps. Sovereign spread widening lifts the
+        government curve by 50bp at every tenor and leaves every swap curve where it is. Swap
+        spread tightening lowers every EUR swap curve by 25bp and leaves the government curve
+        where it is. In every scenario the bond positions are revalued in full on the shocked
+        government curve at held spread, and the GOVT_RV column adds them to the hedge swaps.
       </P>
       <P>
         On the closing book the parallel rise gains <N>6.05m</N> and the parallel fall loses{' '}
@@ -446,6 +477,13 @@ const text: Record<string, ReactNode> = {
         effect of a changed mark on the book shows immediately.
       </P>
       <P>
+        The government bonds are verified on price. Each closing clean price is compared with
+        a generated consensus mid in units of the bond&apos;s half bid/offer, with the same
+        thresholds. A bond&apos;s IPV value is its face over 100 times the gap from the mark to
+        the mid. Only flagged bonds go into the IPV adjustment, which is reported on the page
+        and kept out of the prudent valuation deduction.
+      </P>
+      <P>
         The second tab turns the same test on the trading curves themselves: their{' '}
         <N>144</N> quotes against a separate consensus run, and the internal lanes that price
         the whole book two independent ways and compare the live construction with its
@@ -482,6 +520,18 @@ const text: Record<string, ReactNode> = {
         is <N>968,791</N> of market price uncertainty, <N>1,575,150</N> of close-out cost, and a
         CET1 deduction of <N>1,267,740</N> after aggregation. The consensus behind these numbers
         is generated.
+      </P>
+      <P>
+        The government bond positions are adjusted on price. A position of face{' '}
+        <M tex="F" /> moves by <M tex="s = F/100" /> per price point. With <M tex="m" /> the
+        closing mark, <M tex="\bar p" /> the consensus mid, <M tex="u" /> the 90% width and{' '}
+        <M tex="h" /> the half bid/offer, each in price points,
+      </P>
+      <Eq tex={String.raw`\text{MPU}_b = \max\!\big(0,\ s\,(m - \bar p) + |s|\,u\big), \qquad \text{CoC}_b = |s|\,h.`} />
+      <P>
+        The bonds carry no expected value term, so they aggregate by Method 1 at half of the
+        sum. The deduction shows them as a line of their own beside the swaps, and the bond
+        consensus is generated as well.
       </P>
     </>
   ),
@@ -669,6 +719,15 @@ const text: Record<string, ReactNode> = {
         published curves on every set. Yield, curve price and z-spread agree to within a
         billionth of a basis point across <N>867</N> comparisons, and the export stops if
         they do not. The bonds, their prices and their history are generated.
+      </P>
+      <P>
+        The positions are part of the book as GOVT_RV. The hedge swaps are priced in the swap
+        lanes with the rest of the book, which is the one place they are counted. The
+        desk&apos;s value, DV01 and P&amp;L join the book totals, and three limit lines sit on
+        the bond ladder. VaR and stress revalue the positions in full. At the close the bond
+        prices are verified against a generated consensus, and their valuation adjustments
+        are a line of their own in the deduction. The strip on the panel shows the limit lines,
+        the bond VaR and the GOVT_RV row on each set.
       </P>
     </>
   ),

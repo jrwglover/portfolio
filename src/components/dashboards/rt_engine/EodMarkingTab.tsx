@@ -28,17 +28,40 @@ export interface EodFirstOrder {
   label: string; bumpBp: number; quotes: number;
   full: number; firstOrder: number; absErr: number; relErr: number;
 }
+// The government bonds' price verification, once the export carries it.
+// Prices are clean per 100 of face, devCents is (mark - mid) in cents, face
+// is the net position, signed, and ipvValue = face / 100 * (mid - mark).
+export interface EodBondRow {
+  id: string; name: string; onCurve: boolean; years: number; outstandingBn: number;
+  mark: number; mid: number; sd: number; halfBo: number; u90: number;
+  contrib: number; devCents: number; ratio: number; status: number;
+  face: number; ipvValue: number;
+}
+export interface EodBonds {
+  generated: boolean; seed: number; label: string;
+  curve: string; unit: string; watch: number; flag: number;
+  rows: EodBondRow[];
+  totals: {
+    bonds: number; held: number; pass: number; watch: number; flag: number;
+    ipvTotal: number; ipvAdjustment: number; closeValue: number;
+  };
+}
 export interface EodMarking {
   meta: {
     valuationDate: string; epoch: number; trades: number; threads: number;
     familyBuildUs: number; pairIterations: number;
     worstRoundTripBp: number; roundTripGateBp: number;
+    bondPositions?: number; bondHedges?: number;
   };
   npv: {
     eod: number; rt: number; basis: number; crossResidual: number;
     eodTradeLevel: number; reconAbs: number;
     collapsedUs: number; tradeLevelUs: number;
+    // The bond positions at the closing clean prices, and the swap book on
+    // the EOD family plus that.
+    bonds?: number; total?: number;
   };
+  bonds?: EodBonds;
   family: EodFamilyRow[];
   rows: EodRow[];
   jacobian: { bumpBp: number; rebuilds: number; computeUs: number; threads: number };
@@ -110,6 +133,12 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
     color: on ? colour : 'var(--text-dim)',
     background: on ? colour + '18' : 'transparent',
   });
+
+  // The bond table opens on the bonds the desk holds, and a toggle shows the
+  // whole universe. Order is the file's.
+  const [allBonds, setAllBonds] = useState(false);
+  const bonds = em.bonds ?? null;
+  const bondRows = bonds ? bonds.rows.filter(r => allBonds || r.face !== 0) : [];
 
   const worstFo = em.firstOrder.reduce((w, c) => Math.max(w, c.absErr), 0);
   const fo5 = em.firstOrder.filter(f => f.bumpBp === 5);
@@ -281,7 +310,118 @@ export default function EodMarkingTab({ em }: { em: EodMarking }) {
         IPV test a mark passes under {em.ipv.watch}, is on watch up to {em.ipv.flag}{' '}
         and is flagged beyond. dNPV/bp is the engine&apos;s bump-and-resolve Jacobian
         ({em.jacobian.rebuilds} curve re-solves).
+        {bonds && em.meta.bondHedges !== undefined && <>
+          {' '}The {em.meta.trades.toLocaleString()} trades include the{' '}
+          {em.meta.bondHedges} GOVT_RV hedge swaps, and the government bonds are
+          verified on price below.
+        </>}
       </p>
+
+      {/* ---- government bonds, verified on price ---- */}
+      {bonds && (
+        <>
+          <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+            Government bonds, verified on price
+          </h4>
+          <p className="text-sm mb-2 max-w-4xl" style={dimText}>
+            The desk marks each bond at its closing clean price, and the same test runs
+            on price. A bond passes under {bonds.watch} half bid-offers from the
+            consensus mid, is on watch up to {bonds.flag} and is flagged beyond. A
+            bond&apos;s IPV value is what moving its mark to the consensus mid would
+            change the position by, and only flagged bonds go into the IPV adjustment.
+            {bonds.generated && ` ${bonds.label}`}
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-2 mb-3 font-mono text-[11px]">
+            {tile('Bonds at the close', em.npv.bonds !== undefined ? millions(em.npv.bonds) : '-',
+              `${bonds.totals.held} bonds held, at the closing clean prices`)}
+            {tile('Book at the close', em.npv.total !== undefined ? millions(em.npv.total) : '-',
+              'the EOD family valuation and the bonds')}
+            {tile('Bond IPV flags', `${bonds.totals.flag} flag, ${bonds.totals.watch} watch`,
+              `${bonds.totals.pass} of ${bonds.totals.bonds} bonds pass`,
+              bonds.totals.flag > 0 ? '#c86e6e' : undefined)}
+            {tile('IPV value, all bonds', (bonds.totals.ipvTotal >= 0 ? '+' : '') + money(bonds.totals.ipvTotal),
+              'every mark moved to the consensus mid')}
+            {tile('IPV adjustment', (bonds.totals.ipvAdjustment >= 0 ? '+' : '') + money(bonds.totals.ipvAdjustment),
+              'the flagged bonds only',
+              bonds.totals.ipvAdjustment !== 0 ? '#d4a853' : undefined)}
+          </div>
+          <div className="flex gap-2 mb-2 font-mono text-[11px] flex-wrap items-center">
+            <button onClick={() => setAllBonds(false)} className="px-2.5 py-1 rounded"
+              style={chip(!allBonds, '#5eaab5')}>bonds held</button>
+            <button onClick={() => setAllBonds(true)} className="px-2.5 py-1 rounded"
+              style={chip(allBonds, '#5eaab5')}>all {bonds.rows.length} bonds</button>
+          </div>
+          <div className="rounded overflow-x-auto mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
+            <table className="w-full font-mono text-[10.5px]">
+              <thead>
+                <tr style={{ color: 'var(--text-dim)' }}>
+                  <th className="text-left px-2 py-1.5 font-normal">Bond</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Years</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Face</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Mark</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Cons mid</th>
+                  <th className="text-right px-2 py-1.5 font-normal">SD, cents</th>
+                  <th className="text-right px-2 py-1.5 font-normal">1/2 BO, cents</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Ctb</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Mark - mid, cents</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Dev (1/2 BO)</th>
+                  <th className="text-center px-2 py-1.5 font-normal">IPV</th>
+                  <th className="text-right px-2 py-1.5 font-normal">IPV value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bondRows.map(r => {
+                  const st = STATUS[r.status] ?? STATUS[0];
+                  return (
+                    <tr key={r.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                      <td className="px-2 py-1 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+                        {r.name}
+                        {r.onCurve && <span className="ml-1.5" style={dimText}>on the curve</span>}
+                      </td>
+                      <td className="px-2 py-1 text-right" style={dimText}>{r.years.toFixed(1)}</td>
+                      <td className="px-2 py-1 text-right" style={{ color: r.face ? 'var(--text-secondary)' : 'var(--text-dim)' }}>
+                        {r.face ? money(r.face) : '0'}
+                      </td>
+                      <td className="px-2 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{r.mark.toFixed(3)}</td>
+                      <td className="px-2 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>{r.mid.toFixed(3)}</td>
+                      <td className="px-2 py-1 text-right" style={dimText}>{(r.sd * 100).toFixed(1)}</td>
+                      <td className="px-2 py-1 text-right" style={dimText}>{(r.halfBo * 100).toFixed(1)}</td>
+                      <td className="px-2 py-1 text-right" style={dimText}>{r.contrib}</td>
+                      <td className="px-2 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>
+                        {r.devCents >= 0 ? '+' : ''}{r.devCents.toFixed(1)}
+                      </td>
+                      <td className="px-2 py-1 text-right"
+                        style={{ color: r.ratio >= 0.5 ? st.colour : 'var(--text-secondary)' }}>
+                        {r.ratio.toFixed(2)}
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <span className="px-1.5 py-0.5 rounded text-[9.5px] uppercase"
+                          style={{ border: `1px solid ${st.colour}66`, color: st.colour }}>
+                          {st.label}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1 text-right" style={{
+                        color: !r.face ? 'var(--text-dim)'
+                          : r.ipvValue >= 0 ? 'var(--accent-green)' : '#c86e6e',
+                      }}>
+                        {r.face ? (r.ipvValue >= 0 ? '+' : '') + money(r.ipvValue) : '0'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-sm mb-4 max-w-4xl" style={dimText}>
+            Prices are clean per 100 of face, and dispersion, half bid-offer and the
+            mark to mid gap are in cents per 100. Face is the net position, so a bond
+            the desk is short has a negative face. The consensus is GENERATED, seed{' '}
+            {bonds.seed}, and its widths are illustrative. The IPV adjustment stays out
+            of the prudent valuation deduction, which charges the same gap through
+            market price uncertainty.
+          </p>
+        </>
+      )}
 
       {/* ---- the convention mapping and model basis ---- */}
       <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>

@@ -32,8 +32,31 @@ export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: V
       e.quotes += 1; e.closeOut += r.cocFull; e.mpu += r.mpuFull;
       by.set(r.service, e);
     }
-    return Array.from(by, ([curve, e]) => ({ curve, ...e }));
+    const out = Array.from(by, ([curve, e]) => ({ curve, ...e }));
+    // The government bonds, on price, as one row. Its quote count is the
+    // bonds the desk holds.
+    const tb = va.totals.bonds;
+    if (tb && va.bondRows)
+      out.push({
+        curve: 'EUR_GOVT', quotes: va.bondRows.filter(r => r.face !== 0).length,
+        closeOut: tb.coc, mpu: tb.mpu,
+      });
+    return out;
   }, [va]);
+  // The close-out totals. The engine's swap totals plus the bond row when the
+  // prudent valuation file carries one. The risk_val totals already hold it.
+  const closeTotals = useMemo(() => {
+    if (!va) return {
+      quotes: rv.closeout.quotesCovered, closeOut: rv.closeout.total, mpu: rv.closeout.mpuTotal,
+    };
+    const bond = closeRows?.find(r => r.curve === 'EUR_GOVT');
+    return {
+      quotes: va.meta.quotes + (bond?.quotes ?? 0),
+      closeOut: va.totals.coc.full + (bond?.closeOut ?? 0),
+      mpu: va.totals.mpu.full + (bond?.mpu ?? 0),
+    };
+  }, [va, rv.closeout, closeRows]);
+  const closeHasBonds = (closeRows ?? rv.closeout.byCurve).some(r => r.curve === 'EUR_GOVT');
   const avaRows = useMemo(() => rv.ava.rows.map(r => {
     const o = va?.ava.find(a => a.category === r.category && a.apva !== null && a.apva !== undefined);
     return o ? { ...r, raw: o.raw ?? undefined, ava: o.apva ?? undefined } : r;
@@ -188,7 +211,7 @@ export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: V
                   {(closeRows ?? rv.closeout.byCurve).map(c => (
                     <tr key={c.curve} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td className="px-3 py-1.5" style={{ color: COLOUR[c.curve] ?? 'var(--text-secondary)' }}>
-                        {LABEL[c.curve] ?? c.curve}
+                        {c.curve === 'EUR_GOVT' ? 'Government bonds' : (LABEL[c.curve] ?? c.curve)}
                       </td>
                       <td className="px-3 py-1.5 text-right" style={dimText}>{c.quotes}</td>
                       <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{money(c.closeOut)}</td>
@@ -197,9 +220,9 @@ export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: V
                   ))}
                   <tr style={{ borderTop: '1px solid var(--border-hover)' }}>
                     <td className="px-3 py-1.5" style={dimText}>Total</td>
-                    <td className="px-3 py-1.5 text-right" style={dimText}>{va ? va.meta.quotes : rv.closeout.quotesCovered}</td>
-                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{money(va ? va.totals.coc.full : rv.closeout.total)}</td>
-                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{money(va ? va.totals.mpu.full : rv.closeout.mpuTotal)}</td>
+                    <td className="px-3 py-1.5 text-right" style={dimText}>{closeTotals.quotes}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{money(closeTotals.closeOut)}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{money(closeTotals.mpu)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -208,6 +231,7 @@ export default function ValuationsTab({ rv, panel, va }: { rv: RiskVal; panel: V
               The MPU column runs the same arithmetic on the 90% confidence width of
               the consensus dispersion. Both columns feed the prudent valuation table
               beside this one.
+              {closeHasBonds && ' The government bond row is on price, the bond consensus widths times each position\'s face over 100, and its quote count is the bonds the desk holds.'}
             </p>
           </PanelCard>
 

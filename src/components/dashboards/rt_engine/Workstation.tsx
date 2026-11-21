@@ -14,6 +14,10 @@ interface Row {
 interface BookAgg {
   book: string; trades: number; npv: number; dv01: number;
   failed: number; degraded: number;
+  // GOVT_RV only, once the bond desk is in the book: its trade count is the
+  // hedge swaps, and npv and dv01 add the bond positions to them.
+  positions?: number; bondNpv?: number; bondDv01?: number; bondPnl?: number;
+  cs01?: number; hedgeNpv?: number; hedgeDv01?: number;
 }
 // [zero-bucket pv01, forward-bucket pv01] per bucket, flat, read against the
 // bucket maturities the file carries under riskT.
@@ -53,7 +57,14 @@ interface Frame {
   // revalued under the 250 most recent days of the dated scenario history,
   // through the collapsed lane, on this set. us is the measured wall clock
   // including the evaluator compile against this set's curves.
-  varRt?: { var99: number; var95: number; es99: number; us: number };
+  varRt?: {
+    var99: number; var95: number; es99: number; us: number;
+    // The split once the bond positions are in: swaps holds the GOVT_RV
+    // hedges, bonds the positions. bondUs is the bond evaluator's own clock.
+    swaps?: { var99: number; var95: number; es99: number };
+    bonds?: { var99: number; var95: number; es99: number };
+    bondUs?: number;
+  };
   // Per-set limits, evaluated on this set's market PV01 ladder and nothing
   // else: net rows per curve plus the desk total, per-bucket utilizations
   // and caps aligned with the mktQ axes (null = uncapped or unbuilt), and
@@ -64,6 +75,9 @@ interface Frame {
     net: { key: string; dv01: number; limit: number; util: number; breach: boolean }[];
     rows: Record<string, (number | null)[]>;
     lims: Record<string, (number | null)[]>;
+    // Bucket labels for a line that has no market ladder, which is the bond
+    // curve: its buckets are the pillars of the zero ladder, such as 6M/ZERO.
+    axis?: Record<string, string[]>;
     events: {
       kind: 'bucket' | 'net'; curve: string; q?: string; years?: number;
       util: number; prev: number; enter: boolean;
@@ -111,6 +125,9 @@ interface Frame {
   // The government bond desk on this set: the bond events that arrived, the
   // curve's pillars, every bond against the two curves, and the book.
   bond?: BondFrame;
+  // The bond positions' zero pillar ladder at held spread, aligned with
+  // bl.axis.EUR_GOVT. z0 is the pillar at the curve date.
+  riskGovt?: { q: string[]; t: number[]; z: number[]; z0: number };
 }
 
 // ---- position detail ------------------------------------------------------
@@ -141,6 +158,8 @@ export interface Timeline {
   feed: FeedTrade[];
   detail?: Detail;
   bondDesk?: BondDesk;
+  // trades stays the generated swap book. The bond desk is counted beside it.
+  bondBook?: { book: string; positions: number; hedges: number };
 }
 
 const LABEL: Record<string, string> = {
@@ -148,6 +167,7 @@ const LABEL: Record<string, string> = {
   EUR_ESTR_IMMFUT: 'ESTR IMM fut', EUR_EURIBOR6M: 'EURIBOR 6M',
   USD_SOFR: 'SOFR', GBP_SONIA: 'SONIA', EUR_USD_XCCY: 'EUR/USD xccy',
   USD_CSA_CTD: 'USD CSA CTD', EUR_GOVT: 'Govt bonds',
+  GOVT_CS01: 'Govt CS01', BOND_NET: 'Bond net',
 };
 
 // The curve model's own colours, so a curve is the same colour on both projects.
@@ -315,6 +335,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   const [drillCurve, setDrillCurve] = useState<string | null>(null);
   const limitBreaches = useMemo(
     () => bl?.net.filter(r => r.breach) ?? [], [bl]);
+  const hasBondLines = bl?.net.some(r => r.key === 'EUR_GOVT') ?? false;
 
   useEffect(() => {
     // The flash is a timed highlight keyed to the frame, so it is set here and cleared by the timer.
@@ -471,14 +492,26 @@ export default function Workstation({ tl }: { tl: Timeline }) {
   // Curves with something to show in the domain on screen. The market domain
   // is read against the quoted instruments; the other two against the bucket
   // axes.
+  // The bond curve has a zero pillar ladder of the bond positions and no
+  // market or forward ladder, so its chip stays on in every domain and the
+  // other two say so.
+  const riskGovt = f.riskGovt ?? null;
   const riskCurves = useMemo(() => tl.curveIds.filter(c =>
-    riskMode === 'mkt' ? (here.mktQ[c] ?? []).length : (f.risk?.[c] ?? []).length),
-    [tl.curveIds, riskMode, here, f]);
+    (c === 'EUR_GOVT' && riskGovt !== null)
+    || (riskMode === 'mkt' ? (here.mktQ[c] ?? []).length : (f.risk?.[c] ?? []).length)),
+    [tl.curveIds, riskMode, here, f, riskGovt]);
   const curveOn = riskCurves.includes(riskCurve) ? riskCurve : (riskCurves[0] ?? riskCurve);
 
+  const govtOn = curveOn === 'EUR_GOVT' && riskGovt !== null;
   const riskChart = useMemo(() => {
-    const { times, z, w } = ladderOn(curveOn);
     const rows: { label: string; pv01: number; t: number }[] = [];
+    if (curveOn === 'EUR_GOVT' && riskGovt) {
+      riskGovt.t.forEach((t, n) => {
+        rows.push({ label: (riskGovt.q[n] ?? '').split('/')[0], pv01: riskGovt.z[n] ?? 0, t });
+      });
+      return rows;
+    }
+    const { times, z, w } = ladderOn(curveOn);
     times.forEach((t, n) => {
       if (t <= 0) return;
       rows.push({
@@ -487,7 +520,9 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       });
     });
     return rows;
-  }, [ladderOn, curveOn, riskMode]);
+  }, [ladderOn, curveOn, riskMode, riskGovt]);
+  const govtTotal = riskGovt
+    ? riskGovt.z.reduce((s, v) => s + v, 0) + riskGovt.z0 : 0;
 
   // ---- market-quote ladder ------------------------------------------------
   // The engine computes this ladder on every published set, like the zero and
@@ -626,6 +661,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
       fromOpen: now.npv - bookOn(b.book, 0, openTotals).npv,
     };
   };
+  const govtBook = f.books.find(b => b.book === 'GOVT_RV') ?? null;
   const deskNpv = totals.npv;
   const deskDv01 = totals.dv01;
   const deskTrades = totals.trades;
@@ -672,7 +708,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
           ['Book revalued', ms(f.npvUs), 'every trade, ' + tl.threads + ' cores'],
           ['Risk ladders', ms(f.riskUs), f.buckets + ' buckets, zero and forward'],
           ['1-day VaR, 99%', f.varRt ? ms(f.varRt.us) : '-',
-            f.varRt ? 'full reval, 250 scenarios' : 'not in this recording'],
+            !f.varRt ? 'not in this recording'
+              : f.varRt.bonds
+                ? `full reval, 250 scenarios, bonds ${millions(f.varRt.bonds.var99)} of ${millions(f.varRt.var99)}`
+                : 'full reval, 250 scenarios'],
           ['Market PV01', f.mkt ? ms(f.mktUs) : '-',
             f.mkt ? mktTotals.quotes + ' quotes bumped, ' + f.mktRebuilds + ' curve solves'
               : 'not run while a curve is stale']]
@@ -688,6 +727,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
         VaR runs on every published set as a full revaluation of the collapsed book
         under the 250 most recent days of the generated scenario history. Its wall
         clock is measured per set and includes rebinding to the new curves.
+        {f.varRt?.bonds && f.varRt.swaps && <>
+          {' '}The bond positions are revalued in full under the same days and added
+          to the swap P&amp;L before the quantile is taken. On this set the swaps,
+          with the GOVT_RV hedges, give {millions(f.varRt.swaps.var99)}, the bonds{' '}
+          {millions(f.varRt.bonds.var99)} and the book {millions(f.varRt.var99)}.
+        </>}
       </p>
 
       <div className="rounded px-4 py-3 mb-4" style={{ border: '1px solid #d4a85355', background: '#d4a8530a' }}>
@@ -780,7 +825,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                   const d = bookMove(b);
                   const now = bookOn(b.book, i, totals);
                   return (
-                    <tr key={b.book} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <tr key={b.book} style={{ borderTop: '1px solid var(--border-subtle)' }}
+                      title={b.positions !== undefined && b.bondNpv !== undefined && b.hedgeNpv !== undefined
+                        ? `${b.positions} bond positions ${millions(b.bondNpv)}, ${b.trades} hedge swaps ${millions(b.hedgeNpv)}`
+                        : undefined}>
                       <td className="px-3 py-1.5" style={{ color: b.degraded ? '#c86e6e' : 'var(--text-secondary)' }}>
                         {b.book}{b.degraded ? ' *' : ''}
                       </td>
@@ -820,6 +868,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
             compares it with the first set, the mark the session starts from.
             {withPending && ' Pending tickets are in these totals because the blotter toggle below is on.'}
             {f.books.some(b => b.degraded) && ' A book marked * holds trades priced on a curve that failed to rebuild and is serving its last good version.'}
+            {govtBook?.positions !== undefined && ` GOVT_RV is the government bond desk. Its trade count is the ${govtBook.trades} hedge swaps, and its value and DV01 add the ${govtBook.positions} bond positions to them. Hover the row for the split.`}
           </p>
 
           <div className="text-[10px] uppercase mt-4 mb-2" style={{ color: 'var(--text-dim)' }}>
@@ -892,7 +941,8 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                     if (u2 !== null && (worstN < 0 || u2 > (rows[worstN] ?? 0))) worstN = n;
                   });
                   const worstU = worstN >= 0 ? rows[worstN] as number : null;
-                  const worstQ = worstN >= 0 ? (here.mktQ[r.key] ?? [])[worstN] : null;
+                  const axis = bl.axis?.[r.key] ?? here.mktQ[r.key] ?? [];
+                  const worstQ = worstN >= 0 ? axis[worstN] : null;
                   const canDrill = r.key !== 'TOTAL' && rows.length > 0;
                   const drilled = drillCurve === r.key;
                   return (
@@ -930,7 +980,7 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                           style={{ borderLeft: '2px solid #5eaab540' }}>
                           {rows.map((u2, n) => {
                             if (u2 === null) return null;
-                            const qid = (here.mktQ[r.key] ?? [])[n] ?? '';
+                            const qid = axis[n] ?? '';
                             const bcol = u2 > 1.0 ? '#c86e6e' : u2 > 0.85 ? '#d4a853' : '#5eaab5';
                             const bw = Math.min(u2, 1.25) / 1.25 * 100;
                             const lim = (bl.lims[r.key] ?? [])[n];
@@ -965,6 +1015,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               utilization is measured on every evaluated set. The
               mark past the end of each bar is 100%, and clicking a curve opens its
               bucket ladder.
+              {hasBondLines && <>
+                {' '}The bond lines sit on the zero pillar ladder of the bond positions
+                at held spread, and their buckets are the pillars of the government
+                curve. Govt bonds counts in the desk total. Govt CS01 and Bond net, the
+                bonds with the GOVT_RV hedge swaps, do not.
+              </>}
               {limitBreaches.length > 0 && <>
                 {' '}<span style={{ color: '#c86e6e' }}>
                   {limitBreaches.map(b => b.key === 'TOTAL' ? 'Desk total' : (LABEL[b.key] ?? b.key)).join(' and ')}{' '}
@@ -996,7 +1052,16 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               style={chip(curveOn === c, COLOUR[c] ?? '#8b8a97')}>{LABEL[c] ?? c}</button>
           ))}
         </div>
-        {riskMode === 'mkt' && !f.mkt ? (
+        {govtOn && riskMode !== 'zero' ? (
+          <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
+            <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
+              The government bond curve has no {riskMode === 'mkt' ? 'market' : 'forward'}{' '}
+              ladder. Its risk is the zero pillar ladder of the bond positions at held
+              spread, which is the ladder its limits are set on. Switch to Zero PV01 to
+              see it.
+            </p>
+          </div>
+        ) : riskMode === 'mkt' && !f.mkt ? (
           <div className="rounded px-4 py-6 text-center" style={{ border: '1px dashed var(--border-subtle)' }}>
             <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-dim)' }}>
               Market PV01 was not run on set {epochAt(i)}.{' '}
@@ -1016,8 +1081,10 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                   {' '}&middot; {mktTotals.quotes} quoted instruments,{' '}
                   {f.mktRebuilds} curve solves, in {ms(f.mktUs)} on {f.threads} cores
                 </> : <>
-                  {' '}&middot; {f.buckets} buckets in both the zero and forward domains, in{' '}
-                  {ms(f.riskUs)} on {f.threads} cores
+                  {' '}&middot; {govtOn
+                    ? `${riskChart.length} pillars of the government curve, bond positions at held spread`
+                    : <>{f.buckets} buckets in both the zero and forward domains, in{' '}
+                      {ms(f.riskUs)} on {f.threads} cores</>}
                 </>}
                 {feedCount.executed > 0 && <>
                   {' '}&middot; {feedCount.executed} executed{' '}
@@ -1130,6 +1197,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
                   its cap turns red. On a set where the market run is skipped, the
                   envelope goes with the ladder.
                 </>}
+              </> : govtOn ? <>
+                Each bar is what the bond positions gain or lose for one basis point at a
+                single pillar of the government curve, with every bond&apos;s own spread
+                held. The pillars sum, with the one at the curve date, to{' '}
+                {money(govtTotal)}, the Govt bonds line in the limits above. The GOVT_RV
+                hedge swaps are on the ESTR ladders with the rest of the swap book.
               </> : <>
                 Each bar is what the book gains or loses for one basis point at a single{' '}
                 {riskMode === 'zero' ? 'node' : 'interval'} of{' '}
@@ -1218,6 +1291,12 @@ export default function Workstation({ tl }: { tl: Timeline }) {
               {BRIDGE_RPS.toLocaleString()} rows a second writing that shape, so the
               whole book takes about {Math.round((tl.trades + tl.cashflows) / BRIDGE_RPS)}{' '}
               seconds.
+              {tl.bondBook && <>
+                {' '}The government bond desk is counted beside that book, with{' '}
+                {tl.bondBook.positions} bond positions and {tl.bondBook.hedges} hedge
+                swaps in book {tl.bondBook.book}. The hedge swaps are priced in the swap
+                lanes with the rest of the book.
+              </>}
             </p>
             <p>
               Trades arrive during the session the same way prices do, and the tickets

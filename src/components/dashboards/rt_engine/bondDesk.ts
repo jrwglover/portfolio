@@ -16,6 +16,10 @@ export interface BondDesk {
   packages: { name: string; strategy: string }[];
   swapT: number[];
   gates: { sets: number; rebuilds: number; checks: number; rows: { name: string; value: number; limit: number }[] };
+  // The checks on the bond book in the risk lanes (limits, VaR, stress, end
+  // of day), once the export puts the desk in the book. runs is how many
+  // times each one was checked.
+  bookGates?: { name: string; value: number; limit: number; runs: number }[];
 }
 
 export interface BondEvent {

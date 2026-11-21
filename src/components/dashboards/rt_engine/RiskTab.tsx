@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
-  type RiskVal, LABEL, chip, money, millions, signedM, ms, pct,
+  type RiskVal, type VarSet, LABEL, BOND_KEYS, chip, money, millions, signedM, ms, pct,
   moveColour, dimText,
 } from './riskval';
 import { Group, PanelCard } from './PanelCard';
@@ -36,6 +36,26 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
     return m;
   }, [rv.limits.config]);
   const breaches = lf.rows.filter(r => r.breach);
+  // The bond lines arrive with the export that puts the bond desk in the
+  // book. Older data has none, and the copy about them stays off.
+  const hasBondLines = rv.limits.config.some(c => BOND_KEYS.includes(c.key));
+  const breachNote = (key: string) =>
+    key === 'EUR_EURIBOR6M'
+      ? ' The session\'s tickets run unhedged until the close, and the large EURIBOR receivers dealt on the gap set take that line through its limit.'
+      : key === 'EUR_ESTR_ECB' && hasBondLines
+        ? ' The ESTR meeting line holds the GOVT_RV hedge swaps along with the rest of the swap book.'
+        : '';
+
+  // The regime the stressed window falls in, read off the exported regime
+  // bands. Which one it is depends on the book, so the copy does not name it.
+  const stressedRegime = v.regimes.find(r =>
+    r.startIdx <= v.stressed.endIdx && r.endIdx >= v.stressed.startIdx) ?? null;
+  const split = v.split ?? null;
+  const bs = v.bondScenarios ?? null;
+  const bondRecon = v.bondRecon ?? [];
+  const bondReconWorst = bondRecon.reduce((w, r) => Math.max(w, Math.abs(r.absDiff)), 0);
+  const govtStress = rv.stressScenarios.some(s =>
+    s.byBook.some(b => b.book === 'GOVT_RV' && b.bonds !== undefined));
 
   // Histogram bars: position labels come off the exported bin origin and
   // width; counts are the engine's own binning.
@@ -73,7 +93,20 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
       {panel === 'limits' && <Group title="Limits"
         note="This compares what the desk is allowed to run with what it is running.">
         <PanelCard title="PV01 limits"
-          intro="Each bar is a curve's net market PV01 on the chosen set, the sum of its market PV01 ladder, against a desk limit structure configured in the engine. Limits live in the quote space the desk deals in, so a set whose market run was skipped isn't evaluated. The levels are illustrative, but the utilization under them is measured.">
+          intro={<>
+            Each bar is a curve&apos;s net market PV01 on the chosen set, the sum of its
+            market PV01 ladder, against a desk limit structure configured in the engine.
+            Limits live in the quote space the desk deals in, so a set whose market run
+            was skipped isn&apos;t evaluated. The levels are illustrative, but the
+            utilization under them is measured.
+            {hasBondLines && <>
+              {' '}The three bond lines are read off the zero pillar ladder of the bond
+              positions at held spread. Govt bonds is their net DV01 to the government
+              curve and counts in the desk total. Govt CS01 is their DV01 to their own
+              spreads, and Bond net adds the DV01 of the GOVT_RV hedge swaps to the bond
+              DV01. Neither of those two counts in the desk total.
+            </>}
+          </>}>
           <div className="flex gap-1.5 mb-3 flex-wrap font-mono text-[10px]">
             {rv.limits.frames.map((f, k) => (
               <button key={k} onClick={() => setFrameIdx(k)}
@@ -110,7 +143,7 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
           </div>
           <p className="text-sm max-w-4xl" style={dimText}>
             {breaches.length
-              ? `${breaches.map(b => LABEL[b.key] ?? b.key).join(' and ')} ${breaches.length === 1 ? 'is' : 'are'} over the line on this set. The session's tickets run unhedged until the close, and the large EURIBOR receivers dealt on the gap set take that line through its limit. The mark past the end of each bar is 100%.`
+              ? `${breaches.map(b => LABEL[b.key] ?? b.key).join(' and ')} ${breaches.length === 1 ? 'is' : 'are'} over the line on this set.${breaches.map(b => breachNote(b.key)).join('')} The mark past the end of each bar is 100%.`
               : 'Every line is inside its limit on this set. The mark past the end of each bar is 100%.'}
           </p>
         </PanelCard>
@@ -163,16 +196,82 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
             {v.window}-day window for this portfolio, <span style={{ color: 'var(--text-secondary)' }}>
             {v.stressed.start} to {v.stressed.end}</span>, identified per Art.
             365(2) as the continuous period of significant stress relevant to the
-            portfolio. It lands on the 2008-09 crisis and runs{' '}
-            {v.svarRatio.toFixed(1)}x ordinary VaR. The 10-day row scales the 1-day
+            portfolio.{stressedRegime && ` It falls in the band marked ${stressedRegime.name}.`}{' '}
+            It runs {v.svarRatio.toFixed(1)}x ordinary VaR. The 10-day row scales the 1-day
             row by sqrt-of-10, the internal-models convention, and both sides use the
             same estimator, linear interpolation between order statistics on the
             window&apos;s own 250 P&Ls.
           </p>
 
+          {split && (
+            <>
+              <div className="rounded overflow-x-auto mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
+                <table className="w-full font-mono text-[11px]">
+                  <thead>
+                    <tr style={dimText}>
+                      <th className="text-left px-3 py-1.5 font-normal">1-day, by desk</th>
+                      <th className="text-right px-3 py-1.5 font-normal">VaR 99%</th>
+                      <th className="text-right px-3 py-1.5 font-normal">VaR 95%</th>
+                      <th className="text-right px-3 py-1.5 font-normal">ES 99%</th>
+                      <th className="text-right px-3 py-1.5 font-normal">Stressed VaR 99%</th>
+                      <th className="text-right px-3 py-1.5 font-normal">Stressed ES 99%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {([
+                      ['Swaps, with the GOVT_RV hedges', split.swaps],
+                      [rv.meta.bondPositions !== undefined
+                        ? `Bonds, ${rv.meta.bondPositions} GOVT_RV positions` : 'Bonds, GOVT_RV positions',
+                        split.bonds],
+                      ['Total', {
+                        var99: v.var99, var95: v.var95, es99: v.es99, es95: v.es95,
+                        svar99: v.stressed.var99, ses99: v.stressed.es99,
+                      }],
+                    ] as [string, VarSet][]).map(([label, s], k) => (
+                      <tr key={label} style={{ borderTop: `1px solid ${k === 2 ? 'var(--border-hover)' : 'var(--border-subtle)'}` }}>
+                        <td className="px-3 py-1.5" style={{ color: 'var(--text-secondary)' }}>{label}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{millions(s.var99)}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{millions(s.var95)}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{millions(s.es99)}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>{millions(s.svar99)}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{millions(s.ses99)}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                      <td className="px-3 py-1.5" style={dimText}>Diversification, 99%</td>
+                      <td className="px-3 py-1.5 text-right" style={dimText}>{millions(split.diversification99)}</td>
+                      <td colSpan={4} className="px-3 py-1.5" style={dimText}>
+                        swaps and bonds less the total
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-sm mb-3 max-w-4xl" style={dimText}>
+                The total is the quantile of one combined P&amp;L series, the swap P&amp;L
+                plus the bond P&amp;L on each day. The stressed figures of both legs are
+                taken on the total&apos;s stressed window.
+                {bs && <>
+                  {' '}On each day the {bs.positions} bond positions are revalued in full
+                  on the government curve and their own spreads. {bs.curveMove}{' '}
+                  {bs.spreadSource}{' '}
+                  {bs.bondsWithHistory} of the bonds held carry a residual history of{' '}
+                  {bs.historyDays} days{bs.recycled ? ', recycled over the full history' : ''},
+                  and the others move with the curve alone.
+                  {bs.generated && ' The bond history is generated, like the curve history.'}
+                  {bs.frozen > 0 && <span style={{ color: '#c86e6e' }}>
+                    {' '}{bs.frozen} position{bs.frozen === 1 ? '' : 's'} did not reprice
+                    under the scenarios and {bs.frozen === 1 ? 'is' : 'are'} held at market value.
+                  </span>}
+                </>}
+              </p>
+            </>
+          )}
+
           <div className="rounded px-3 py-2 mb-3 font-mono text-[11px]"
             style={{ border: '1px solid #5eaab555', background: '#5eaab50a', color: 'var(--text-secondary)' }}>
             {v.scenarios.toLocaleString()} full revaluations of {rv.meta.trades.toLocaleString()} trades
+            {rv.meta.bondPositions !== undefined && ` and ${rv.meta.bondPositions} bond positions`}{' '}
             in {ms(v.timing.collapsedUs)}
             <span style={dimText}>
               {' '}&middot; {Math.round(v.timing.perScenarioUs)} µs a scenario through{' '}
@@ -271,6 +370,14 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
                 best gain, the median, one stressed day and the last. Both routes give
                 the same P&L to fractions of a cent on moves of millions.
               </div>
+              {bondRecon.length > 0 && (
+                <div className="text-[10px] mt-1" style={dimText}>
+                  The bond positions are checked the same way on those days. The
+                  scenario evaluator is compared with a second route through the
+                  scenario curve view, and the worst absolute difference is{' '}
+                  <span style={{ color: 'var(--text-secondary)' }}>{bondReconWorst.toExponential(2)}</span>.
+                </div>
+              )}
             </div>
           </div>
         </PanelCard>
@@ -298,6 +405,9 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
                     <td className="px-3 py-1.5" style={{ color: 'var(--text-secondary)' }}>{s.name}</td>
                     {s.byBook.map(b => (
                       <td key={b.book} className="px-3 py-1.5 text-right"
+                        title={b.bonds !== undefined && b.hedges !== undefined
+                          ? `bond positions ${signedM(b.bonds)}, hedge swaps ${signedM(b.hedges)}`
+                          : undefined}
                         style={{ color: moveColour(b.pnl, 1e3) }}>
                         {Math.abs(b.pnl) < 1e3 ? '0' : signedM(b.pnl)}
                       </td>
@@ -313,6 +423,11 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
           <p className="text-sm mt-2 max-w-4xl" style={dimText}>
             Hover a row for the shock definition. Every row is a full revaluation of
             the closing book, with the session&apos;s tickets hedged at the close.
+            {govtStress && <>
+              {' '}The GOVT_RV column adds the bond positions, revalued in full on the
+              shocked government curve at held spread, to the hedge swaps from the swap
+              lane, and the total includes it. Hover a GOVT_RV cell for the split.
+            </>}
           </p>
         </PanelCard>
       </Group>}
@@ -321,7 +436,8 @@ export default function RiskTab({ rv, panel }: { rv: RiskVal; panel: RiskPanel }
       <p className="text-sm max-w-4xl" style={dimText}>
         Every figure on this panel was computed by the engine on the closing book
         ({rv.meta.trades.toLocaleString()} trades, {(rv.meta.cashflows / 1e6).toFixed(1)}m
-        cashflows collapsed to {rv.meta.terms.toLocaleString()} terms) against set{' '}
+        cashflows collapsed to {rv.meta.terms.toLocaleString()} terms
+        {rv.meta.bondPositions !== undefined && `, and ${rv.meta.bondPositions} government bond positions`}) against set{' '}
         {rv.meta.epoch} and exported as JSON for the browser to draw.
       </p>
     </div>

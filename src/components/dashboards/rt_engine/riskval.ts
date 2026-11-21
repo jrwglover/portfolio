@@ -7,6 +7,9 @@ export interface RvMeta {
   terms: number; pairs: number; threads: number;
   collapseBuildUs: number; evalCompileUs: number;
   baseNpv: number; tradeLevelNpv: number; tradeLevelNpvUs: number;
+  // The government bond desk in the closing book, once the export carries it:
+  // positions held in BondBook as book GOVT_RV, hedge swaps in the swap lanes.
+  bondPositions?: number; bondHedges?: number; bondValue?: number;
 }
 
 export interface LimitRow { key: string; dv01: number; util: number; breach: boolean }
@@ -28,6 +31,17 @@ export interface VarRegime {
 }
 export interface VarPairRow {
   horizon: string; var99: number; es99: number; svar99: number; ses99: number;
+}
+// One leg of the VaR split, loss positive. The stressed figures of a leg are
+// taken on the total's stressed window.
+export interface VarSet {
+  var99: number; var95: number; es99: number; es95: number;
+  svar99: number; ses99: number;
+}
+export interface BondScenarios {
+  generated: boolean; positions: number; curve: string;
+  curveMove: string; spreadSource: string;
+  bondsWithHistory: number; historyDays: number; recycled: boolean; frozen: number;
 }
 export interface RvVar {
   scenarios: number; seed: number; window: number;
@@ -58,11 +72,19 @@ export interface RvVar {
     absDiff: number;
   }[];
   worstScenAbsDiff: number;
+  // With bonds in the book: pnl is the combined series, pnlBonds the bond
+  // part on the same days, and split the swap and bond legs.
+  pnlBonds?: number[];
+  split?: { swaps: VarSet; bonds: VarSet; diversification99: number };
+  bondScenarios?: BondScenarios;
+  bondRecon?: { day: number; date: string; evaluator: number; viewRoute: number; absDiff: number }[];
 }
 
 export interface StressRow {
   name: string; note: string; total: number;
-  byBook: { book: string; pnl: number }[];
+  // GOVT_RV carries its split: bond positions revalued in full, and the
+  // hedge swaps from the swap lane. pnl = bonds + hedges.
+  byBook: { book: string; pnl: number; bonds?: number; hedges?: number }[];
 }
 
 export interface ConsensusRow {
@@ -81,7 +103,8 @@ export interface IpvLane {
 }
 
 export interface RvCloseout {
-  byCurve: { curve: string; closeOut: number; mpu: number; quotes: number }[];
+  // The EUR_GOVT row, when present, is in price terms (unit 'price').
+  byCurve: { curve: string; closeOut: number; mpu: number; quotes: number; unit?: string }[];
   total: number; mpuTotal: number;
   quotesCovered: number; quotesMissing: number;
 }
@@ -89,6 +112,7 @@ export interface RvCloseout {
 export interface AvaRow {
   category: string; article: string; status: string;
   raw?: number; ava?: number; note: string;
+  bonds?: { raw: number; ava: number };
 }
 export interface RvAva { rows: AvaRow[]; total: number; weights: string }
 
@@ -120,14 +144,19 @@ export const LABEL: Record<string, string> = {
   EUR_ESTR: 'ESTR', EUR_ESTR_ECB: 'ESTR meeting', EUR_ESTR_IMM: 'ESTR IMM',
   EUR_ESTR_IMMFUT: 'ESTR IMM fut', EUR_EURIBOR6M: 'EURIBOR 6M',
   USD_SOFR: 'SOFR', GBP_SONIA: 'SONIA', EUR_USD_XCCY: 'EUR/USD xccy',
-  USD_CSA_CTD: 'USD CSA CTD', TOTAL: 'Desk total',
+  USD_CSA_CTD: 'USD CSA CTD', EUR_GOVT: 'Govt bonds',
+  GOVT_CS01: 'Govt CS01', BOND_NET: 'Bond net', TOTAL: 'Desk total',
 };
+
+// The limit lines that belong to the bond desk. EUR_GOVT counts in the desk
+// total because it is rate risk, the other two do not.
+export const BOND_KEYS = ['EUR_GOVT', 'GOVT_CS01', 'BOND_NET'];
 
 export const COLOUR: Record<string, string> = {
   EUR_ESTR: '#d4a853', EUR_ESTR_ECB: '#e07850', EUR_ESTR_IMM: '#5cb87a',
   EUR_ESTR_IMMFUT: '#b8b04a', EUR_EURIBOR6M: '#8b7ec8', EUR_USD_XCCY: '#4a9a68',
   USD_SOFR: '#9a8bd8', GBP_SONIA: '#c86e6e',
-  USD_CSA_CTD: '#e8963c',
+  USD_CSA_CTD: '#e8963c', EUR_GOVT: '#5eaab5',
 };
 
 export const chip = (on: boolean, colour: string) => ({

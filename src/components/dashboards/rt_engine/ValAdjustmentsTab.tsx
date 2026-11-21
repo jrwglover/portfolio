@@ -27,6 +27,9 @@ export interface VaMeta {
     interpolation: string; worstRoundTripBp: number; roundTripGateBp: number;
     perInstrumentBuilds: number; jointBuilds: number; npvLane: string;
   };
+  // The government bond desk, once the export carries it.
+  bondConsensusSeed?: number; bondPositions?: number; bondHedges?: number;
+  bondValue?: number;
 }
 export interface VaRow {
   curve: string; service: string; tenor: string; inst: string; quoteId: string;
@@ -44,6 +47,12 @@ export interface VaTotals {
   apva: {
     mpuFull: number; cocFull: number; mpuSensi: number; cocSensi: number;
     headline: number; method1Mpu: number; method1Coc: number;
+    // With bonds in the book the headline is the two lines added.
+    headlineSwaps?: number; headlineBonds?: number;
+  };
+  bonds?: {
+    mpu: number; coc: number; apvaMpu: number; apvaCoc: number; apva: number;
+    method: string;
   };
 }
 export interface VaJointLeg {
@@ -54,10 +63,19 @@ export interface VaJoint { mpu: VaJointLeg; coc: VaJointLeg }
 export interface VaAvaRow {
   category: string; article: string;
   raw: number | null; apva: number | null; note: string;
+  bonds?: { raw: number; apva: number };
+}
+// One government bond, on price. s is face / 100, the currency per price
+// point. Prices and widths are in price points per 100 of face.
+export interface VaBondRow {
+  id: string; name: string; onCurve: boolean; years: number; face: number;
+  s: number; mark: number; mid: number; u90: number; halfBo: number;
+  mpu: number; coc: number;
 }
 export interface ValAdjustments {
   meta: VaMeta; rows: VaRow[]; totals: VaTotals; joint: VaJoint;
   ava: VaAvaRow[];
+  bondRows?: VaBondRow[];
 }
 
 // Outrights read in percent, spreads in basis points: the units each market
@@ -76,6 +94,9 @@ const eodColour = (id: string) => COLOUR[id.replace(/^EOD_/, '')] ?? '#8b8a97';
 
 const TEAL = '#5eaab5';
 const AMBER = '#d4a853';
+// The filter key for the bond table. It is not a curve id, so it cannot
+// collide with one.
+const BONDS = '#bonds';
 
 export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
   const curves = useMemo(() => {
@@ -109,6 +130,18 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
 
   const gapMaterial = Math.abs(t.mpu.gapPct) > 0.001;
 
+  // The bond desk's rows, when the export carries them. The table opens on
+  // the bonds the desk holds.
+  const bondRows = va.bondRows ?? [];
+  const tb = t.bonds ?? null;
+  const [allBonds, setAllBonds] = useState(false);
+  const shownBonds = bondRows.filter(r => allBonds || r.face !== 0);
+  const heldBonds = bondRows.filter(r => r.face !== 0).length;
+  const showRates = curve !== BONDS;
+  const showBonds = bondRows.length > 0 && tb !== null && (curve === null || curve === BONDS);
+  const hasBondLine = t.apva.headlineSwaps !== undefined && t.apva.headlineBonds !== undefined;
+  const avaBonds = va.ava.some(r => r.bonds);
+
   return (
     <div>
       <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
@@ -120,6 +153,11 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         2020/866, using both of the methods Art. 9(5)(c) allows. Fair value is the EOD family
         valuation, and the consensus inputs are the same GENERATED Totem-style run the
         IPV sheet reads, seed {va.meta.seed}.
+        {tb && <>
+          {' '}The government bond positions are adjusted on price with the same
+          consensus rule and aggregated by {tb.method}. Their adjustments are a
+          separate line in the deduction.
+        </>}
       </p>
       <ul className="text-sm mb-3 max-w-4xl space-y-1 list-disc pl-5" style={dimText}>
         <li>
@@ -152,7 +190,9 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
           `MPU full minus sensi · CoC ${signed(t.coc.gap)} (${pct(t.coc.gapPct)}) · worst single row ${pct(t.worstRowLinErrPctMpu)} of its own AVA`,
           gapMaterial ? AMBER : undefined)}
         {tile('Diversified AVA, the CET1 deduction', millions(t.apva.headline),
-          'Method 2, alpha 50%, MPU + CoC on the full-reval route', TEAL)}
+          hasBondLine
+            ? `swaps ${millions(t.apva.headlineSwaps as number)} by Method 2, bonds ${millions(t.apva.headlineBonds as number)} by Method 1`
+            : 'Method 2, alpha 50%, MPU + CoC on the full-reval route', TEAL)}
       </div>
 
       {/* ---- B: curve filter ---- */}
@@ -165,9 +205,16 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
             {eodLabel(c)}
           </button>
         ))}
+        {bondRows.length > 0 && tb && (
+          <button onClick={() => setCurve(curve === BONDS ? null : BONDS)}
+            className="px-2 py-0.5 rounded" style={chip(curve === BONDS, COLOUR.EUR_GOVT ?? TEAL)}>
+            Bonds
+          </button>
+        )}
       </div>
 
       {/* ---- C: the instrument configuration ---- */}
+      {showRates && <>
       <div className="rounded overflow-x-auto mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
         <table className="w-full font-mono text-[10.5px]">
           <thead>
@@ -269,6 +316,77 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         reval minus the sensitivity route.
         {flooredCount > 0 && ` ${flooredCount} instrument${flooredCount > 1 ? 's' : ''} floored at zero per Art. 8(4).`}
       </p>
+      </>}
+
+      {/* ---- C2: the government bonds, on price ---- */}
+      {showBonds && tb && (
+        <>
+          <div className="flex gap-2 mb-2 font-mono text-[10px] flex-wrap items-center">
+            <span className="uppercase" style={dimText}>Government bonds</span>
+            <button onClick={() => setAllBonds(false)} className="px-2 py-0.5 rounded"
+              style={chip(!allBonds, TEAL)}>{heldBonds} held</button>
+            <button onClick={() => setAllBonds(true)} className="px-2 py-0.5 rounded"
+              style={chip(allBonds, TEAL)}>all {bondRows.length}</button>
+          </div>
+          <div className="rounded overflow-x-auto mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
+            <table className="w-full font-mono text-[10.5px]">
+              <thead>
+                <tr style={{ color: 'var(--text-dim)' }}>
+                  <th className="text-left px-2 py-1.5 font-normal">Bond</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Years</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Face</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Mark</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Cons mid</th>
+                  <th className="text-right px-2 py-1.5 font-normal">U90, cents</th>
+                  <th className="text-right px-2 py-1.5 font-normal">1/2 BO, cents</th>
+                  <th className="text-right px-2 py-1.5 font-normal">Per price point</th>
+                  <th className="text-right px-2 py-1.5 font-normal">MPU</th>
+                  <th className="text-right px-2 py-1.5 font-normal">CoC</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shownBonds.map(r => (
+                  <tr key={r.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <td className="px-2 py-1 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+                      {r.name}
+                      {r.onCurve && <span className="ml-1.5" style={dimText}>on the curve</span>}
+                    </td>
+                    <td className="px-2 py-1 text-right" style={dimText}>{r.years.toFixed(1)}</td>
+                    <td className="px-2 py-1 text-right" style={dimText}>{r.face ? money(r.face) : '0'}</td>
+                    <td className="px-2 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>{r.mark.toFixed(3)}</td>
+                    <td className="px-2 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>{r.mid.toFixed(3)}</td>
+                    <td className="px-2 py-1 text-right" style={dimText}>{(r.u90 * 100).toFixed(1)}</td>
+                    <td className="px-2 py-1 text-right" style={dimText}>{(r.halfBo * 100).toFixed(1)}</td>
+                    <td className="px-2 py-1 text-right" style={dimText}>{money(r.s)}</td>
+                    <td className="px-2 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{money(r.mpu)}</td>
+                    <td className="px-2 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>{money(r.coc)}</td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: '1px solid var(--border-hover)' }}>
+                  <td className="px-2 py-1" colSpan={8} style={dimText}>Total, every bond</td>
+                  <td className="px-2 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{money(tb.mpu)}</td>
+                  <td className="px-2 py-1 text-right" style={{ color: 'var(--text-primary)' }}>{money(tb.coc)}</td>
+                </tr>
+                <tr style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                  <td className="px-2 py-1" colSpan={8} style={dimText}>APVA, {tb.method}</td>
+                  <td className="px-2 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>{money(tb.apvaMpu)}</td>
+                  <td className="px-2 py-1 text-right" style={{ color: 'var(--text-secondary)' }}>{money(tb.apvaCoc)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-sm mb-4 max-w-4xl" style={dimText}>
+            Prices are clean per 100 of face and the widths are in cents per 100. A
+            position moves by its face over 100 per price point. MPU is the 90%
+            confidence width on that, moved by the gap from the mark to the
+            consensus mid and floored at zero. CoC is the half bid-offer on it. The bond
+            consensus is GENERATED
+            {va.meta.bondConsensusSeed !== undefined && `, seed ${va.meta.bondConsensusSeed}`}, and its
+            widths are illustrative. The bonds&apos; APVA is {money(tb.apva)}, a line of
+            its own in the deduction.
+          </p>
+        </>
+      )}
 
       {/* ---- D: route comparison and the no-shortcut receipt ---- */}
       <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
@@ -385,6 +503,7 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
               <th className="text-left px-3 py-1.5 font-normal">RTS</th>
               <th className="text-right px-3 py-1.5 font-normal">Raw</th>
               <th className="text-right px-3 py-1.5 font-normal">AVA (50%)</th>
+              {avaBonds && <th className="text-right px-3 py-1.5 font-normal">Of which bonds</th>}
             </tr>
           </thead>
           <tbody>
@@ -403,6 +522,11 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
                 }}>
                   {r.apva !== null ? money(r.apva) : 'not modelled'}
                 </td>
+                {avaBonds && (
+                  <td className="px-3 py-1.5 text-right" style={dimText}>
+                    {r.bonds ? money(r.bonds.apva) : ''}
+                  </td>
+                )}
               </tr>
             ))}
             <tr style={{ borderTop: '1px solid var(--border-hover)' }}>
@@ -414,7 +538,20 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
               <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-primary)' }}>
                 {money(t.apva.headline)}
               </td>
+              {avaBonds && <td className="px-3 py-1.5"></td>}
             </tr>
+            {hasBondLine && ([
+              ['Swaps, Method 2', t.apva.headlineSwaps as number],
+              [`Government bonds, ${tb?.method ?? 'Method 1'}`, t.apva.headlineBonds as number],
+            ] as [string, number][]).map(([label2, v2]) => (
+              <tr key={label2} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                <td className="px-3 py-1.5 pl-6" style={dimText}>{label2}</td>
+                <td className="px-3 py-1.5"></td>
+                <td className="px-3 py-1.5"></td>
+                <td className="px-3 py-1.5 text-right" style={{ color: 'var(--text-secondary)' }}>{money(v2)}</td>
+                {avaBonds && <td className="px-3 py-1.5"></td>}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -438,6 +575,15 @@ export default function ValAdjustmentsTab({ va }: { va: ValAdjustments }) {
         <li>
           Scope: {va.meta.scope}.
         </li>
+        {tb && (
+          <li>
+            The government bond positions are adjusted on price, bond by bond,
+            from a separate GENERATED consensus around the desk&apos;s closing marks.
+            The bonds have no expected value term, so they aggregate by{' '}
+            {tb.method}, and the deduction carries them as their own line beside
+            the swaps.
+          </li>
+        )}
         <li>
           MPU is mid-based per Art. 9(5)(a)(ii), so close-out cost is a
           separate nonzero AVA per Art. 10(2). The consensus half

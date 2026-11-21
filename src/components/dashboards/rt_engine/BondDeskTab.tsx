@@ -34,6 +34,17 @@ const signed = (v: number) => (v > 0 ? '+' : v < 0 ? '-' : '') + Math.abs(Math.r
 const bp = (v: number, d = 1) => (v >= 0 ? '+' : '') + v.toFixed(d);
 const ms = (us: number) => us >= 1000 ? (us / 1000).toFixed(1) + ' ms' : us + ' µs';
 const pnlColour = (v: number) => (Math.abs(v) < 0.5 ? SEC : v > 0 ? CHEAP : RICH);
+const utilColour = (u: number) => (u > 1.0 ? RICH : u > 0.85 ? GOV : SEC);
+// A gate value or limit as a number a reader can take in: small and large
+// ones in exponent form, the rest as they are.
+const gateNum = (v: number) => v === 0 ? '0'
+  : Math.abs(v) < 1e-2 || Math.abs(v) >= 1e6 ? v.toExponential(1)
+    : v.toLocaleString(undefined, { maximumFractionDigits: 4 });
+const LIMIT_LINE: Record<string, [string, string]> = {
+  EUR_GOVT: ['Govt bonds limit', 'net DV01 on the government curve, in the desk total'],
+  GOVT_CS01: ['Govt CS01 limit', 'DV01 to the bonds\' own spreads'],
+  BOND_NET: ['Bond net limit', 'bonds and the GOVT_RV hedge swaps'],
+};
 
 function Tile({ title, value, note, colour }: { title: string; value: string; note: string; colour?: string }) {
   return (
@@ -153,6 +164,14 @@ export default function BondDeskTab({ tl }: { tl: Timeline }) {
         ? 'The event was applied and the curve did not need to change.'
         : 'The bond is not a curve instrument, so no curve was rebuilt and no set was published.';
 
+  // The desk in the book's limits, VaR and books on this set, when the export
+  // carries them. Older data has none of these, and the strip stays off.
+  const bondLines = (f.bl?.net ?? []).filter(r => r.key in LIMIT_LINE);
+  const bondVar = f.varRt?.bonds && f.varRt ? { bonds: f.varRt.bonds.var99, total: f.varRt.var99 } : null;
+  const govtRow = f.books.find(x => x.book === 'GOVT_RV' && x.positions !== undefined) ?? null;
+  const inBook = bondLines.length > 0 || bondVar !== null || govtRow !== null;
+  const bookGates = desk.bookGates ?? [];
+
   const govLad = b.govT.map((t, k) => ({ t, v: b.book.govLad[k] ?? 0 })).filter(d => d.t > 0);
   const swapLad = desk.swapT.map((t, k) => ({ t, v: b.book.swapLad[k] ?? 0 })).filter(d => d.t > 0.2);
   const bucket = (t: number) => t < 1 ? `${Math.round(t * 12)}M` : `${t.toFixed(t < 10 ? 1 : 0)}Y`;
@@ -218,6 +237,37 @@ export default function BondDeskTab({ tl }: { tl: Timeline }) {
         <Tile title="From the swap hedges" value={signed(b.book.pnlHedge)} colour={pnlColour(b.book.pnlHedge)}
           note={`${desk.hedges.length} swaps on ESTR`} />
       </div>
+
+      {/* ---- the desk in the book ---- */}
+      {inBook && (
+        <div className="mb-8">
+          <Label>The desk in the book&apos;s limits and VaR on this set</Label>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 mb-2">
+            {bondLines.map(r => (
+              <Tile key={r.key} title={LIMIT_LINE[r.key][0]} value={`${(r.util * 100).toFixed(1)}%`}
+                colour={utilColour(r.util)}
+                note={`${money(r.dv01)} of ${money(r.limit)}, ${LIMIT_LINE[r.key][1]}`} />
+            ))}
+            {bondVar && (
+              <Tile title="Bond VaR, 99% 1-day" value={money(bondVar.bonds)}
+                note={`the positions alone, the whole book ${money(bondVar.total)}`} />
+            )}
+            {govtRow && (
+              <Tile title="Book GOVT_RV" value={money(govtRow.npv)}
+                note={`${govtRow.positions} positions and ${govtRow.trades} hedge swaps, DV01 ${signed(govtRow.dv01)}`} />
+            )}
+          </div>
+          <p className="text-xs max-w-4xl" style={{ color: DIM }}>
+            The positions are in the book as GOVT_RV, and the hedge swaps are priced in
+            the swap lanes with the rest of the book. The bond limit lines are read off
+            the positions&apos; zero pillar ladder at held spread. VaR revalues the
+            positions in full on every scenario and adds them to the swap P&amp;L, and the
+            stress table has a GOVT_RV column. At the close the bond prices are verified
+            against a generated consensus, and their valuation adjustments are a line of
+            their own in the deduction.
+          </p>
+        </div>
+      )}
 
       {/* ---- the curve ---- */}
       <div className="grid lg:grid-cols-2 gap-6 mb-10">
@@ -518,6 +568,41 @@ export default function BondDeskTab({ tl }: { tl: Timeline }) {
         The export stops if any row is over its limit. Valuation {desk.valuation}. The bonds,
         their prices and their history are generated, and no row is a real security or a real quote.
       </p>
+
+      {bookGates.length > 0 && (
+        <>
+          <div className="mt-6"><Label>What the engine checked on the bond book in the risk lanes</Label></div>
+          <div className="rounded-lg overflow-x-auto max-w-4xl" style={{ border: `1px solid ${EDGE}` }}>
+            <table className="w-full text-xs" style={{ background: CARD }}>
+              <thead>
+                <tr style={{ color: DIM }}>
+                  {['Check', 'Worst value', 'Limit', 'Runs'].map((h, k) => (
+                    <th key={h} className={`font-mono font-normal uppercase tracking-wider text-[10px] px-4 py-2 ${k ? 'text-right' : 'text-left'}`}
+                      style={{ borderBottom: `1px solid ${EDGE}` }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bookGates.map((g, k) => (
+                  <tr key={g.name} style={{ borderTop: k ? `1px solid ${EDGE}` : undefined }}>
+                    <td className="px-4 py-2" style={{ color: SEC }}>{g.name}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: PRI }}>{gateNum(g.value)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: DIM }}>{gateNum(g.limit)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: DIM }}>{g.runs.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs mt-2 max-w-4xl" style={{ color: DIM }}>
+            These hold the bond book to the risk lanes it joins. The hedge swaps in the
+            swap lane agree with the desk&apos;s own marks, the scenario evaluator agrees
+            with the desk&apos;s value and DV01, the limit lines add up from the pillar
+            ladder, and each stress and adjustment total adds up from its rows. A failed
+            check stops the export.
+          </p>
+        </>
+      )}
     </div>
   );
 }
